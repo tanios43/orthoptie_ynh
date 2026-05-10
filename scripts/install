@@ -11,6 +11,16 @@ python3 -m venv "$install_dir/venv"
 "$install_dir/venv/bin/pip" install flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug --quiet
 
 #=================================================
+# COPY APP FILES
+#=================================================
+ynh_script_progression --message="Copie des fichiers de l'application..." --weight=1
+
+# Copier les extra_files si présents
+if [ -d "$YNH_APP_BASEDIR/sources/extra_files/app" ]; then
+    cp -r "$YNH_APP_BASEDIR/sources/extra_files/app/." "$install_dir/"
+fi
+
+#=================================================
 # CREATE DATA DIRECTORY
 #=================================================
 ynh_script_progression --message="Création des dossiers de données..." --weight=1
