@@ -58,6 +58,13 @@ yunohost service add "$app" --description="Dossiers Patients Orthoptie" --log="/
 ynh_script_progression --message="Initialisation de la base de données..." --weight=2
 
 pushd "$install_dir"
+    # Créer toutes les tables d'abord
+    "$install_dir/venv/bin/python3" -c "from app import app, db
+with app.app_context():
+    db.create_all()
+    print('Tables créées')
+"
+    # Puis appliquer les migrations
     "$install_dir/venv/bin/python3" "$install_dir/migrate.py"
 popd
 
