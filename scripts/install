@@ -37,9 +37,10 @@ mkdir -p "$data_dir/uploads/bilans"
 rm -rf "$install_dir/uploads"
 ln -sf "$data_dir/uploads" "$install_dir/uploads"
 
-# Base de données
-touch "$data_dir/orthoptie.db"
-ln -sf "$data_dir/orthoptie.db" "$install_dir/orthoptie_v2.db"
+# Base de données dans instance/
+mkdir -p "$install_dir/instance"
+touch "$data_dir/orthoptie_v2.db"
+ln -sf "$data_dir/orthoptie_v2.db" "$install_dir/instance/orthoptie_v2.db"
 
 #=================================================
 # NGINX CONFIGURATION
