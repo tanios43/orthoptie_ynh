@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Édition — {{ nom_fichier }}{% endblock %}
+{% block page_title %}✎ Édition du document{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}"
+     class="btn btn-secondary btn-sm">← Retour au bilan</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:640px;margin:40px auto;text-align:center;">
+  <div class="card-body" style="padding:40px 32px;">
+
+    <div style="font-size:52px;margin-bottom:16px;">📝</div>
+
+    <h2 style="margin-bottom:8px;">{{ nom_fichier }}</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:24px;">
+      Le document va s'ouvrir dans Collabora Online dans un nouvel onglet.<br>
+      <strong>Enregistrez</strong> dans Collabora pour sauvegarder automatiquement
+      le document dans les pièces jointes du bilan.
+    </p>
+
+    <a href="{{ editor_url }}" target="_blank"
+       class="btn btn-primary" style="font-size:14px;padding:12px 24px;">
+      ✎ Ouvrir dans Collabora Online
+    </a>
+
+    <div style="margin-top:24px;padding:16px;background:var(--bg);border-radius:8px;
+                border:1px solid var(--border);font-size:12px;color:var(--muted);
+                text-align:left;">
+      <strong>Comment procéder :</strong>
+      <ol style="margin:8px 0 0 16px;line-height:1.8;">
+        <li>Cliquez sur "Ouvrir dans Collabora Online" (ou attendez l'ouverture automatique)</li>
+        <li>Éditez le document dans le nouvel onglet</li>
+        <li>Enregistrez avec <kbd>Ctrl+S</kbd> — le document est automatiquement
+            sauvegardé dans les pièces jointes du bilan</li>
+        <li>Fermez l'onglet Collabora et revenez ici</li>
+      </ol>
+    </div>
+
+    <div style="margin-top:20px;">
+      <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}"
+         class="btn btn-secondary btn-sm">← Retour au bilan</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Ouvrir automatiquement Collabora au chargement
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    window.open('{{ editor_url }}', '_blank');
+  }, 600);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,47 @@
+# Base de données
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads et fichiers patients (données sensibles)
+uploads/
+instance/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Secrets et configuration locale
+config_local.py
+.env
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Fichiers temporaires
+tmp/
+temp/
+*.tmp

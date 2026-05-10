@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Modèles de documents{% endblock %}
+{% block page_title %}Modèles de documents{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;max-width:1000px;">
+
+  {# Créer un modèle #}
+  <div>
+    <div class="card">
+      <div class="card-header"><h2>Nouveau modèle</h2></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_document_modele_nouveau') }}">
+          <div class="field-group" style="margin-bottom:10px;">
+            <label class="field-label">Nom *</label>
+            <input type="text" name="nom" placeholder="Ex : Compte-rendu bilan" required autofocus>
+          </div>
+          <div class="field-group" style="margin-bottom:14px;">
+            <label class="field-label">Type</label>
+            <select name="type">
+              <option value="courrier">Courrier</option>
+              <option value="ordonnance">Ordonnance</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Créer</button>
+        </form>
+      </div>
+    </div>
+
+    {# Référence des variables #}
+    <div class="card" style="margin-top:14px;">
+      <div class="card-header"><h2 style="font-size:13px;">Variables disponibles</h2></div>
+      <div style="padding:10px 14px;font-size:12px;">
+        {% for grp, vars in [
+          ('Patient', ['{{patient.nom}}','{{patient.prenom}}','{{patient.ddn}}','{{patient.age}}','{{patient.medecin}}']),
+          ('Document', ['{{date}}']),
+          ('Praticien', ['{{praticien.nom}}','{{praticien.titre}}','{{praticien.rpps}}','{{praticien.adeli}}','{{praticien.forme}}']),
+          ('Cabinet', ['{{cabinet.nom}}','{{cabinet.adresse}}','{{cabinet.tel}}','{{cabinet.email}}','{{cabinet.commune}}'])
+        ] %}
+        <div style="font-weight:600;color:var(--muted);font-size:10px;text-transform:uppercase;
+                    letter-spacing:.5px;margin:8px 0 4px;">{{ grp }}</div>
+        {% for v in vars %}
+        <code style="display:block;background:var(--bg);padding:2px 6px;border-radius:4px;
+                     margin-bottom:2px;font-size:11px;color:var(--accent);cursor:pointer;"
+              onclick="navigator.clipboard.writeText('{{ v }}')">{{ v }}</code>
+        {% endfor %}
+        {% endfor %}
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;">Cliquez pour copier</div>
+      </div>
+    </div>
+  </div>
+
+  {# Liste des modèles #}
+  <div>
+    {% for type_key, type_label in [('courrier','Courriers'),('ordonnance','Ordonnances')] %}
+    {% set type_modeles = modeles | selectattr('type','equalto',type_key) | list %}
+    {% if type_modeles %}
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                letter-spacing:.5px;margin-bottom:8px;">{{ type_label }}</div>
+    {% for m in type_modeles %}
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header">
+        <h2 style="font-size:14px;">{{ m.nom }}</h2>
+        {% if not m.actif %}<span class="badge badge-warn" style="margin-left:6px;">désactivé</span>{% endif %}
+        <span class="text-sm text-muted" style="margin-left:8px;">{{ m.blocs|length }} bloc(s)</span>
+        <a href="{{ url_for('admin_document_modele_detail', modele_id=m.id) }}"
+           class="btn btn-secondary btn-sm" style="margin-left:auto;">Éditer</a>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
+
+    {% if not modeles %}
+    <div class="empty-state">
+      <div class="icon">📄</div>
+      <p>Aucun modèle créé.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

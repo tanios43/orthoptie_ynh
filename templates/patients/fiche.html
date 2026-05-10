@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+
+{%- macro age_a_la_date(naissance, date_bilan) -%}
+  {%- if naissance and date_bilan -%}
+    {%- set age = date_bilan.year - naissance.year -%}
+    {%- if (date_bilan.month, date_bilan.day) < (naissance.month, naissance.day) -%}
+      {%- set age = age - 1 -%}
+    {%- endif -%}
+    {{ age }} ans
+  {%- endif -%}
+{%- endmacro -%}
+
+
+{% block title %}{{ patient.nom }} {{ patient.prenom }}{% endblock %}
+{% block page_title %}{{ patient.nom }} {{ patient.prenom }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
+  <a href="{{ url_for('patient_modifier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">✎ Modifier</a>
+  <a href="{{ url_for('consultation_nouvelle', patient_id=patient.id) }}" class="btn btn-primary btn-sm">+ Nouveau bilan</a>
+{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start;">
+
+  <!-- Fiche identité -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-lt);
+                    display:flex;align-items:center;justify-content:center;
+                    font-weight:600;color:var(--accent);font-size:15px;flex-shrink:0;">
+          {{ patient.prenom[0] }}{{ patient.nom[0] }}
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:600;">{{ patient.prenom }} {{ patient.nom }}</div>
+          {% if patient.age %}
+            <div class="text-sm text-muted">{{ patient.age }} ans</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-body" style="padding: 14px 16px;">
+        {% macro row(label, value) %}
+          {% if value %}
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
+            <span class="text-sm text-muted">{{ label }}</span>
+            <span class="text-sm" style="text-align:right;max-width:160px;">{{ value }}</span>
+          </div>
+          {% endif %}
+        {% endmacro %}
+
+        {{ row('Naissance', patient.date_naissance.strftime('%d/%m/%Y') if patient.date_naissance) }}
+        {{ row('Sexe', patient.sexe) }}
+        {{ row('Téléphone', patient.telephone) }}
+        {{ row('Email', patient.email) }}
+        {{ row('Rue', patient.rue) }}
+        {% if patient.code_postal or patient.commune %}
+        {{ row('Ville', (patient.code_postal or '') ~ (' ' if patient.code_postal and patient.commune else '') ~ (patient.commune or '')) }}
+        {% endif %}
+        {{ row('Médecin', patient.medecin_referent) }}
+        {{ row('N° Sécu', '•••••••••••' ~ patient.num_secu[-2:] if patient.num_secu) }}
+
+        {% if patient.notes_admin %}
+        <div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:7px;">
+          <div class="text-sm text-muted" style="margin-bottom:4px;font-weight:500;">Notes admin</div>
+          <div class="text-sm">{{ patient.notes_admin }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Historique consultations -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h2>Historique des bilans</h2>
+        <span class="badge badge-gray">{{ patient.consultations|length }} bilan{{ 's' if patient.consultations|length != 1 }}</span>
+      </div>
+
+      {# Macros d'affichage inline du bilan #}
+      {%- macro sph(val) -%}
+        {%- if val is none or val == '' -%}—
+        {%- elif val|float >= 0 -%}+{{ '%.2f'|format(val|float) }}
+        {%- else -%}{{ '%.2f'|format(val|float) }}
+        {%- endif -%}
+      {%- endmacro -%}
+      {%- macro axe(val) -%}{%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}{%- endmacro -%}
+
+      {% if patient.consultations %}
+      <div>
+        {% for c in patient.consultations %}
+
+        {# ── En-tête cliquable ── #}
+        <div style="border-bottom:1px solid var(--border);">
+          <div style="padding:14px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;
+                      transition:background .15s;"
+               onclick="toggleBilan('bilan-{{ c.id }}')"
+               onmouseover="this.style.background='var(--bg)'"
+               onmouseout="this.style.background=''">
+
+            {# Date #}
+            <div style="text-align:center;min-width:44px;flex-shrink:0;">
+              <div style="font-size:18px;font-weight:600;color:var(--accent);line-height:1;">
+                {{ c.date_consult.strftime('%d') }}
+              </div>
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
+                {{ c.date_consult.strftime('%b %Y') }}
+              </div>
+            </div>
+
+            {# Infos principales #}
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:500;">
+                {{ c.motif or 'Bilan orthoptique' }}
+              </div>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
+                {% set coul = c.praticien.couleur or '#2E7D6B' %}
+                <span style="display:inline-flex;align-items:center;gap:5px;
+                             padding:2px 9px;border-radius:20px;font-size:12px;font-weight:500;
+                             background:{{ coul }}20;color:{{ coul }};
+                             border:1px solid {{ coul }}40;">
+                  <span style="width:8px;height:8px;border-radius:50%;
+                               background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+                  {{ c.praticien.titre }} {{ c.praticien.prenom }} {{ c.praticien.nom }}
+                </span>
+                {% if c.cabinet %}
+                {% set cc = c.cabinet.couleur or '#1C2B3A' %}
+                <span style="display:inline-flex;align-items:center;gap:4px;
+                             padding:1px 8px;border-radius:20px;font-size:11px;font-weight:500;
+                             background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+                  <span style="width:6px;height:6px;border-radius:50%;
+                               background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
+                  🏥 {{ c.cabinet.nom }}
+                </span>
+                {% endif %}
+                {% if patient.date_naissance %}
+                <span style="font-size:12px;color:var(--accent);font-weight:500;">
+                  {{ age_a_la_date(patient.date_naissance, c.date_consult) }}
+                </span>
+                {% endif %}
+              </div>
+              {# Aperçu sections #}
+              {% if c.sections %}
+              <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">
+                {% for sec in c.sections %}
+                <span style="font-size:10px;padding:1px 7px;border-radius:10px;
+                             background:var(--accent-lt);color:var(--accent-dk);">
+                  {{ sec.label }}
+                </span>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            {# Chevron + actions #}
+            <div class="flex gap-2" style="flex-shrink:0;align-items:center;">
+              <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}"
+                 class="btn btn-secondary btn-sm"
+                 onclick="event.stopPropagation()">✎</a>
+              <button type="button"
+                      class="btn btn-sm"
+                      style="background:var(--danger-lt);color:var(--danger);border:1px solid #F5C6C2;"
+                      onclick="event.stopPropagation();confirmerSuppression(
+                        {{ c.id }},
+                        '{{ c.date_consult.strftime('%d/%m/%Y') }}',
+                        '{{ patient.prenom }} {{ patient.nom }}'
+                      )">🗑</button>
+              <span id="chev-bilan-{{ c.id }}"
+                    style="font-size:12px;color:var(--muted);transition:transform .2s;display:inline-block;">▶</span>
+            </div>
+          </div>
+
+          {# ── Contenu déplié ── #}
+          <div id="bilan-{{ c.id }}"
+               style="display:none;padding:0 20px 16px;border-top:1px solid var(--border);
+                      background:var(--bg);">
+
+            {% if c.sections %}
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px;">
+              {% for sec in c.sections %}
+              {% set d = sec.get_donnees() %}
+              <div style="background:var(--surface);border:1px solid var(--border);
+                          border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;font-weight:600;color:var(--accent);
+                            text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+                  {{ sec.label }}
+                </div>
+
+                {# Observations #}
+                {% if sec.observations %}
+                <div style="font-size:12px;color:var(--muted);font-style:italic;
+                            margin-bottom:6px;white-space:pre-wrap;">{{ sec.observations }}</div>
+                {% endif %}
+
+                {# Réfraction sous forme de tableau compact #}
+                {% if sec.type in ['correction_portee','refraction_obj','refraction_subj'] %}
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <tr style="color:var(--muted);">
+                    <td></td>
+                    <td style="text-align:center;padding:2px 4px;"><span class="eye-label eye-od" style="font-size:10px;">OD</span></td>
+                    <td style="text-align:center;padding:2px 4px;"><span class="eye-label eye-og" style="font-size:10px;">OG</span></td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--muted);padding:2px 4px;font-size:11px;">Sph.</td>
+                    <td style="text-align:center;padding:2px 4px;font-family:monospace;">{{ sph(d.get('od_sph')) }}</td>
+                    <td style="text-align:center;padding:2px 4px;font-family:monospace;">{{ sph(d.get('og_sph')) }}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--muted);padding:2px 4px;font-size:11px;">Cyl.</td>
+                    <td style="text-align:center;padding:2px 4px;font-family:monospace;">{{ d.get('od_cyl','—') }}</td>
+                    <td style="text-align:center;padding:2px 4px;font-family:monospace;">{{ d.get('og_cyl','—') }}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--muted);padding:2px 4px;font-size:11px;">Axe</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ axe(d.get('od_axe')) }}</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ axe(d.get('og_axe')) }}</td>
+                  </tr>
+                  {% if sec.type == 'refraction_subj' %}
+                  <tr>
+                    <td style="color:var(--muted);padding:2px 4px;font-size:11px;">AV loin</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ d.get('od_av_loin','—') }}</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ d.get('og_av_loin','—') }}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--muted);padding:2px 4px;font-size:11px;">AV près</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ d.get('od_av_pres','—') }}</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ d.get('og_av_pres','—') }}</td>
+                  </tr>
+                  {% endif %}
+                </table>
+
+                {# Acuité visuelle #}
+                {% elif sec.type == 'acuite' %}
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <tr>
+                    <td></td>
+                    <td style="text-align:center;padding:2px 4px;"><span class="eye-label eye-od" style="font-size:10px;">OD</span></td>
+                    <td style="text-align:center;padding:2px 4px;"><span class="eye-label eye-og" style="font-size:10px;">OG</span></td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--muted);padding:2px 4px;font-size:11px;">Loin</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ d.get('av_od_loin','—') }}</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ d.get('av_og_loin','—') }}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--muted);padding:2px 4px;font-size:11px;">Près</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ d.get('av_od_pres','—') }}</td>
+                    <td style="text-align:center;padding:2px 4px;">{{ d.get('av_og_pres','—') }}</td>
+                  </tr>
+                  {% if d.get('av_bino') %}
+                  <tr>
+                    <td style="color:var(--muted);padding:2px 4px;font-size:11px;">Bino</td>
+                    <td colspan="2" style="text-align:center;padding:2px 4px;">{{ d.get('av_bino') }}</td>
+                  </tr>
+                  {% endif %}
+                </table>
+
+                {# Cas général : liste des champs renseignés #}
+                {% else %}
+                {% set def = sections_def.get(sec.type, {}) %}
+                {% for champ in def.get('champs', []) %}
+                  {% if champ.type == 'fichier' %}
+                    {% set fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', champ.name) | list %}
+                    {% if fics %}
+                    <div style="margin:4px 0;">
+                      <div style="font-size:10px;color:var(--muted);font-weight:500;margin-bottom:4px;">{{ champ.label }}</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                        {% for f in fics %}
+                        <a href="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
+                           target="_blank"
+                           style="display:flex;flex-direction:column;align-items:center;
+                                  text-decoration:none;border:1px solid var(--border);
+                                  border-radius:6px;overflow:hidden;background:var(--bg);width:60px;">
+                          {% if f.type_fichier == 'image' %}
+                            <img src="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
+                                 style="width:60px;height:44px;object-fit:cover;display:block;">
+                          {% else %}
+                            <div style="width:60px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px;">
+                              {{ '📝' if f.type_fichier == 'word' else '📄' }}
+                            </div>
+                          {% endif %}
+                          <div style="font-size:8px;color:var(--muted);padding:2px 3px;width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                            {{ f.titre if f.titre else f.nom_original }}
+                          </div>
+                        </a>
+                        {% endfor %}
+                      </div>
+                    </div>
+                    {% endif %}
+                  {% elif d.get(champ.name) %}
+                  <div style="display:flex;justify-content:space-between;
+                              padding:2px 0;font-size:12px;border-bottom:1px solid var(--border);">
+                    <span style="color:var(--muted);">{{ champ.label }}</span>
+                    <span style="font-weight:500;">{{ d.get(champ.name) }}</span>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+                {% endif %}
+
+              </div>
+              {% endfor %}
+            </div>
+
+            {# Lien vers la page complète #}
+            <div style="margin-top:12px;text-align:right;">
+              <a href="{{ url_for('consultation_detail', consultation_id=c.id) }}"
+                 class="btn btn-secondary btn-sm">Voir le bilan complet →</a>
+            </div>
+
+
+        {% if c.fichiers %}
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);">
+          <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                      letter-spacing:.5px;margin-bottom:6px;">Pièces jointes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            {% for f in c.fichiers %}
+            <a href="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+               target="_blank"
+               style="display:flex;flex-direction:column;align-items:center;text-decoration:none;
+                      border:1px solid var(--border);border-radius:7px;overflow:hidden;
+                      background:var(--surface);width:80px;">
+              {% if f.type_fichier == 'image' %}
+                <img src="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+                     style="width:80px;height:56px;object-fit:cover;display:block;">
+              {% else %}
+                <div style="width:80px;height:56px;display:flex;align-items:center;
+                            justify-content:center;font-size:22px;">
+                  {{ '📝' if f.type_fichier == 'word' else '📄' }}
+                </div>
+              {% endif %}
+              <div style="font-size:9px;color:var(--muted);padding:2px 4px;width:80px;
+                          overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                {{ f.titre if f.titre else f.nom_original }}
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+            {% else %}
+            <div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px;">
+              Bilan vide — <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}">ajouter des sections</a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <p>Aucun bilan enregistré pour ce patient.</p>
+        <a href="{{ url_for('consultation_nouvelle', patient_id=patient.id) }}"
+           class="btn btn-primary mt-2">Créer le premier bilan</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{# ── MODALE DE CONFIRMATION SUPPRESSION ── #}
+<div id="modal-suppression" style="
+  display:none; position:fixed; inset:0; z-index:1000;
+  background:rgba(0,0,0,.45);
+  align-items:center; justify-content:center;">
+  <div style="
+    background:var(--surface); border-radius:var(--radius);
+    box-shadow:0 8px 32px rgba(0,0,0,.18);
+    padding:28px 28px 24px; max-width:440px; width:90%; margin:20px;">
+
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;">
+      <div style="
+        width:40px;height:40px;border-radius:50%;flex-shrink:0;
+        background:var(--danger-lt);
+        display:flex;align-items:center;justify-content:center;
+        font-size:18px;">⚠️</div>
+      <div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:6px;color:var(--text);">
+          Supprimer ce bilan ?
+        </div>
+        <div id="modal-desc" style="font-size:14px;color:var(--muted);line-height:1.5;"></div>
+      </div>
+    </div>
+
+    <div style="
+      background:var(--danger-lt);border:1px solid #F5C6C2;
+      border-radius:7px;padding:10px 14px;margin-bottom:20px;">
+      <div style="font-size:13px;color:var(--danger);font-weight:500;margin-bottom:2px;">
+        ⚠ Action irréversible
+      </div>
+      <div style="font-size:13px;color:var(--danger);">
+        Toutes les données du bilan (réfraction, acuité, stéréoscopie, etc.)
+        seront définitivement effacées et ne pourront pas être récupérées.
+      </div>
+    </div>
+
+    <form id="form-suppression" method="POST" action="">
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary"
+                onclick="fermerModal()">Annuler</button>
+        <button type="submit" class="btn btn-danger">
+          Supprimer définitivement
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleBilan(id) {
+  const body = document.getElementById(id);
+  const chev = document.getElementById('chev-' + id);
+  if (!body) return;
+  const open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function confirmerSuppression(id, date, patient) {
+  document.getElementById('modal-desc').textContent =
+    'Bilan du ' + date + ' pour ' + patient + '.';
+  document.getElementById('form-suppression').action =
+    '/consultation/' + id + '/supprimer';
+  const modal = document.getElementById('modal-suppression');
+  modal.style.display = 'flex';
+}
+function fermerModal() {
+  document.getElementById('modal-suppression').style.display = 'none';
+}
+// Fermer en cliquant sur l'arrière-plan
+document.getElementById('modal-suppression').addEventListener('click', function(e) {
+  if (e.target === this) fermerModal();
+});
+</script>
+{% endblock %}

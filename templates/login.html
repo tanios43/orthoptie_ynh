@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — Cabinet d'Orthoptie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent: #2E7D6B; --accent-dk: #1D5C4E;
+      --bg: #F4F2EE; --surface: #fff;
+      --border: #E2DED8; --text: #1A1F2E; --muted: #6B7280;
+      --danger-lt: #FDECEA; --danger: #C0392B;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-wrap {
+      width: 100%; max-width: 400px; padding: 20px;
+    }
+    .login-brand {
+      text-align: center; margin-bottom: 32px;
+    }
+    .logo-mark {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      color: #fff; font-size: 26px;
+      margin: 0 auto 14px;
+    }
+    .login-brand h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; color: var(--text);
+    }
+    .login-brand p {
+      font-size: 13px; color: var(--muted); margin-top: 4px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+    }
+    .field { margin-bottom: 16px; }
+    label {
+      display: block; font-size: 12px; font-weight: 500;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .4px;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%; font-family: 'DM Sans', sans-serif; font-size: 15px;
+      color: var(--text); background: #FAFAF8;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 13px; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(46,125,107,.12);
+      background: #fff;
+    }
+    .btn {
+      width: 100%; padding: 11px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+      cursor: pointer; margin-top: 6px;
+      transition: background .15s;
+    }
+    .btn:hover { background: var(--accent-dk); }
+    .flash {
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;
+      font-size: 13px;
+      background: var(--danger-lt); color: var(--danger);
+      border: 1px solid #F5C6C2;
+    }
+  </style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-brand">
+    <div class="logo-mark">O</div>
+    <h1>Cabinet d'Orthoptie</h1>
+    <p>Dossiers patients — Accès praticiens</p>
+  </div>
+
+  <div class="card">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="field">
+        <label for="login">Identifiant</label>
+        <input type="text" id="login" name="login" placeholder="prenom.nom" autofocus required>
+      </div>
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" name="password" placeholder="(vide pour le prototype)">
+      </div>
+      <button type="submit" class="btn">Se connecter</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

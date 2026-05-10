@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Gestion des sections{% endblock %}
+{% block page_title %}Gestion des sections{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;">
+
+  {# Créer une section #}
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header"><h2>Nouvelle section</h2></div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('admin_section_nouvelle') }}"
+            style="display:flex;gap:10px;align-items:flex-end;">
+        <div class="field-group" style="flex:1;">
+          <label class="field-label">Nom de la section</label>
+          <input type="text" name="label" placeholder="Ex : Bilan accommodation" required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary">+ Créer</button>
+      </form>
+    </div>
+  </div>
+
+  {# Liste des sections #}
+  <div class="card">
+    <div class="card-header">
+      <h2>Sections disponibles</h2>
+      <span class="badge badge-gray">{{ sections|length }}</span>
+      <span class="text-sm text-muted" style="margin-left:auto;">Glissez pour réordonner</span>
+    </div>
+
+    <div id="sections-list" style="padding:8px;">
+      {% for s in sections %}
+      <div class="section-row" data-id="{{ s.id }}"
+           style="display:flex;align-items:center;gap:10px;
+                  padding:10px 12px;border-radius:8px;margin-bottom:4px;
+                  background:var(--surface);border:1px solid var(--border);
+                  cursor:grab;">
+        <span style="color:var(--muted);font-size:14px;cursor:grab;">⠿</span>
+        <div style="flex:1;">
+          <span style="font-size:14px;font-weight:500;">{{ s.label }}</span>
+          {% if s.builtin %}
+            <span class="badge badge-gray" style="margin-left:6px;font-size:10px;">native</span>
+          {% endif %}
+          {% if not s.actif %}
+            <span class="badge badge-warn" style="margin-left:6px;font-size:10px;">désactivée</span>
+          {% endif %}
+          <span class="text-sm text-muted" style="margin-left:8px;">
+            {{ s.champs|selectattr('actif')|list|length }} champ(s)
+          </span>
+        </div>
+        <a href="{{ url_for('admin_section_detail', section_id=s.id) }}"
+           class="btn btn-secondary btn-sm">Éditer</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Drag & drop pour réordonner
+const list = document.getElementById('sections-list');
+let dragged = null;
+
+list.querySelectorAll('.section-row').forEach(row => {
+  row.addEventListener('dragstart', e => {
+    dragged = row;
+    row.style.opacity = '.4';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  row.setAttribute('draggable', 'true');
+  row.addEventListener('dragend', () => {
+    row.style.opacity = '1';
+    dragged = null;
+    saveOrder();
+  });
+  row.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (row !== dragged) {
+      const rect = row.getBoundingClientRect();
+      const after = e.clientY > rect.top + rect.height / 2;
+      list.insertBefore(dragged, after ? row.nextSibling : row);
+    }
+  });
+});
+
+function saveOrder() {
+  const ordre = Array.from(list.querySelectorAll('.section-row'))
+                     .map(r => parseInt(r.dataset.id));
+  fetch('{{ url_for("admin_sections_reordonner") }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ordre})
+  });
+}
+</script>
+{% endblock %}

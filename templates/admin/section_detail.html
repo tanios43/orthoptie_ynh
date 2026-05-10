@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% block title %}{{ section.label }} — Sections{% endblock %}
+{% block page_title %}{{ section.label }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin_sections') }}" class="btn btn-secondary btn-sm">← Sections</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;max-width:1000px;">
+
+  {# ── Colonne principale : champs ── #}
+  <div>
+
+    {# Propriétés de la section #}
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><h2>Propriétés</h2></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_section_modifier', section_id=section.id) }}"
+              style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field-group" style="flex:1;min-width:200px;">
+            <label class="field-label">Nom affiché</label>
+            <input type="text" name="label" value="{{ section.label }}" required>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Statut</label>
+            <select name="actif">
+              <option value="1" {{ 'selected' if section.actif }}>Active</option>
+              <option value="0" {{ 'selected' if not section.actif }}>Désactivée</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Observations libres</label>
+            <select name="avec_observations">
+              <option value="1" {{ 'selected' if section.avec_observations != False }}>Afficher le champ</option>
+              <option value="0" {{ 'selected' if section.avec_observations == False }}>Masquer le champ</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin_section_modifier', section_id=section.id) }}"
+              style="margin-top:12px;">
+          <input type="hidden" name="label" value="{{ section.label }}">
+          <input type="hidden" name="actif" value="{{ '1' if section.actif else '0' }}">
+          <div class="field-group">
+            <label class="field-label">
+              Observation par défaut
+              <span style="font-weight:400;color:var(--muted);font-size:10px;margin-left:4px;">
+                pré-remplie à l'ajout de la section dans un bilan
+              </span>
+            </label>
+            <textarea name="obs_defaut" rows="3"
+                      placeholder="Laisser vide pour ne pas pré-remplir…">{{ section.obs_defaut or '' }}</textarea>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm" style="margin-top:6px;">
+            Enregistrer l'observation par défaut
+          </button>
+        </form>
+        {% if section.builtin %}
+        <div style="margin-top:10px;font-size:12px;color:var(--muted);">
+          ⚠ Section native — non supprimable. Vous pouvez la désactiver ou modifier ses champs.
+        </div>
+        {% else %}
+        <form method="POST" action="{{ url_for('admin_section_supprimer', section_id=section.id) }}"
+              style="margin-top:12px;"
+              onsubmit="return confirm('Supprimer définitivement cette section ?')">
+          <button type="submit" class="btn btn-danger btn-sm">Supprimer la section</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Champs #}
+    <div class="card">
+      <div class="card-header">
+        <h2>Champs</h2>
+        <span class="badge badge-gray">{{ section.champs|selectattr('actif')|list|length }}</span>
+      </div>
+
+      <div id="champs-list" style="padding:8px;">
+        {% for champ in section.champs %}
+        <div class="champ-row" data-id="{{ champ.id }}"
+             style="border:1px solid var(--border);border-radius:8px;
+                    margin-bottom:6px;background:var(--surface);">
+
+          {# En-tête du champ #}
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:grab;">
+            <span style="color:var(--muted);font-size:14px;">⠿</span>
+            <div style="flex:1;">
+              <span style="font-size:13px;font-weight:500;">{{ champ.label }}</span>
+              <span class="badge badge-gray" style="margin-left:6px;font-size:10px;">{{ champ.type }}</span>
+              {% if not champ.actif %}
+              <span class="badge badge-warn" style="margin-left:4px;font-size:10px;">inactif</span>
+              {% endif %}
+            </div>
+            <button type="button" onclick="toggleChamp({{ champ.id }})"
+                    class="btn btn-secondary btn-sm">✎</button>
+          </div>
+
+          {# Formulaire d'édition (caché par défaut) #}
+          <div id="edit-champ-{{ champ.id }}" style="display:none;padding:0 12px 12px;
+               border-top:1px solid var(--border);">
+            <form method="POST" action="{{ url_for('admin_champ_modifier', champ_id=champ.id) }}"
+                  style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;margin-top:10px;">
+              <div class="field-group">
+                <label class="field-label">Libellé</label>
+                <input type="text" name="label" value="{{ champ.label }}">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Type</label>
+                <select name="type">
+                  {% for t in ['text','textarea','number','select','sph','fichier'] %}
+                  <option value="{{ t }}" {{ 'selected' if champ.type == t }}>{{ t }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Actif</label>
+                <select name="actif">
+                  <option value="1" {{ 'selected' if champ.actif }}>Oui</option>
+                  <option value="0" {{ 'selected' if not champ.actif }}>Non</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">OK</button>
+            </form>
+
+            <form method="POST" action="{{ url_for('admin_champ_supprimer', champ_id=champ.id) }}"
+                  style="margin-top:8px;"
+                  onsubmit="return confirm('Supprimer ce champ ?')">
+              <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+            </form>
+
+            {# Options si type select #}
+            {% if champ.type == 'select' %}
+            <div style="margin-top:14px;">
+              <div style="font-size:12px;font-weight:600;color:var(--muted);
+                          text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+                Valeurs de la liste
+              </div>
+              <div id="options-list-{{ champ.id }}" style="margin-bottom:8px;">
+                {% for opt in champ.options %}
+                {% if opt.actif %}
+                <div class="opt-row" data-id="{{ opt.id }}"
+                     style="display:flex;align-items:center;gap:6px;
+                            padding:4px 8px;border-radius:6px;margin-bottom:3px;
+                            background:var(--bg);border:1px solid var(--border);">
+                  <span style="color:var(--muted);font-size:12px;cursor:grab;">⠿</span>
+                  <span style="flex:1;font-size:13px;">{{ opt.valeur }}</span>
+                  <form method="POST"
+                        action="{{ url_for('admin_option_supprimer', option_id=opt.id) }}"
+                        onsubmit="return confirm('Supprimer cette valeur ?')">
+                    <button type="submit"
+                            style="background:none;border:none;color:var(--muted);
+                                   cursor:pointer;font-size:12px;padding:0 4px;"
+                            onmouseover="this.style.color='var(--danger)'"
+                            onmouseout="this.style.color='var(--muted)'">✕</button>
+                  </form>
+                </div>
+                {% endif %}
+                {% endfor %}
+              </div>
+              <div style="display:flex;gap:6px;margin-top:4px;">
+                <input type="text" id="new-opt-{{ champ.id }}"
+                       placeholder="Nouvelle valeur…"
+                       style="flex:1;font-size:13px;"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();ajouterOption({{ champ.id }});}">
+                <button type="button" class="btn btn-secondary btn-sm"
+                        onclick="ajouterOption({{ champ.id }})">+ Ajouter</button>
+              </div>
+              <script>
+              (function() {
+                const optList = document.getElementById('options-list-{{ champ.id }}');
+                if (!optList) return;
+                initOptDrag(optList);
+              })();
+              </script>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# Ajouter un champ #}
+      <div style="padding:12px 16px;border-top:1px solid var(--border);">
+        <form method="POST" action="{{ url_for('admin_champ_nouveau', section_id=section.id) }}"
+              style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field-group" style="flex:1;min-width:160px;">
+            <label class="field-label">Libellé du champ</label>
+            <input type="text" name="label" placeholder="Libellé (optionnel)">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Type</label>
+            <select name="type">
+              <option value="text">Texte libre</option>
+              <option value="textarea">Texte multilignes</option>
+              <option value="number">Nombre</option>
+              <option value="select">Liste déroulante</option>
+              <option value="sph">Sphère (±)</option>
+              <option value="fichier">Pièce jointe</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">+ Ajouter</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Colonne droite : navigation ── #}
+  <div style="position:sticky;top:80px;">
+    <div class="card">
+      <div class="card-header"><h2 style="font-size:13px;">Toutes les sections</h2></div>
+      <div style="padding:8px;max-height:calc(100vh - 200px);overflow-y:auto;">
+        {% for s in all_sections %}
+        <a href="{{ url_for('admin_section_detail', section_id=s.id) }}"
+           style="display:block;padding:7px 12px;border-radius:7px;margin-bottom:2px;
+                  font-size:13px;text-decoration:none;
+                  background:{{ 'var(--accent-lt)' if s.id == section.id else 'transparent' }};
+                  color:{{ 'var(--accent-dk)' if s.id == section.id else 'var(--text)' }};
+                  font-weight:{{ '600' if s.id == section.id else '400' }};"
+           onmouseover="if({{ 'false' if s.id == section.id else 'true' }}) this.style.background='var(--bg)'"
+           onmouseout="if({{ 'false' if s.id == section.id else 'true' }}) this.style.background='transparent'">
+          {{ s.label }}
+          {% if not s.actif %}
+          <span style="font-size:10px;color:var(--muted);"> (off)</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleChamp(id) {
+  const el = document.getElementById('edit-champ-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// Drag & drop champs
+const champsList = document.getElementById('champs-list');
+let draggedChamp = null;
+champsList.querySelectorAll('.champ-row').forEach(row => {
+  row.setAttribute('draggable', 'true');
+  row.addEventListener('dragstart', e => { draggedChamp = row; row.style.opacity='.4'; e.dataTransfer.effectAllowed='move'; });
+  row.addEventListener('dragend', () => { row.style.opacity='1'; draggedChamp=null; saveChampsOrder(); });
+  row.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (row !== draggedChamp) {
+      const after = e.clientY > row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2;
+      champsList.insertBefore(draggedChamp, after ? row.nextSibling : row);
+    }
+  });
+});
+
+function saveChampsOrder() {
+  const ordre = Array.from(champsList.querySelectorAll('.champ-row')).map(r => parseInt(r.dataset.id));
+  fetch('{{ url_for("admin_champs_reordonner") }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ordre})
+  });
+}
+
+// ── Options AJAX ──────────────────────────────────────────
+
+function ajouterOption(champId) {
+  const input = document.getElementById('new-opt-' + champId);
+  const valeur = input.value.trim();
+  if (!valeur) return;
+
+  const fd = new FormData();
+  fd.append('valeur', valeur);
+
+  fetch('/admin/champ/' + champId + '/option/nouvelle', {method:'POST', body: fd})
+    .then(r => r.text())
+    .then(html => {
+      // Parser la réponse pour extraire le dernier opt-row ajouté
+      // Plus simple : recharger juste la liste d'options via fetch JSON
+      return fetch('/admin/champ/' + champId + '/options_json');
+    })
+    .then(r => r.json())
+    .then(data => {
+      const list = document.getElementById('options-list-' + champId);
+      list.innerHTML = '';
+      data.options.forEach(opt => {
+        const row = buildOptRow(opt.id, opt.valeur);
+        list.appendChild(row);
+      });
+      initOptDrag(list);
+      input.value = '';
+      input.focus();
+    })
+    .catch(err => console.error('Erreur ajout option:', err));
+}
+
+function supprimerOption(optId, champId) {
+  if (!confirm('Supprimer cette valeur ?')) return;
+  const fd = new FormData();
+  fetch('/admin/option/' + optId + '/supprimer', {method:'POST', body: fd})
+    .then(() => {
+      const row = document.querySelector('.opt-row[data-id="' + optId + '"]');
+      if (row) row.remove();
+    });
+}
+
+function buildOptRow(id, valeur) {
+  const div = document.createElement('div');
+  div.className = 'opt-row';
+  div.dataset.id = id;
+  div.setAttribute('draggable', 'true');
+  div.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;margin-bottom:3px;background:var(--bg);border:1px solid var(--border);';
+  div.innerHTML = `
+    <span style="color:var(--muted);font-size:12px;cursor:grab;">⠿</span>
+    <span style="flex:1;font-size:13px;">${valeur}</span>
+    <button type="button"
+            onclick="supprimerOption(${id}, null)"
+            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 4px;"
+            onmouseover="this.style.color='var(--danger)'"
+            onmouseout="this.style.color='var(--muted)'">✕</button>`;
+  return div;
+}
+
+function initOptDrag(list) {
+  let draggedOpt = null;
+  list.querySelectorAll('.opt-row').forEach(row => {
+    row.setAttribute('draggable', 'true');
+    row.addEventListener('dragstart', e => { draggedOpt = row; row.style.opacity='.4'; e.dataTransfer.effectAllowed='move'; });
+    row.addEventListener('dragend', () => {
+      row.style.opacity='1'; draggedOpt=null;
+      const ordre = Array.from(list.querySelectorAll('.opt-row')).map(r=>parseInt(r.dataset.id));
+      fetch('{{ url_for("admin_options_reordonner") }}', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ordre})});
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (row !== draggedOpt) {
+        const after = e.clientY > row.getBoundingClientRect().top + row.getBoundingClientRect().height/2;
+        list.insertBefore(draggedOpt, after ? row.nextSibling : row);
+      }
+    });
+  });
+}
+</script>
+{% endblock %}

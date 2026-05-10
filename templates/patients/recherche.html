@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Recherche{% endblock %}
+{% block page_title %}Recherche patient{% endblock %}
+
+{% block content %}
+<div style="max-width: 720px;">
+  <div class="card">
+    <div class="card-body">
+      <form method="GET" style="display:flex;gap:8px;">
+        <input type="text" name="q" value="{{ q }}" autofocus style="flex:1;"
+               placeholder="Nom, prénom, nom+prénom ou date (ex: 12/03/2008)">
+        <button type="submit" class="btn btn-primary">Rechercher</button>
+      </form>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="text-sm text-muted">Exemples :</span>
+        <code style="font-size:12px;background:var(--bg);padding:2px 7px;border-radius:5px;">Martin</code>
+        <code style="font-size:12px;background:var(--bg);padding:2px 7px;border-radius:5px;">Martin Emma</code>
+        <code style="font-size:12px;background:var(--bg);padding:2px 7px;border-radius:5px;">Emma Martin</code>
+        <code style="font-size:12px;background:var(--bg);padding:2px 7px;border-radius:5px;">12/03/2008</code>
+      </div>
+    </div>
+  </div>
+
+  {% if q %}
+  <div class="card mt-2">
+    <div class="card-header">
+      <h2>Résultats</h2>
+      <span class="badge badge-gray">{{ patients|length }} résultat{{ 's' if patients|length != 1 }}</span>
+    </div>
+
+    {% if patients %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Nom / Prénom</th>
+          <th>Date de naissance</th>
+          <th>Téléphone</th>
+          <th>Médecin référent</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in patients %}
+        <tr>
+          <td><a href="{{ url_for('patient_detail', patient_id=p.id) }}">{{ p.nom }} {{ p.prenom }}</a></td>
+          <td class="text-muted text-sm">
+            {{ p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '—' }}
+          </td>
+          <td class="text-muted text-sm">{{ p.telephone or '—' }}</td>
+          <td class="text-muted text-sm">{{ p.medecin_referent or '—' }}</td>
+          <td>
+            <a href="{{ url_for('consultation_nouvelle', patient_id=p.id) }}"
+               class="btn btn-secondary btn-sm">+ Bilan</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">🔍</div>
+      <p>Aucun patient trouvé pour « {{ q }} ».</p>
+      <a href="{{ url_for('patient_nouveau') }}" class="btn btn-primary mt-2">Créer ce patient</a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

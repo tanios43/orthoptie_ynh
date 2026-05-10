@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Gestion des praticiens{% endblock %}
+{% block page_title %}Gestion des praticiens{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin_praticien_nouveau') }}" class="btn btn-primary btn-sm">+ Nouveau praticien</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;">
+  <div class="card">
+    <div class="card-header">
+      <h2>Praticiens du cabinet</h2>
+      <span class="badge badge-gray">{{ praticiens|length }}</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Nom / Prénom</th>
+          <th>Titre</th>
+          <th>Login</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in praticiens %}
+        <tr>
+          <td style="font-weight:500;">{{ p.prenom }} {{ p.nom }}</td>
+          <td class="text-muted text-sm">{{ p.titre }}</td>
+          <td class="text-sm">
+            <code style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:12px;">
+              {{ p.login }}
+            </code>
+          </td>
+          <td class="text-muted text-sm">{{ p.email or '—' }}</td>
+          <td>
+            {% if p.role == 'admin' %}
+              <span class="badge" style="background:#EEF2FF;color:#3730A3;">Admin</span>
+            {% else %}
+              <span class="badge badge-gray">Praticien</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if p.actif %}
+              <span class="badge badge-green">Actif</span>
+            {% else %}
+              <span class="badge badge-warn">Désactivé</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('admin_praticien_modifier', praticien_id=p.id) }}"
+               class="btn btn-secondary btn-sm">✎ Modifier</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

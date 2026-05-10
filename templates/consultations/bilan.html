@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{%- macro age_a_la_date(naissance, date_bilan) -%}
+  {%- if naissance and date_bilan -%}
+    {%- set a = date_bilan.year - naissance.year -%}
+    {%- if (date_bilan.month, date_bilan.day) < (naissance.month, naissance.day) -%}{%- set a = a - 1 -%}{%- endif -%}
+    {{ a }} ans
+  {%- endif -%}
+{%- endmacro -%}
+
+{% block title %}Bilan du {{ consultation.date_consult.strftime('%d/%m/%Y') }} — {{ consultation.patient.nom }}{% endblock %}
+{% block page_title %}Bilan du {{ consultation.date_consult.strftime('%d/%m/%Y') }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('patient_detail', patient_id=consultation.patient_id) }}" class="btn btn-secondary btn-sm">← Fiche patient</a>
+  <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}" class="btn btn-primary btn-sm">✎ Modifier</a>
+{% endblock %}
+
+{%- macro sph(val) -%}
+  {%- if val is none or val == '' -%}—
+  {%- elif val | float >= 0 -%}+{{ '%.2f' | format(val | float) }}
+  {%- else -%}{{ '%.2f' | format(val | float) }}
+  {%- endif -%}
+{%- endmacro -%}
+
+{%- macro axe(val) -%}
+  {%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}
+{%- endmacro -%}
+
+{% macro row(label, value, hint='') %}
+  {% if value %}
+  <div style="display:flex;justify-content:space-between;align-items:baseline;
+              padding:7px 0;border-bottom:1px solid var(--border);">
+    <span class="text-sm text-muted">{{ label }}
+      {% if hint %}<span style="font-size:10px;color:var(--accent);margin-left:4px;">{{ hint }}</span>{% endif %}
+    </span>
+    <span class="text-sm" style="font-weight:500;text-align:right;max-width:60%;">{{ value }}</span>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro obs_block(text) %}
+  {% if text %}
+  <div style="background:var(--bg);border-radius:7px;padding:9px 12px;margin-top:8px;">
+    <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;
+                letter-spacing:.5px;margin-bottom:4px;">Observations</div>
+    <div class="text-sm" style="white-space:pre-wrap;">{{ text }}</div>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% set c = consultation %}
+
+{% block content %}
+<div style="max-width:860px;">
+
+  {# En-tête patient #}
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-body" style="padding:14px 20px;">
+      <div class="flex flex-center justify-between">
+        <div class="flex flex-center gap-3">
+          <div style="width:44px;height:44px;border-radius:50%;background:var(--accent-lt);
+                      display:flex;align-items:center;justify-content:center;
+                      font-weight:600;color:var(--accent);font-size:16px;">
+            {{ c.patient.prenom[0] }}{{ c.patient.nom[0] }}
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:600;">{{ c.patient.prenom }} {{ c.patient.nom }}</div>
+            <div class="text-sm text-muted">
+              {% if c.patient.date_naissance %}
+                {{ c.patient.date_naissance.strftime('%d/%m/%Y') }} —
+                <span style="color:var(--accent);font-weight:500;">
+                  {{ age_a_la_date(c.patient.date_naissance, c.date_consult) }} au {{ c.date_consult.strftime('%d/%m/%Y') }}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+          {% set coul = c.praticien.couleur or '#2E7D6B' %}
+          <span style="display:inline-flex;align-items:center;gap:6px;
+                       padding:4px 12px;border-radius:20px;font-size:13px;font-weight:500;
+                       background:{{ coul }}20;color:{{ coul }};
+                       border:1px solid {{ coul }}40;">
+            <span style="width:9px;height:9px;border-radius:50%;
+                         background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+            {{ c.praticien.titre }} {{ c.praticien.prenom }} {{ c.praticien.nom }}
+          </span>
+{% if c.cabinet %}
+            {% set cc = c.cabinet.couleur or '#1C2B3A' %}
+            <span style="display:inline-flex;align-items:center;gap:4px;
+                         padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;
+                         background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+              <span style="width:8px;height:8px;border-radius:50%;
+                           background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
+              🏥 {{ c.cabinet.nom }}
+            </span>
+            {% endif %}
+          {% if c.motif %}<div class="text-sm" style="color:var(--muted);">{{ c.motif }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Sections du bilan #}
+  {% for sec in c.sections %}
+    {% set d = sec.get_donnees() %}
+    {% set def = sections_def.get(sec.type, {}) %}
+
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header">
+        <span class="bilan-section-num" style="margin-right:8px;">{{ loop.index }}</span>
+        <h2>{{ sec.label }}{% if sec.titre %} — <span style="font-weight:400;color:var(--muted);">{{ sec.titre }}</span>{% endif %}</h2>
+      </div>
+      <div class="card-body">
+
+        {# Observations en tête #}
+        {% set sec_avec_obs = sections_def.get(sec.type, {}).get('avec_observations', true) %}
+        {% if sec_avec_obs != false %}{{ obs_block(sec.observations) }}{% endif %}
+
+        {% if sec.observations %}<div style="margin-top:14px;"></div>{% endif %}
+
+        {# ── RÉFRACTION (correction portée / objective / subjective) ── #}
+        {% if sec.type in ['correction_portee','refraction_obj','refraction_subj'] %}
+          <table class="od-og-table">
+            <colgroup>
+              <col style="width:18%">
+              <col style="width:12%"><col style="width:12%"><col style="width:9%">
+              <col style="width:12%"><col style="width:12%"><col style="width:9%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th></th>
+                <th colspan="3" style="text-align:center;">
+                  <span class="eye-label eye-od">OD</span></th>
+                <th colspan="3" style="text-align:center;">
+                  <span class="eye-label eye-og">OG</span></th>
+              </tr>
+              <tr>
+                <th></th>
+                <th>Sphère</th><th>Cyl.</th><th>Axe</th>
+                <th>Sphère</th><th>Cyl.</th><th>Axe</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><small class="text-muted">
+                  {% if sec.type == 'correction_portee' %}Portée
+                  {% elif sec.type == 'refraction_obj' %}Objectif
+                  {% else %}Subjectif{% endif %}
+                </small></td>
+                <td style="font-family:monospace;">{{ sph(d.get('od_sph')) }}</td>
+                <td style="font-family:monospace;">{{ d.get('od_cyl','—') }}</td>
+                <td>{{ axe(d.get('od_axe')) }}</td>
+                <td style="font-family:monospace;">{{ sph(d.get('og_sph')) }}</td>
+                <td style="font-family:monospace;">{{ d.get('og_cyl','—') }}</td>
+                <td>{{ axe(d.get('og_axe')) }}</td>
+              </tr>
+              {% if sec.type in ['correction_portee','refraction_subj'] and (d.get('od_add') or d.get('og_add')) %}
+              <tr>
+                <td class="text-muted text-sm">Addition</td>
+                <td colspan="3">{{ d.get('od_add','—') }}</td>
+                <td colspan="3">{{ d.get('og_add','—') }}</td>
+              </tr>
+              {% endif %}
+              {% if sec.type == 'refraction_subj' %}
+              <tr>
+                <td colspan="7" style="padding:6px 6px 3px;font-size:11px;font-weight:600;
+                    color:var(--muted);text-transform:uppercase;letter-spacing:.5px;
+                    border-top:1px dashed var(--border);">
+                  Acuité visuelle avec cette correction
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted text-sm">De loin</td>
+                <td colspan="3">{{ d.get('od_av_loin','—') }}</td>
+                <td colspan="3">{{ d.get('og_av_loin','—') }}</td>
+              </tr>
+              <tr>
+                <td class="text-muted text-sm">De près</td>
+                <td colspan="3">{{ d.get('od_av_pres','—') }}</td>
+                <td colspan="3">{{ d.get('og_av_pres','—') }}</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+
+        {# ── ACUITÉ ── #}
+        {% elif sec.type == 'acuite' %}
+          {{ row('Binoculaire', d.get('av_bino')) }}
+          {{ row('Correction', d.get('av_correction')) }}
+          <table class="od-og-table" style="margin-top:8px;">
+            <thead><tr>
+              <th></th>
+              <th style="text-align:center;"><span class="eye-label eye-od">OD</span></th>
+              <th style="text-align:center;"><span class="eye-label eye-og">OG</span></th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td class="text-muted text-sm">De loin</td>
+                <td>{{ d.get('av_od_loin','—') }}</td>
+                <td>{{ d.get('av_og_loin','—') }}</td>
+              </tr>
+              <tr>
+                <td class="text-muted text-sm">De près</td>
+                <td>{{ d.get('av_od_pres','—') }}</td>
+                <td>{{ d.get('av_og_pres','—') }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+        {# ── SWAINE ── #}
+        {% elif sec.type == 'swaine' %}
+          <table class="od-og-table">
+            <thead><tr>
+              <th></th>
+              <th style="text-align:center;"><span class="eye-label eye-od">OD</span></th>
+              <th style="text-align:center;"><span class="eye-label eye-og">OG</span></th>
+            </tr></thead>
+            <tbody><tr>
+              <td class="text-muted text-sm">/10</td>
+              <td>{{ d.get('swaine_od','—') }}</td>
+              <td>{{ d.get('swaine_og','—') }}</td>
+            </tr></tbody>
+          </table>
+
+        {# ── CAS GÉNÉRAL ── #}
+        {% else %}
+          {% set champs = sections_def.get(sec.type, {}).get('champs', []) %}
+          {% for champ in champs %}
+            {% if champ.type == 'fichier' %}
+              {% set fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', champ.name) | list %}
+              {% if fics %}
+              <div style="margin:8px 0;">
+                <div style="font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;">{{ champ.label }}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                  {% for f in fics %}
+                  <a href="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
+                     target="_blank"
+                     style="display:flex;flex-direction:column;align-items:center;
+                            text-decoration:none;border:1px solid var(--border);
+                            border-radius:7px;overflow:hidden;background:var(--bg);width:90px;">
+                    {% if f.type_fichier == 'image' %}
+                      <img src="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
+                           style="width:90px;height:66px;object-fit:cover;display:block;">
+                    {% else %}
+                      <div style="width:90px;height:66px;display:flex;align-items:center;
+                                  justify-content:center;font-size:24px;">
+                        {{ '📝' if f.type_fichier == 'word' else '📄' }}
+                      </div>
+                    {% endif %}
+                    <div style="font-size:9px;color:var(--muted);padding:3px 4px;width:90px;
+                                overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                      {{ f.titre if f.titre else f.nom_original }}
+                    </div>
+                  </a>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            {% else %}
+              {{ row(champ.label, d.get(champ.name)) }}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if not c.sections %}
+  <div class="empty-state">
+    <div class="icon">📋</div>
+    <p>Aucune section dans ce bilan.</p>
+    <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}"
+       class="btn btn-primary mt-2">Ajouter des sections</a>
+  </div>
+  {% endif %}
+
+  {# ── PIÈCES JOINTES ── #}
+  {% if c.fichiers %}
+  <div class="card" style="margin-bottom:12px;">
+    <div class="card-header">
+      <span class="bilan-section-num" style="margin-right:8px;">📎</span>
+      <h2>Pièces jointes</h2>
+      <span class="badge badge-gray" style="margin-left:auto;">{{ c.fichiers|length }}</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;">
+        {% for f in c.fichiers %}
+        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;
+                    background:var(--bg);text-align:center;">
+          {% if f.type_fichier == 'image' %}
+            <a href="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+               target="_blank">
+              <img src="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+                   style="width:150px;height:110px;object-fit:cover;display:block;">
+            </a>
+          {% else %}
+            <a href="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+               target="_blank"
+               style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                      width:150px;height:110px;text-decoration:none;color:var(--text);">
+              <span style="font-size:36px;">{{ '📝' if f.type_fichier == 'word' else '📄' }}</span>
+              <span style="font-size:11px;color:var(--muted);margin-top:4px;">
+                {{ 'Ouvrir le document' if f.type_fichier == 'word' else 'Ouvrir le PDF' }}
+              </span>
+            </a>
+          {% endif %}
+          <div style="font-size:11px;font-weight:500;padding:4px 6px;
+                      max-width:150px;overflow:hidden;text-overflow:ellipsis;
+                      white-space:nowrap;color:var(--text);">
+            {{ f.titre if f.titre else f.nom_original }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,1440 @@
+{% extends "base.html" %}
+
+{%- macro age_a_la_date(naissance, date_bilan) -%}
+  {%- if naissance and date_bilan -%}
+    {%- set a = date_bilan.year - naissance.year -%}
+    {%- if (date_bilan.month, date_bilan.day) < (naissance.month, naissance.day) -%}{%- set a = a - 1 -%}{%- endif -%}
+    {{ a }} ans
+  {%- endif -%}
+{%- endmacro -%}
+
+{% block title %}{{ 'Modifier le bilan' if consultation else 'Nouveau bilan' }} — {{ patient.nom }} {{ patient.prenom }}{% endblock %}
+
+{% block page_title %}
+  {% if consultation %}
+    Modifier le bilan du {{ consultation.date_consult.strftime('%d/%m/%Y') }}
+    {% if patient.date_naissance %}
+      <span style="font-size:14px;font-weight:400;color:var(--muted);margin-left:8px;">
+        — {{ patient.prenom }} {{ patient.nom }}, {{ age_a_la_date(patient.date_naissance, consultation.date_consult) }}
+      </span>
+    {% endif %}
+  {% else %}
+    Nouveau bilan — {{ patient.prenom }} {{ patient.nom }}
+    {% if patient.date_naissance %}
+      <span id="age-preview" style="font-size:14px;font-weight:400;color:var(--muted);margin-left:8px;"></span>
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">← Fiche patient</a>
+{% endblock %}
+
+{% block content %}
+
+{# Données existantes pour le mode édition #}
+{% if consultation %}
+{% set existing_sections = consultation.sections %}
+{% else %}
+{% set existing_sections = [] %}
+{% endif %}
+
+{% if modeles and not consultation %}
+{# ── SÉLECTEUR DE MODÈLE ── #}
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-header">
+    <h2 style="font-size:14px;">🗂 Modèle de bilan</h2>
+  </div>
+  <div class="card-body" style="padding:14px 16px;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+      <button type="button"
+              onclick="appliquerModele(null)"
+              id="btn-modele-vierge"
+              class="btn btn-secondary"
+              style="font-size:13px;border:2px solid var(--accent);color:var(--accent);">
+        Bilan vierge
+      </button>
+      {% for m in modeles %}
+      <button type="button"
+              onclick="appliquerModele({{ m.id }})"
+              id="btn-modele-{{ m.id }}"
+              class="btn btn-secondary"
+              style="font-size:13px;">
+        {{ m.nom }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if autres_consultations %}
+{# ── HISTORIQUE DES BILANS PRÉCÉDENTS ── #}
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-header"
+       style="cursor:pointer;user-select:none;"
+       onclick="toggleHistorique()">
+    <h2 style="font-size:13px;display:flex;align-items:center;gap:8px;">
+      <span>📋 Bilans précédents</span>
+      <span class="badge badge-gray">{{ autres_consultations|length }}</span>
+    </h2>
+    <span id="chev-histo" style="margin-left:auto;font-size:12px;color:var(--muted);
+          transition:transform .2s;display:inline-block;">▶</span>
+  </div>
+
+  <div id="panel-historique" style="display:none;">
+    {%- macro sph(val) -%}
+      {%- if val is none or val == '' -%}—
+      {%- elif val|float >= 0 -%}+{{ '%.2f'|format(val|float) }}
+      {%- else -%}{{ '%.2f'|format(val|float) }}
+      {%- endif -%}
+    {%- endmacro -%}
+    {%- macro axe(val) -%}{%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}{%- endmacro -%}
+
+    {% for c in autres_consultations %}
+    <div style="border-top:1px solid var(--border);">
+
+      {# En-tête cliquable #}
+      <div style="padding:12px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;
+                  transition:background .15s;"
+           onclick="toggleBilanHist('hist-{{ c.id }}')"
+           onmouseover="this.style.background='var(--bg)'"
+           onmouseout="this.style.background=''">
+
+        <div style="text-align:center;min-width:44px;flex-shrink:0;">
+          <div style="font-size:16px;font-weight:600;color:var(--accent);line-height:1;">
+            {{ c.date_consult.strftime('%d') }}
+          </div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
+            {{ c.date_consult.strftime('%b %Y') }}
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;">{{ c.motif or 'Bilan orthoptique' }}</div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:3px;">
+            {% set coul = c.praticien.couleur or '#2E7D6B' %}
+            <span style="display:inline-flex;align-items:center;gap:4px;
+                         padding:1px 8px;border-radius:20px;font-size:11px;font-weight:500;
+                         background:{{ coul }}20;color:{{ coul }};
+                         border:1px solid {{ coul }}40;">
+              <span style="width:7px;height:7px;border-radius:50%;
+                           background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+              {{ c.praticien.titre }} {{ c.praticien.prenom }} {{ c.praticien.nom }}
+            </span>
+            {% if c.cabinet %}
+            {% set cc = c.cabinet.couleur or '#1C2B3A' %}
+            <span style="display:inline-flex;align-items:center;gap:4px;
+                         padding:1px 8px;border-radius:20px;font-size:11px;font-weight:500;
+                         background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+              <span style="width:6px;height:6px;border-radius:50%;
+                           background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
+              🏥 {{ c.cabinet.nom }}
+            </span>
+            {% endif %}
+            {% if patient.date_naissance %}
+            <span style="font-size:11px;color:var(--accent);font-weight:500;">
+              {{ age_a_la_date(patient.date_naissance, c.date_consult) }}
+            </span>
+            {% endif %}
+          </div>
+          {% if c.sections %}
+          <div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px;">
+            {% for sec in c.sections %}
+            <span style="font-size:10px;padding:1px 6px;border-radius:10px;
+                         background:var(--accent-lt);color:var(--accent-dk);">{{ sec.label }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+          <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}"
+             class="btn btn-secondary btn-sm"
+             onclick="event.stopPropagation()">✎</a>
+          <span id="chev-hist-{{ c.id }}"
+                style="font-size:11px;color:var(--muted);transition:transform .2s;display:inline-block;">▶</span>
+        </div>
+      </div>
+
+      {# Contenu déplié #}
+      <div id="hist-{{ c.id }}"
+           style="display:none;padding:0 20px 14px;background:var(--bg);
+                  border-top:1px solid var(--border);">
+        {% if c.sections %}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+                    gap:8px;margin-top:10px;">
+          {% for sec in c.sections %}
+          {% set d = sec.get_donnees() %}
+          <div style="background:var(--surface);border:1px solid var(--border);
+                      border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:600;color:var(--accent);
+                        text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
+              {{ sec.label }}
+            </div>
+            {% if sec.observations %}
+            <div style="font-size:11px;color:var(--muted);font-style:italic;
+                        margin-bottom:5px;white-space:pre-wrap;">{{ sec.observations }}</div>
+            {% endif %}
+
+            {% if sec.type in ['correction_portee','refraction_obj','refraction_subj'] %}
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <tr>
+                <td></td>
+                <td style="text-align:center;padding:1px 4px;"><span class="eye-label eye-od" style="font-size:9px;">OD</span></td>
+                <td style="text-align:center;padding:1px 4px;"><span class="eye-label eye-og" style="font-size:9px;">OG</span></td>
+              </tr>
+              <tr><td style="color:var(--muted);">Sph.</td>
+                <td style="text-align:center;font-family:monospace;">{{ sph(d.get('od_sph')) }}</td>
+                <td style="text-align:center;font-family:monospace;">{{ sph(d.get('og_sph')) }}</td></tr>
+              <tr><td style="color:var(--muted);">Cyl.</td>
+                <td style="text-align:center;font-family:monospace;">{{ d.get('od_cyl','—') }}</td>
+                <td style="text-align:center;font-family:monospace;">{{ d.get('og_cyl','—') }}</td></tr>
+              <tr><td style="color:var(--muted);">Axe</td>
+                <td style="text-align:center;">{{ axe(d.get('od_axe')) }}</td>
+                <td style="text-align:center;">{{ axe(d.get('og_axe')) }}</td></tr>
+              {% if sec.type == 'refraction_subj' %}
+              <tr><td style="color:var(--muted);">AV loin</td>
+                <td style="text-align:center;">{{ d.get('od_av_loin','—') }}</td>
+                <td style="text-align:center;">{{ d.get('og_av_loin','—') }}</td></tr>
+              <tr><td style="color:var(--muted);">AV près</td>
+                <td style="text-align:center;">{{ d.get('od_av_pres','—') }}</td>
+                <td style="text-align:center;">{{ d.get('og_av_pres','—') }}</td></tr>
+              {% endif %}
+            </table>
+
+            {% elif sec.type == 'acuite' %}
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <tr>
+                <td></td>
+                <td style="text-align:center;"><span class="eye-label eye-od" style="font-size:9px;">OD</span></td>
+                <td style="text-align:center;"><span class="eye-label eye-og" style="font-size:9px;">OG</span></td>
+              </tr>
+              <tr><td style="color:var(--muted);">Loin</td>
+                <td style="text-align:center;">{{ d.get('av_od_loin','—') }}</td>
+                <td style="text-align:center;">{{ d.get('av_og_loin','—') }}</td></tr>
+              <tr><td style="color:var(--muted);">Près</td>
+                <td style="text-align:center;">{{ d.get('av_od_pres','—') }}</td>
+                <td style="text-align:center;">{{ d.get('av_og_pres','—') }}</td></tr>
+            </table>
+
+            {% else %}
+            {% set def = sections_def.get(sec.type, {}) %}
+            {% for champ in def.get('champs', []) %}
+              {% if champ.type == 'fichier' %}
+                {% set fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', champ.name) | list %}
+                {% if fics %}
+                <div style="margin:4px 0;">
+                  <div style="font-size:10px;color:var(--muted);font-weight:500;margin-bottom:4px;">{{ champ.label }}</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:5px;">
+                    {% for f in fics %}
+                    <a href="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
+                       target="_blank"
+                       style="display:flex;flex-direction:column;align-items:center;
+                              text-decoration:none;border:1px solid var(--border);
+                              border-radius:6px;overflow:hidden;background:var(--bg);width:56px;">
+                      {% if f.type_fichier == 'image' %}
+                        <img src="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
+                             style="width:56px;height:40px;object-fit:cover;display:block;">
+                      {% else %}
+                        <div style="width:56px;height:40px;display:flex;align-items:center;justify-content:center;font-size:16px;">
+                          {{ '📝' if f.type_fichier == 'word' else '📄' }}
+                        </div>
+                      {% endif %}
+                      <div style="font-size:8px;color:var(--muted);padding:2px 3px;width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                        {{ f.titre if f.titre else f.nom_original }}
+                      </div>
+                    </a>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
+              {% elif d.get(champ.name) %}
+              <div style="display:flex;justify-content:space-between;padding:2px 0;
+                          font-size:11px;border-bottom:1px solid var(--border);">
+                <span style="color:var(--muted);">{{ champ.label }}</span>
+                <span style="font-weight:500;text-align:right;max-width:55%;">{{ d.get(champ.name) }}</span>
+              </div>
+              {% endif %}
+            {% endfor %}
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="padding:12px 0;text-align:center;color:var(--muted);font-size:12px;">Bilan vide</div>
+        {% endif %}
+
+        {% if c.fichiers %}
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);">
+          <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                      letter-spacing:.5px;margin-bottom:6px;">Pièces jointes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            {% for f in c.fichiers %}
+            <a href="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+               target="_blank"
+               style="display:flex;flex-direction:column;align-items:center;text-decoration:none;
+                      border:1px solid var(--border);border-radius:7px;overflow:hidden;
+                      background:var(--surface);width:80px;">
+              {% if f.type_fichier == 'image' %}
+                <img src="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+                     style="width:80px;height:56px;object-fit:cover;display:block;">
+              {% else %}
+                <div style="width:80px;height:56px;display:flex;align-items:center;
+                            justify-content:center;font-size:22px;">
+                  {{ '📝' if f.type_fichier == 'word' else '📄' }}
+                </div>
+              {% endif %}
+              <div style="font-size:9px;color:var(--muted);padding:2px 4px;width:80px;
+                          overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                {{ f.titre if f.titre else f.nom_original }}
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start;min-height:0;">
+
+  {# ── PANNEAU GAUCHE : sélection des sections ── #}
+  <div style="position:sticky;top:80px;max-height:calc(100vh - 100px);overflow-y:auto;">
+    <div class="card">
+      <div class="card-header"><h2 style="font-size:13px;">Ajouter une section</h2></div>
+      <div style="padding:8px 8px 4px;">
+        <input type="text" id="section-search"
+               placeholder="Rechercher…"
+               oninput="filtrerSections(this.value)"
+               style="font-size:12px;padding:6px 10px;margin-bottom:6px;">
+      </div>
+      <div id="sections-panel" style="padding:0 8px 8px;">
+        {% for key in sections_ordre %}
+          {% set sec = sections_dispo[key] %}
+          <button type="button"
+                  class="sec-btn"
+                  data-label="{{ sec.label | lower }}"
+                  onclick="ajouterSection('{{ key }}', '{{ sec.label }}')"
+                  style="display:block;width:100%;text-align:left;
+                         padding:7px 12px;margin-bottom:3px;
+                         background:var(--surface);border:0.5px solid var(--border);
+                         border-radius:7px;font-size:13px;color:var(--text);
+                         cursor:pointer;transition:all .15s;"
+                  onmouseover="this.style.background='var(--accent-lt)';this.style.borderColor='var(--accent)'"
+                  onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)'">
+            + {{ sec.label }}
+          </button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# ── COLONNE DROITE : formulaire ── #}
+  <form method="POST" id="form-bilan" enctype="multipart/form-data">
+
+    {# En-tête consultation #}
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-header"><h2>Consultation</h2></div>
+      <div class="card-body">
+        <div class="field-grid field-grid-3">
+          <div class="field-group">
+            <label class="field-label">Date *</label>
+            <input type="date" name="date_consult" id="date_consult" required
+              value="{{ consultation.date_consult.strftime('%Y-%m-%d') if consultation else '' }}">
+          </div>
+          <div class="field-group" style="grid-column:span 2;">
+            <label class="field-label">Motif</label>
+            <input type="text" name="motif"
+              value="{{ consultation.motif if consultation else '' }}"
+              placeholder="Ex : bilan de contrôle, céphalées…">
+          </div>
+          <div class="field-group" style="grid-column:span 2;">
+            <label class="field-label">Médecin prescripteur</label>
+            <input type="text" name="medecin_prescripteur"
+              value="{{ consultation.medecin_prescripteur if consultation else (patient.medecin_referent or '') }}"
+              placeholder="Dr Martin">
+          </div>
+          <div class="field-group" style="grid-column:span 2;">
+            <label class="field-label">Classe / Profession</label>
+            <input type="text" name="classe_profession"
+              value="{{ consultation.classe_profession if consultation else '' }}"
+              placeholder="CE1, lycée, infirmière…">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Zone des sections dynamiques #}
+    <div id="sections-container">
+      {% if existing_sections %}
+        {% for sec in existing_sections %}
+          <div class="section-placeholder" data-idx="{{ loop.index0 }}"></div>
+        {% endfor %}
+        <script id="sections-data" type="application/json">
+        [{% for sec in existing_sections %}
+          {
+            "type":    {{ sec.type | tojson }},
+            "label":   {{ sec.label | tojson }},
+            "obs":     {{ (sec.observations or '') | tojson }},
+            "donnees": {{ sec.get_donnees() | tojson }},
+            "fichiers_sec": [{% if consultation %}{% for f in consultation.fichiers_sec %}{% if f.section_ordre == loop.index0 %}{
+              "id": {{ f.id }},
+              "champ_name": {{ f.champ_name | tojson }},
+              "nom_original": {{ f.nom_original | tojson }},
+              "nom_stocke": {{ f.nom_stocke | tojson }},
+              "type_fichier": {{ f.type_fichier | tojson }},
+              "titre": {{ (f.titre or '') | tojson }}
+            }{% if not loop.last %},{% endif %}{% endif %}{% endfor %}{% endif %}]
+          }{% if not loop.last %},{% endif %}
+        {% endfor %}]
+        </script>
+      {% else %}
+        <div id="empty-hint" style="text-align:center;padding:48px 20px;color:var(--muted);
+             border:2px dashed var(--border);border-radius:var(--radius);">
+          <div style="font-size:28px;margin-bottom:10px;">+</div>
+          <div style="font-size:14px;">Ajoutez des sections depuis le panneau de gauche</div>
+        </div>
+      {% endif %}
+    </div>
+
+    {# ── PIÈCES JOINTES ── #}
+    <div class="card" style="margin-top:4px;margin-bottom:14px;">
+      <div class="card-header">
+        <span class="bilan-section-num" style="margin-right:8px;">📎</span>
+        <h2>Pièces jointes</h2>
+      </div>
+      <div class="card-body">
+
+        {# Fichiers déjà enregistrés (mode édition) #}
+        {% if consultation and consultation.fichiers %}
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          {% for f in consultation.fichiers %}
+          <div id="fichier-{{ f.id }}" style="position:relative;border:1px solid var(--border);border-radius:8px;
+                      overflow:hidden;background:var(--bg);">
+            {% if f.type_fichier == 'image' %}
+              <a href="{{ url_for('uploaded_file', consultation_id=consultation.id, filename=f.nom_stocke) }}"
+                 target="_blank">
+                <img src="{{ url_for('uploaded_file', consultation_id=consultation.id, filename=f.nom_stocke) }}"
+                     style="width:120px;height:90px;object-fit:cover;display:block;">
+              </a>
+            {% else %}
+              <a href="{{ url_for('uploaded_file', consultation_id=consultation.id, filename=f.nom_stocke) }}"
+                 target="_blank"
+                 style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                        width:120px;height:90px;text-decoration:none;color:var(--text);">
+                <span style="font-size:28px;">{{ '📝' if f.type_fichier == 'word' else '📄' }}</span>
+                <span style="font-size:10px;color:var(--muted);padding:0 6px;text-align:center;
+                             word-break:break-all;max-width:110px;">{{ f.nom_original }}</span>
+              </a>
+            {% endif %}
+            <button type="button"
+                    onclick="supprimerFichier({{ f.id }}, '{{ f.nom_original }}')"
+                    style="position:absolute;top:3px;right:3px;
+                           background:rgba(0,0,0,.5);border:none;border-radius:50%;
+                           width:20px;height:20px;color:#fff;font-size:11px;
+                           cursor:pointer;line-height:1;padding:0;">✕</button>
+            <input type="text"
+                   value="{{ f.titre or '' }}"
+                   placeholder="{{ f.nom_original }}"
+                   onblur="sauverTitreFichier({{ f.id }}, this.value)"
+                   style="width:120px;font-size:10px;padding:3px 6px;border:none;
+                          border-top:1px solid var(--border);background:var(--surface);
+                          color:var(--text);outline:none;display:block;box-sizing:border-box;">
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {# Zone d'ajout de nouveaux fichiers #}
+        <div id="drop-zone"
+             style="border:2px dashed var(--border);border-radius:8px;padding:20px;
+                    text-align:center;cursor:pointer;transition:all .2s;"
+             onclick="document.getElementById('fichiers-input').click()"
+             ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-lt)'"
+             ondragleave="this.style.borderColor='var(--border)';this.style.background=''"
+             ondrop="handleDrop(event)">
+          <div style="font-size:24px;margin-bottom:6px;">📁</div>
+          <div style="font-size:13px;color:var(--muted);">
+            Cliquez ou déposez des fichiers ici
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            Images, PDF, Word (.doc, .docx) — 16 Mo max par fichier
+          </div>
+        </div>
+        <input type="file" id="fichiers-input" name="fichiers[]"
+               multiple accept="image/*,.pdf,.doc,.docx"
+               style="display:none"
+               onchange="previewFichiers(this.files)">
+
+        {# Prévisualisation avant envoi #}
+        <div id="preview-zone" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div style="padding-bottom:80px;"></div>
+
+  </form>
+</div>
+
+{# Barre de sauvegarde fixe en bas — toujours visible quelle que soit la hauteur du contenu #}
+<div style="position:fixed;bottom:0;
+            left:calc(var(--sidebar-w) + 32px + 220px + 20px);right:32px;
+            background:var(--surface);border-top:1px solid var(--border);
+            padding:12px 20px;display:flex;gap:10px;align-items:center;
+            border-radius:10px 10px 0 0;
+            box-shadow:0 -2px 8px rgba(0,0,0,.06);z-index:90;">
+  <button form="form-bilan" type="submit" class="btn btn-primary">
+    {{ 'Enregistrer les modifications' if consultation else 'Enregistrer le bilan' }}
+  </button>
+  <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary">Annuler</a>
+  <span id="save-hint" style="font-size:12px;color:var(--muted);margin-left:8px;"></span>
+</div>
+
+{# Définition JSON des sections pour le JS #}
+<script>
+const SECTIONS_DEF = {{ sections_dispo | tojson }};
+const SECTIONS_ORDRE = {{ sections_ordre | tojson }};
+const MODELES = {{ modeles_json | tojson }};
+const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
+
+// ── Compteur global d'index de section ──
+let sectionIndex = 0;
+
+// ── Templates HTML des types de champs ──
+function champHTML(idx, champ, val) {
+  const name = `champ__${idx}__${champ.name}`;
+  const v = val || '';
+
+  if (champ.type === 'textarea') {
+    return `<div class="field-group">
+      <label class="field-label">${champ.label}</label>
+      <textarea name="${name}" style="min-height:64px;">${v}</textarea>
+    </div>`;
+  }
+
+  if (champ.type === 'select') {
+    const opts = (champ.options || []).map(o =>
+      `<option value="${o}"${v === o ? ' selected' : ''}>${o}</option>`
+    ).join('');
+    const listId = `dl-${name}`;
+    return `<div class="field-group">
+      <label class="field-label">${champ.label}</label>
+      <input list="${listId}" name="${name}" value="${v}"
+             placeholder="Choisir ou saisir…" autocomplete="off">
+      <datalist id="${listId}">${
+        (champ.options || []).map(o => `<option value="${o}">`).join('')
+      }</datalist>
+    </div>`;
+  }
+
+  if (champ.type === 'sph') {
+    return `<div class="field-group">
+      <label class="field-label">${champ.label}</label>
+      <input type="text" name="${name}" value="${v}"
+             placeholder="+0.00"
+             style="text-align:center;font-family:monospace;"
+             onblur="formatSignedFloat(this)">
+    </div>`;
+  }
+
+  if (champ.type === 'fichier') {
+    return `<div class="field-group">
+      <label class="field-label">${champ.label}</label>
+      <div id="drop-${idx}-${champ.name}"
+           style="border:2px dashed var(--border);border-radius:8px;padding:12px;
+                  background:var(--bg);transition:border-color .15s,background .15s;"
+           ondragover="event.preventDefault();event.dataTransfer.dropEffect='copy';this.style.borderColor='var(--accent)';this.style.background='var(--accent-lt)';"
+           ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--bg)';"
+           ondrop="dropFichierSection(event,'${idx}','${champ.name}')">
+        <div id="pj-sec-preview-${idx}-${champ.name}"
+             style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+                        padding:6px 12px;border-radius:7px;font-size:13px;
+                        background:var(--surface);border:1px solid var(--border);">
+            📎 Ajouter un fichier
+            <input type="file" name="${name}" multiple
+                   accept="image/*,.pdf,.doc,.docx"
+                   style="display:none;"
+                   onchange="previewFichierSection(this, '${idx}', '${champ.name}')">
+          </label>
+          <span style="font-size:11px;color:var(--muted);">
+            Images, PDF, Word — ou glissez ici
+          </span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // number ou text
+  return `<div class="field-group">
+    <label class="field-label">${champ.label}</label>
+    <input type="${champ.type === 'number' ? 'number' : 'text'}"
+           name="${name}" value="${v}">
+  </div>`;
+}
+
+// ── Rendu d'une section complète ──
+function renderSection(type, label, idx, titre, obs, donnees) {
+  const def = SECTIONS_DEF[type];
+  if (!def) return null;
+  donnees = donnees || {};
+
+  // Grouper les champs réfraction en tableau OD/OG si c'est une réfraction
+  let champsHTML = '';
+  if (['correction_portee','refraction_obj','refraction_subj'].includes(type)) {
+    champsHTML = refractionHTML(idx, type, donnees);
+  } else if (['acuite','swaine'].includes(type)) {
+    champsHTML = odOgHTML(idx, def.champs, donnees, type);
+  } else {
+    const grid = def.champs.length > 1 ? 'field-grid-2' : '';
+    champsHTML = `<div class="field-grid ${grid}" style="gap:12px;">
+      ${def.champs.map(c => champHTML(idx, c, donnees[c.name])).join('')}
+    </div>`;
+  }
+
+  // Comptage pour le badge de doublon
+  return `
+  <div class="bilan-section" id="sec-wrap-${idx}" data-idx="${idx}" data-type="${type}">
+    <div class="bilan-section-header" onclick="toggleSection('s${idx}')">
+      <span class="bilan-section-num">${idx + 1}</span>
+      <span class="bilan-section-title">${label}</span>
+      <span class="bilan-section-toggle" id="ico-s${idx}" tabindex="-1">▶</span>
+      <button type="button"
+              tabindex="-1"
+              onclick="event.stopPropagation();ouvrirHistoriqueSection('${type}', '${label}', ${idx})"
+              title="Historique de cette section"
+              style="margin-left:auto;background:none;border:none;
+                     color:var(--muted);cursor:pointer;font-size:13px;
+                     padding:0 6px;line-height:1;"
+              onmouseover="this.style.color='var(--accent)'"
+              onmouseout="this.style.color='var(--muted)'">🕐</button>
+      ${['prescription','courrier'].includes(type) && CONSULTATION_ID ? `
+      <a href="#"
+         tabindex="-1"
+         onclick="event.stopPropagation(); sauverEtGenerer('${type}'); return false;"
+         title="Enregistrer et générer un document"
+         style="background:none;border:1px solid var(--accent);border-radius:6px;
+                color:var(--accent);font-size:11px;font-weight:500;
+                padding:2px 8px;text-decoration:none;line-height:1.8;"
+         onmouseover="this.style.background='var(--accent-lt)'"
+         onmouseout="this.style.background='none'">📄 Générer</a>
+      ` : ''}
+      <button type="button"
+              tabindex="-1"
+              onclick="event.stopPropagation();supprimerSection(${idx})"
+              title="Supprimer cette section"
+              style="background:none;border:none;
+                     color:var(--muted);cursor:pointer;font-size:14px;
+                     padding:0 4px;line-height:1;"
+              onmouseover="this.style.color='var(--danger)'"
+              onmouseout="this.style.color='var(--muted)'">✕</button>
+    </div>
+    <div class="bilan-section-body open" id="sec-s${idx}">
+
+      <input type="hidden" name="sections_types[]" value="${type}">
+
+      ${(def.avec_observations !== false) && !['anam','conclusions'].includes(type) ? `
+      <div class="obs-field" style="margin-bottom:14px;">
+        <label class="field-label" style="color:var(--accent);">Observations libres</label>
+        <textarea name="sections_obs[]"
+                  placeholder="Observations, remarques…"
+                  style="min-height:52px;background:#FAFAF8;">${obs || ''}</textarea>
+      </div>` : '<input type="hidden" name="sections_obs[]" value="">'}
+
+      <div style="${['anam','conclusions'].includes(type) ? '' : 'border-top:1px solid var(--border);padding-top:14px;margin-top:4px;'}">
+        ${champsHTML}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Tableau OD/OG pour acuité et swaine ──
+function odOgHTML(idx, champs, donnees, type) {
+  if (type === 'swaine') {
+    return `<table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="width:40%;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;"></th>
+        <th style="text-align:center;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);">
+          <span class="eye-label eye-od">OD</span></th>
+        <th style="text-align:center;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);">
+          <span class="eye-label eye-og">OG</span></th>
+      </tr></thead>
+      <tbody><tr>
+        <td style="padding:5px 8px;font-size:13px;color:var(--muted);">/10</td>
+        <td style="padding:5px 8px;"><input type="number" step="0.5" min="0" max="10"
+          name="champ__${idx}__swaine_od" value="${donnees.swaine_od||''}"
+          style="text-align:center;"></td>
+        <td style="padding:5px 8px;"><input type="number" step="0.5" min="0" max="10"
+          name="champ__${idx}__swaine_og" value="${donnees.swaine_og||''}"
+          style="text-align:center;"></td>
+      </tr></tbody>
+    </table>`;
+  }
+  // Acuité
+  return `
+    <div class="field-grid field-grid-2" style="gap:12px;margin-bottom:12px;">
+      <div class="field-group">
+        <label class="field-label">Binoculaire</label>
+        <input list="dl-${idx}-bino" name="champ__${idx}__av_bino" value="${donnees.av_bino||''}" placeholder="Choisir ou saisir…" autocomplete="off">
+        <datalist id="dl-${idx}-bino">${['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Correction</label>
+        <input list="dl-${idx}-corr" name="champ__${idx}__av_correction" value="${donnees.av_correction||''}" placeholder="Choisir ou saisir…" autocomplete="off">
+        <datalist id="dl-${idx}-corr">${['sans correction','avec correction habituelle','avec correction optimale','avec addition'].map(o=>`<option value="${o}">`).join('')}</datalist>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="width:30%;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;"></th>
+        <th style="text-align:center;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);">
+          <span class="eye-label eye-od">OD</span></th>
+        <th style="text-align:center;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);">
+          <span class="eye-label eye-og">OG</span></th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td style="padding:5px 8px;font-size:13px;color:var(--muted);">De loin (5m)</td>
+          <td style="padding:5px 8px;">
+            <input list="dl-${idx}-odl" name="champ__${idx}__av_od_loin" value="${donnees.av_od_loin||''}" placeholder="—" autocomplete="off">
+            <datalist id="dl-${idx}-odl">${['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
+          </td>
+          <td style="padding:5px 8px;">
+            <input list="dl-${idx}-ogl" name="champ__${idx}__av_og_loin" value="${donnees.av_og_loin||''}" placeholder="—" autocomplete="off">
+            <datalist id="dl-${idx}-ogl">${['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:5px 8px;font-size:13px;color:var(--muted);">De près (40cm)</td>
+          <td style="padding:5px 8px;">
+            <input list="dl-${idx}-odp" name="champ__${idx}__av_od_pres" value="${donnees.av_od_pres||''}" placeholder="—" autocomplete="off">
+            <datalist id="dl-${idx}-odp">${['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'].map(o=>`<option value="${o}">`).join('')}</datalist>
+          </td>
+          <td style="padding:5px 8px;">
+            <input list="dl-${idx}-ogp" name="champ__${idx}__av_og_pres" value="${donnees.av_og_pres||''}" placeholder="—" autocomplete="off">
+            <datalist id="dl-${idx}-ogp">${['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'].map(o=>`<option value="${o}">`).join('')}</datalist>
+          </td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
+// ── Tableau réfraction OD/OG (correction portée, objective, subjective) ──
+function refractionHTML(idx, type, donnees) {
+  const th = txt =>
+    `<th style="padding:5px 8px;font-size:11px;font-weight:600;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.4px;background:var(--bg);
+      border-bottom:1px solid var(--border);text-align:center;">${txt}</th>`;
+
+  const sphInput = (name, val) =>
+    `<input type="text" name="${name}" value="${val||''}" placeholder="+0.00"
+      style="text-align:center;font-family:monospace;width:100%;" onblur="formatSignedFloat(this)">`;
+  const txtInput = (name, val) =>
+    `<input type="text" name="${name}" value="${val||''}" placeholder="-0.00"
+      style="text-align:center;font-family:monospace;width:100%;"
+      onblur="formatSignedFloat(this)">`;
+  const numInput = (name, val) =>
+    `<input type="number" name="${name}" value="${val||''}" placeholder="0"
+      min="0" max="180" style="text-align:center;width:100%;">`;
+  const selInput = (name, val, opts) => {
+    const listId = `dl-${name}`;
+    return `<input list="${listId}" name="${name}" value="${val||''}"
+      placeholder="—" autocomplete="off" style="width:100%;">
+      <datalist id="${listId}">${opts.map(o=>`<option value="${o}">`).join('')}</datalist>`;
+  };
+
+  const avLoinOpts = ['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10'];
+  const avPresOpts = ['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'];
+
+  const p = (name, val, type='sph') => {
+    const full = `champ__${idx}__${name}`;
+    if (type === 'sph') return sphInput(full, val);
+    if (type === 'cyl') return txtInput(full, val);
+    if (type === 'axe') return `<input type="text" name="${full}" value="${val||''}" placeholder="0" style="text-align:center;width:100%;">`;
+    if (type === 'av_loin') return selInput(full, val, avLoinOpts);
+    if (type === 'av_pres') return selInput(full, val, avPresOpts);
+  };
+
+  const d = donnees;
+  const headerRow = `<tr>
+    <th style="width:18%;background:var(--bg);border-bottom:1px solid var(--border);"></th>
+    <th colspan="3" style="text-align:center;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);">
+      <span class="eye-label eye-od" style="display:inline-block;width:80%;text-align:center;">OD</span></th>
+    <th colspan="3" style="text-align:center;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);">
+      <span class="eye-label eye-og" style="display:inline-block;width:80%;text-align:center;">OG</span></th>
+  </tr>`;
+
+  const subHeader = `<tr>
+    ${th('')}${th('Sphère')}${th('Cyl.')}${th('Axe')}
+    ${th('Sphère')}${th('Cyl.')}${th('Axe')}
+  </tr>`;
+
+  // Colonnes fixes pour alignement OD/OG entre réfraction et AV
+  // 7 colonnes : label(18%) + sph(12%) + cyl(12%) + axe(8%) + sph(12%) + cyl(12%) + axe(8%) = 82% + label
+  // Pour subjectif on force la même largeur de colonne dans les deux blocs via colgroup
+  const colgroup = `<colgroup>
+    <col style="width:18%">
+    <col style="width:12%"><col style="width:12%"><col style="width:9%">
+    <col style="width:12%"><col style="width:12%"><col style="width:9%">
+  </colgroup>`;
+
+  const dataRow = `<tr>
+    <td style="padding:4px 6px;font-size:12px;color:var(--muted);font-weight:500;">
+      ${type==='correction_portee'?'Correction portée':type==='refraction_obj'?'Objectif':'Subjectif'}
+    </td>
+    <td style="padding:4px 6px;">${p('od_sph', d.od_sph, 'sph')}</td>
+    <td style="padding:4px 6px;">${p('od_cyl', d.od_cyl, 'cyl')}</td>
+    <td style="padding:4px 6px;">${p('od_axe', d.od_axe, 'axe')}</td>
+    <td style="padding:4px 6px;">${p('og_sph', d.og_sph, 'sph')}</td>
+    <td style="padding:4px 6px;">${p('og_cyl', d.og_cyl, 'cyl')}</td>
+    <td style="padding:4px 6px;">${p('og_axe', d.og_axe, 'axe')}</td>
+  </tr>
+  ${['correction_portee','refraction_subj'].includes(type) ? `<tr>
+    <td style="padding:4px 6px;font-size:12px;color:var(--muted);">Addition</td>
+    <td colspan="3" style="padding:4px 6px;">
+      <input type="text" name="champ__${idx}__od_add"
+             value="${d.od_add||''}" placeholder="+0.00"
+             style="text-align:center;font-family:monospace;width:100%;"
+             onblur="formatSignedFloat(this)">
+    </td>
+    <td colspan="3" style="padding:4px 6px;">
+      <input type="text" name="champ__${idx}__og_add"
+             value="${d.og_add||''}" placeholder="+0.00"
+             style="text-align:center;font-family:monospace;width:100%;"
+             onblur="formatSignedFloat(this)">
+    </td>
+  </tr>` : ''}`;
+
+  // Pour refraction_subj : lignes AV dans le MÊME tableau, séparées par un sous-titre
+  const avRows = type === 'refraction_subj' ? `
+    <tr>
+      <td colspan="7" style="padding:6px 6px 3px;font-size:11px;font-weight:600;
+          color:var(--muted);text-transform:uppercase;letter-spacing:.5px;
+          border-top:1px dashed var(--border);">
+        Acuité visuelle avec cette correction
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:4px 6px;font-size:12px;color:var(--muted);">De loin</td>
+      <td colspan="3" style="padding:4px 6px;">${p('od_av_loin', d.od_av_loin, 'av_loin')}</td>
+      <td colspan="3" style="padding:4px 6px;">${p('og_av_loin', d.og_av_loin, 'av_loin')}</td>
+    </tr>
+    <tr>
+      <td style="padding:4px 6px;font-size:12px;color:var(--muted);">De près</td>
+      <td colspan="3" style="padding:4px 6px;">${p('od_av_pres', d.od_av_pres, 'av_pres')}</td>
+      <td colspan="3" style="padding:4px 6px;">${p('og_av_pres', d.og_av_pres, 'av_pres')}</td>
+    </tr>` : '';
+
+  return `<table style="width:100%;border-collapse:collapse;">
+    ${colgroup}
+    <thead>${headerRow}${subHeader}</thead>
+    <tbody>${dataRow}${avRows}</tbody>
+  </table>`;
+}
+
+// ── Ajouter une section (depuis le panneau) ──
+// Les sections respectent toujours l'ordre canonique de SECTIONS_ORDRE,
+// quelle que soit l'ordre d'ajout.
+function ajouterSection(type, label) {
+  const hint = document.getElementById('empty-hint');
+  if (hint) hint.remove();
+
+  const container = document.getElementById('sections-container');
+  const idx = sectionIndex++;
+
+  // Pré-remplir les observations avec la valeur par défaut de la section
+  const obsDefaut = (SECTIONS_DEF[type] && SECTIONS_DEF[type].obs_defaut) || '';
+  const html = renderSection(type, label, idx, '', obsDefaut, {});
+  if (!html) return;
+
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const newEl = tmp.firstElementChild;
+
+  // Trouver le rang canonique du type à insérer
+  const rankNew = SECTIONS_ORDRE.indexOf(type);
+
+  // Chercher la première section existante dont le rang canonique est > rankNew
+  const allSections = container.querySelectorAll('.bilan-section');
+  let insertBefore = null;
+  for (const el of allSections) {
+    const elType = el.dataset.type;
+    const elRank = SECTIONS_ORDRE.indexOf(elType);
+    if (elRank > rankNew) {
+      insertBefore = el;
+      break;
+    }
+  }
+
+  if (insertBefore) {
+    container.insertBefore(newEl, insertBefore);
+  } else {
+    // Pas de section avec un rang supérieur → insérer en dernier
+    container.appendChild(newEl);
+  }
+
+  renumeroter();
+  // Ouvrir la section ajoutée
+  const body = document.getElementById(`sec-s${idx}`);
+  const icon = document.getElementById(`ico-s${idx}`);
+  if (body) body.classList.add('open');
+  if (icon) icon.classList.add('open');
+  // Focus sur le premier champ saisissable de la section
+  setTimeout(() => {
+    const firstInput = newEl.querySelector('input:not([type="hidden"]):not([type="color"]), select, textarea');
+    if (firstInput) {
+      firstInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstInput.focus();
+    }
+  }, 80);
+}
+
+// ── Supprimer une section ──
+function supprimerSection(idx) {
+  const el = document.getElementById(`sec-wrap-${idx}`);
+  if (el) el.remove();
+  renumeroter();
+  if (!document.querySelector('#sections-container .bilan-section')) {
+    document.getElementById('sections-container').innerHTML =
+      `<div id="empty-hint" style="text-align:center;padding:48px 20px;color:var(--muted);
+         border:2px dashed var(--border);border-radius:var(--radius);">
+        <div style="font-size:28px;margin-bottom:10px;">+</div>
+        <div style="font-size:14px;">Ajoutez des sections depuis le panneau de gauche</div>
+      </div>`;
+  }
+}
+
+// ── Renuméroter les badges ──
+function renumeroter() {
+  document.querySelectorAll('#sections-container .bilan-section').forEach((el, i) => {
+    const num = el.querySelector('.bilan-section-num');
+    if (num) num.textContent = i + 1;
+  });
+}
+
+// ── Format sphère avec signe + ──
+function formatSignedFloat(input) {
+  let val = input.value.trim().replace(',', '.');
+  if (!val || val === '-' || val === '+') return;
+  const num = parseFloat(val);
+  if (isNaN(num)) return;
+  input.value = (num >= 0 ? '+' : '') + num.toFixed(2);
+}
+
+// ── Initialisation ──
+// ── Drawer historique de section ──────────────────────────────────
+
+let currentDrawerIdx = null;  // index de la section dont on affiche l'historique
+
+function ouvrirHistoriqueSection(typeKey, label, sectionIdx) {
+  currentDrawerIdx = sectionIdx;
+  document.getElementById('histo-drawer-title').textContent = label;
+  document.getElementById('histo-drawer-body').innerHTML =
+    '<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Chargement…</div>';
+  document.getElementById('histo-drawer').style.transform = 'translateX(0)';
+  document.getElementById('histo-overlay').style.display = 'block';
+
+  const patientId = {{ patient.id }};
+  const excludeId = {{ consultation.id if consultation else 'null' }};
+  const url = `/api/historique_section?patient_id=${patientId}&type_key=${encodeURIComponent(typeKey)}` +
+              (excludeId ? `&exclude_id=${excludeId}` : '');
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => afficherHistoriqueSection(data, typeKey, sectionIdx))
+    .catch(() => {
+      document.getElementById('histo-drawer-body').innerHTML =
+        '<div style="text-align:center;padding:32px;color:var(--muted);">Erreur de chargement.</div>';
+    });
+}
+
+function fermerDrawer() {
+  document.getElementById('histo-drawer').style.transform = 'translateX(100%)';
+  document.getElementById('histo-overlay').style.display = 'none';
+  currentDrawerIdx = null;
+}
+
+// Stockage des entrées d'historique pour éviter l'injection de données dans les onclick
+let _histoEntries = [];
+
+function afficherHistoriqueSection(data, typeKey, sectionIdx) {
+  const body = document.getElementById('histo-drawer-body');
+  if (!data.length) {
+    body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Aucun historique pour cette section.</div>';
+    return;
+  }
+
+  _histoEntries = data;  // stocker pour accès depuis copierDepuisHistorique
+  const def = SECTIONS_DEF[typeKey];
+  const champs = def ? def.champs : [];
+
+  // Construire les cartes sans données dans les attributs onclick
+  const cards = data.map((entry, i) => {
+    const d = entry.donnees;
+    let champsHtml = champs
+      .filter(c => c.type !== 'fichier' && d[c.name])
+      .map(c => `<div style="display:flex;justify-content:space-between;
+                              padding:3px 0;font-size:12px;
+                              border-bottom:1px solid var(--border);">
+          <span style="color:var(--muted);">${c.label}</span>
+          <span style="font-weight:500;text-align:right;max-width:55%;
+                       font-family:${c.type==='sph'||c.type==='number'?'monospace':'inherit'}">
+            ${d[c.name]}
+          </span>
+        </div>`).join('');
+
+    if (!champsHtml && !entry.observations) {
+      champsHtml = '<div style="font-size:12px;color:var(--muted);font-style:italic;">Section vide</div>';
+    }
+
+    return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;
+                  background:var(--bg);border-bottom:1px solid var(--border);">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:500;color:var(--accent);">${entry.date}</div>
+          ${entry.motif ? `<div style="font-size:11px;color:var(--muted);">${entry.motif}</div>` : ''}
+        </div>
+        <button type="button"
+                data-entry-idx="${i}"
+                data-section-idx="${sectionIdx}"
+                class="btn btn-secondary btn-sm histo-copy-btn"
+                tabindex="-1"
+                style="font-size:11px;padding:4px 10px;">
+          Copier ici
+        </button>
+      </div>
+      <div style="padding:10px 12px;">
+        ${entry.observations ? `<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:6px;white-space:pre-wrap;">${entry.observations}</div>` : ''}
+        ${champsHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML = cards;
+
+  // Attacher les événements après injection HTML (pas d'inline onclick)
+  body.querySelectorAll('.histo-copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ei = parseInt(btn.dataset.entryIdx);
+      const si = parseInt(btn.dataset.sectionIdx);
+      copierDepuisHistorique(ei, si);
+    });
+  });
+}
+
+function copierDepuisHistorique(entryIdx, sectionIdx) {
+  const entry = _histoEntries[entryIdx];
+  if (!entry) return;
+
+  const wrap = document.getElementById('sec-wrap-' + sectionIdx);
+  if (!wrap) return;
+
+  // Copier les observations
+  const obsTA = wrap.querySelector('textarea[name="sections_obs[]"]');
+  if (obsTA && entry.observations) obsTA.value = entry.observations;
+
+  // Copier les champs structurés
+  Object.entries(entry.donnees).forEach(([name, val]) => {
+    const key = `champ__${sectionIdx}__${name}`;
+    const input = wrap.querySelector(`[name="${key}"]`);
+    if (input) input.value = val;
+  });
+
+  fermerDrawer();
+
+  // Flash visuel de confirmation
+  wrap.style.transition = 'box-shadow .3s';
+  wrap.style.boxShadow = '0 0 0 3px var(--accent)';
+  setTimeout(() => { wrap.style.boxShadow = ''; }, 900);
+}
+
+// ── Sauvegarder le bilan puis rediriger vers la génération ──
+function sauverEtGenerer(sectionType) {
+  // Ajouter un champ hidden pour indiquer la redirection post-save
+  let redir = document.getElementById('redirect_after');
+  if (!redir) {
+    redir = document.createElement('input');
+    redir.type = 'hidden';
+    redir.id = 'redirect_after';
+    redir.name = 'redirect_after';
+    document.getElementById('form-bilan').appendChild(redir);
+  }
+  redir.value = `/consultation/${CONSULTATION_ID}/document?section=${sectionType}`;
+  document.getElementById('form-bilan').submit();
+}
+
+// ── Recherche de section ──
+function filtrerSections(q) {
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('#sections-panel .sec-btn').forEach(btn => {
+    const match = !q || btn.dataset.label.includes(q);
+    btn.style.display = match ? 'block' : 'none';
+  });
+}
+
+// ── Modèles de bilan ──────────────────────────────────────────────────
+function appliquerModele(modeleId) {
+  // Mettre à jour le style des boutons
+  document.querySelectorAll('[id^="btn-modele-"]').forEach(btn => {
+    btn.style.border = '1px solid var(--border)';
+    btn.style.color  = 'var(--text)';
+    btn.style.fontWeight = '400';
+  });
+  const activeBtn = modeleId
+    ? document.getElementById('btn-modele-' + modeleId)
+    : document.getElementById('btn-modele-vierge');
+  if (activeBtn) {
+    activeBtn.style.border = '2px solid var(--accent)';
+    activeBtn.style.color  = 'var(--accent)';
+    activeBtn.style.fontWeight = '600';
+  }
+
+  // Vider les sections existantes
+  const container = document.getElementById('sections-container');
+  container.innerHTML = '';
+  sectionIndex = 0;
+
+  if (!modeleId) {
+    // Bilan vierge
+    container.innerHTML = `<div id="empty-hint" style="text-align:center;padding:48px 20px;
+      color:var(--muted);border:2px dashed var(--border);border-radius:var(--radius);">
+      <div style="font-size:28px;margin-bottom:10px;">+</div>
+      <div style="font-size:14px;">Ajoutez des sections depuis le panneau de gauche</div>
+    </div>`;
+    // Vider le motif
+    const motifInput = document.querySelector('input[name="motif"]');
+    if (motifInput) motifInput.value = '';
+    return;
+  }
+
+  const modele = MODELES.find(m => m.id === modeleId);
+  if (!modele) return;
+
+  // Pré-remplir le motif
+  const motifInput = document.querySelector('input[name="motif"]');
+  if (motifInput && modele.motif) motifInput.value = modele.motif;
+
+  // Instancier les sections du modèle dans l'ordre canonique
+  modele.sections.forEach(type => {
+    const def = SECTIONS_DEF[type];
+    if (!def) return;
+    const idx = sectionIndex++;
+    const obsDefaut = def.obs_defaut || '';
+    const html = renderSection(type, def.label, idx, '', obsDefaut, {});
+    if (!html) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    container.appendChild(tmp.firstElementChild);
+  });
+  renumeroter();
+}
+
+// ── Historique des bilans : toggle panneau et toggle bilan individuel ──
+function toggleHistorique() {
+  const panel = document.getElementById('panel-historique');
+  const chev  = document.getElementById('chev-histo');
+  if (!panel) return;
+  const open = panel.style.display === 'block';
+  panel.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function toggleBilanHist(id) {
+  const body = document.getElementById(id);
+  const chev = document.getElementById('chev-' + id);
+  if (!body) return;
+  const open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+// ── Pièces jointes de section ──
+function dropFichierSection(event, idx, champName) {
+  event.preventDefault();
+  const drop = document.getElementById('drop-' + idx + '-' + champName);
+  if (drop) {
+    drop.style.borderColor = 'var(--border)';
+    drop.style.background  = 'var(--bg)';
+  }
+  const files = event.dataTransfer.files;
+  if (!files || !files.length) return;
+  // Trouver l'input file correspondant et lui affecter les fichiers via DataTransfer
+  const input = drop ? drop.querySelector('input[type="file"]') : null;
+  if (!input) return;
+  // Créer un nouveau DataTransfer pour assigner les fichiers à l'input
+  const dt = new DataTransfer();
+  // Ajouter les fichiers déjà dans l'input
+  if (input.files) {
+    Array.from(input.files).forEach(f => dt.items.add(f));
+  }
+  // Ajouter les nouveaux fichiers droppés
+  Array.from(files).forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  // Déclencher la preview
+  previewFichierSection(input, idx, champName);
+}
+
+function previewFichierSection(input, idx, champName) {
+  const zone = document.getElementById('pj-sec-preview-' + idx + '-' + champName);
+  if (!zone) return;
+  // Garder les vignettes existantes (fichiers déjà sauvés)
+  const existingPersisted = zone.querySelectorAll('[data-persisted]');
+  // Supprimer les anciennes previews temporaires
+  zone.querySelectorAll('[data-temp]').forEach(el => el.remove());
+  Array.from(input.files).forEach(file => {
+    const wrap = document.createElement('div');
+    wrap.dataset.temp = '1';
+    wrap.style.cssText = 'border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);width:72px;text-align:center;';
+    if (file.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.style.cssText = 'width:72px;height:52px;object-fit:cover;display:block;';
+      img.src = URL.createObjectURL(file);
+      wrap.appendChild(img);
+    } else {
+      const ico = document.createElement('div');
+      ico.style.cssText = 'width:72px;height:52px;display:flex;align-items:center;justify-content:center;font-size:20px;';
+      ico.textContent = file.name.match(/\.docx?$/i) ? '📝' : '📄';
+      wrap.appendChild(ico);
+    }
+    const nm = document.createElement('div');
+    nm.style.cssText = 'font-size:9px;color:var(--muted);padding:2px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    nm.textContent = file.name;
+    wrap.appendChild(nm);
+    zone.appendChild(wrap);
+  });
+}
+
+function supprimerFichierSection(fichierId, elId) {
+  if (!confirm('Supprimer ce fichier ?')) return;
+  fetch('/fichier_section/' + fichierId + '/supprimer', {method:'POST'})
+    .then(r => r.json())
+    .then(() => { const el = document.getElementById(elId); if (el) el.remove(); });
+}
+
+// ── Mise à jour du titre d'un fichier existant via fetch ──
+function sauverTitreFichier(id, titre) {
+  const fd = new FormData();
+  fd.append('titre', titre);
+  fetch('/fichier/' + id + '/titre', { method: 'POST', body: fd })
+    .catch(() => console.error('Erreur sauvegarde titre fichier'));
+}
+
+// ── Suppression d'un fichier existant via fetch (évite les forms imbriqués) ──
+function supprimerFichier(id, nom) {
+  if (!confirm('Supprimer le fichier « ' + nom + ' » ?')) return;
+  fetch('/fichier/' + id + '/supprimer', { method: 'POST' })
+    .then(r => {
+      if (r.ok || r.redirected) {
+        // Supprimer la vignette du DOM sans recharger la page
+        const el = document.getElementById('fichier-' + id);
+        if (el) el.remove();
+      } else {
+        alert('Erreur lors de la suppression.');
+      }
+    })
+    .catch(() => alert('Erreur réseau.'));
+}
+
+// ── Prévisualisation des fichiers — scope global (appelé depuis onchange/ondrop) ──
+function previewFichiers(files) {
+  const zone = document.getElementById('preview-zone');
+  if (!zone) return;
+  zone.innerHTML = '';
+  Array.from(files).forEach(file => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg);';
+    if (file.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.style.cssText = 'width:120px;height:90px;object-fit:cover;display:block;';
+      img.src = URL.createObjectURL(file);
+      wrap.appendChild(img);
+    } else {
+      const isWord = file.name.match(/\.docx?$/i);
+      wrap.style.cssText += 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;height:90px;';
+      wrap.innerHTML = '<span style="font-size:28px;">' + (isWord ? '📝' : '📄') + '</span>';
+    }
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.name = 'fichiers_titres[]';
+    input.placeholder = file.name;
+    input.title = 'Titre du fichier (optionnel)';
+    input.style.cssText = 'width:120px;font-size:10px;padding:3px 6px;border:none;border-top:1px solid var(--border);background:var(--surface);color:var(--text);outline:none;display:block;box-sizing:border-box;';
+    wrap.appendChild(input);
+    zone.appendChild(wrap);
+  });
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const dz = document.getElementById('drop-zone');
+  if (dz) { dz.style.borderColor = 'var(--border)'; dz.style.background = ''; }
+  const input = document.getElementById('fichiers-input');
+  if (!input) return;
+  const transfer = new DataTransfer();
+  Array.from(e.dataTransfer.files).forEach(f => transfer.items.add(f));
+  input.files = transfer.files;
+  previewFichiers(input.files);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Date par défaut
+  const d = document.getElementById('date_consult');
+  if (d && !d.value) d.value = new Date().toISOString().split('T')[0];
+
+  // Calcul âge en temps réel (nouveau bilan)
+  const agePreview = document.getElementById('age-preview');
+  const dnStr = "{{ patient.date_naissance.strftime('%Y-%m-%d') if patient.date_naissance else '' }}";
+  if (agePreview && dnStr && d) {
+    function calcAge(dc) {
+      if (!dc || !dnStr) return '';
+      const dn = new Date(dnStr), dcObj = new Date(dc);
+      let age = dcObj.getFullYear() - dn.getFullYear();
+      if (dcObj.getMonth() < dn.getMonth() ||
+         (dcObj.getMonth() === dn.getMonth() && dcObj.getDate() < dn.getDate())) age--;
+      return '— ' + age + ' ans au ' + dcObj.toLocaleDateString('fr-FR');
+    }
+    d.addEventListener('change', () => { agePreview.textContent = calcAge(d.value); });
+    agePreview.textContent = calcAge(d.value);
+  }
+
+  // Restituer les sections existantes (mode édition)
+  // Les données sont dans un <script type="application/json"> — pas de problème d'échappement
+  const dataScript = document.getElementById('sections-data');
+  if (dataScript) {
+    let sectionsData = [];
+    try { sectionsData = JSON.parse(dataScript.textContent); } catch(e) {
+      console.error('Erreur parsing sections-data:', e);
+    }
+    document.querySelectorAll('.section-placeholder').forEach((ph, i) => {
+      const sec = sectionsData[i];
+      if (!sec) { ph.remove(); return; }
+      const idx = sectionIndex++;
+      const html = renderSection(sec.type, sec.label, idx, '', sec.obs, sec.donnees);
+    // On va injecter les fichiers existants après insertion dans le DOM
+      if (!html) { ph.remove(); return; }
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const el = tmp.firstElementChild;
+      ph.replaceWith(el);
+
+      // Injecter les vignettes des fichiers de section déjà sauvegardés
+      if (sec.fichiers_sec && sec.fichiers_sec.length > 0) {
+        sec.fichiers_sec.forEach(f => {
+          const zone = el.querySelector(`[id^="pj-sec-preview-${idx}-"]`);
+          if (!zone) return;
+          const wrap = document.createElement('div');
+          wrap.id = 'ficsec-' + f.id;
+          wrap.dataset.persisted = '1';
+          wrap.style.cssText = 'position:relative;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);width:72px;text-align:center;';
+          if (f.type_fichier === 'image') {
+            const img = document.createElement('img');
+            img.src = '/uploads/section/{{ consultation.id if consultation else 0 }}/' + f.nom_stocke;
+            img.style.cssText = 'width:72px;height:52px;object-fit:cover;display:block;';
+            wrap.appendChild(img);
+          } else {
+            const ico = document.createElement('div');
+            ico.style.cssText = 'width:72px;height:52px;display:flex;align-items:center;justify-content:center;font-size:20px;';
+            ico.textContent = f.type_fichier === 'word' ? '📝' : '📄';
+            wrap.appendChild(ico);
+          }
+          const nm = document.createElement('div');
+          nm.style.cssText = 'font-size:9px;color:var(--muted);padding:2px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+          nm.textContent = f.titre || f.nom_original;
+          wrap.appendChild(nm);
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.innerHTML = '✕';
+          btn.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:16px;height:16px;color:#fff;font-size:9px;cursor:pointer;line-height:1;padding:0;';
+          btn.onclick = () => supprimerFichierSection(f.id, 'ficsec-' + f.id);
+          wrap.appendChild(btn);
+          zone.appendChild(wrap);
+        });
+      }
+    });
+  }
+
+  // Supprimer le hint si des sections ont été chargées
+  const hint = document.getElementById('empty-hint');
+  if (hint && document.querySelectorAll('#sections-container .bilan-section').length > 0) {
+    hint.remove();
+  }
+
+  renumeroter();
+
+  // Formater les champs signés déjà chargés (mode édition)
+  document.querySelectorAll(
+    'input[onblur="formatSignedFloat(this)"]'
+  ).forEach(inp => { if (inp.value.trim()) formatSignedFloat(inp); });
+
+  // ── Scroll centré sur le champ actif — uniquement via Tab ──
+  let lastInteractionWasKeyboard = false;
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Tab') lastInteractionWasKeyboard = true;
+  });
+  document.addEventListener('mousedown', () => {
+    lastInteractionWasKeyboard = false;
+  });
+
+  // ── Avant soumission : renuméroter les champs pour correspondre à l'ordre réel ──
+  document.getElementById('form-bilan').addEventListener('submit', (e) => {
+    const sections = document.querySelectorAll('#sections-container .bilan-section');
+    sections.forEach((sec, newOrdre) => {
+      const oldIdx = parseInt(sec.dataset.idx);
+      if (oldIdx === newOrdre) return; // déjà correct
+      // Renommer tous les inputs/selects/textareas de cette section
+      sec.querySelectorAll('[name]').forEach(el => {
+        const n = el.name;
+        // Remplacer champ__oldIdx__ par champ__newOrdre__
+        if (n.startsWith(`champ__${oldIdx}__`)) {
+          el.name = n.replace(`champ__${oldIdx}__`, `champ__${newOrdre}__`);
+        }
+      });
+      sec.dataset.idx = newOrdre;
+    });
+  });
+
+  document.getElementById('form-bilan').addEventListener('focusin', e => {
+    const el = e.target;
+    if (!['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) return;
+    if (!lastInteractionWasKeyboard) return;
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  });
+});
+</script>
+
+{# ── DRAWER HISTORIQUE DE SECTION ── #}
+<div id="histo-drawer"
+     style="position:fixed;top:0;right:0;bottom:0;width:380px;
+            background:var(--surface);border-left:1px solid var(--border);
+            box-shadow:-4px 0 16px rgba(0,0,0,.12);
+            z-index:500;display:flex;flex-direction:column;
+            transform:translateX(100%);transition:transform .25s ease;">
+  <div style="display:flex;align-items:center;gap:10px;
+              padding:16px 20px;border-bottom:1px solid var(--border);
+              background:var(--bg);flex-shrink:0;">
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);">Historique</div>
+      <div id="histo-drawer-title" style="font-size:12px;color:var(--muted);"></div>
+    </div>
+    <button type="button" onclick="fermerDrawer()" tabindex="-1"
+            style="background:none;border:none;font-size:18px;cursor:pointer;
+                   color:var(--muted);padding:0 4px;"
+            onmouseover="this.style.color='var(--text)'"
+            onmouseout="this.style.color='var(--muted)'">✕</button>
+  </div>
+  <div id="histo-drawer-body" style="flex:1;overflow-y:auto;padding:12px 16px;">
+    <div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Chargement…</div>
+  </div>
+</div>
+<div id="histo-overlay" onclick="fermerDrawer()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:499;"></div>
+
+{% endblock %}

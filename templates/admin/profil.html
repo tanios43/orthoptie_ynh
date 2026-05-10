@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Mon profil{% endblock %}
+{% block page_title %}Mon profil{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;">
+  <form method="POST">
+    <div class="card">
+      <div class="card-header"><h2>Informations personnelles</h2></div>
+      <div class="card-body">
+        <div class="field-grid field-grid-2">
+          <div class="field-group">
+            <label class="field-label">Nom</label>
+            <input type="text" name="nom" value="{{ praticien.nom }}" required>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Prénom</label>
+            <input type="text" name="prenom" value="{{ praticien.prenom }}" required>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Titre</label>
+            <input list="dl-titres" name="titre" value="{{ praticien.titre }}">
+            <datalist id="dl-titres">
+              <option value="Orthoptiste">
+              <option value="Dr">
+              <option value="Pr">
+            </datalist>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Email</label>
+            <input type="email" name="email" value="{{ praticien.email or '' }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Ma couleur</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="color" name="couleur"
+                     value="{{ praticien.couleur or '#2E7D6B' }}"
+                     style="width:44px;height:36px;padding:2px;border-radius:7px;
+                            border:1px solid var(--border);cursor:pointer;">
+              <span style="font-size:12px;color:var(--muted);">Couleur affichée sur vos bilans</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:7px;">
+          <span class="text-sm text-muted">Login : </span>
+          <code style="font-size:13px;">{{ praticien.login }}</code>
+          <span class="text-sm text-muted" style="margin-left:12px;">Rôle : </span>
+          <span class="text-sm">{{ 'Administrateur' if praticien.is_admin else 'Praticien' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-2">
+      <div class="card-header"><h2>Changer le mot de passe</h2></div>
+      <div class="card-body">
+        <div class="field-grid field-grid-2">
+          <div class="field-group">
+            <label class="field-label">
+              Nouveau mot de passe
+              <span style="font-weight:400;color:var(--muted);font-size:10px;margin-left:4px;">
+                (laisser vide pour ne pas changer)
+              </span>
+            </label>
+            <input type="password" name="password" autocomplete="new-password" placeholder="••••••••">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Confirmer</label>
+            <input type="password" name="password2" autocomplete="new-password" placeholder="••••••••">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-2 mt-3">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <a href="{{ url_for('index') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

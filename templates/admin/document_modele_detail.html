@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}{{ modele.nom }}{% endblock %}
+{% block page_title %}{{ modele.nom }}
+  <span style="font-size:13px;font-weight:400;color:var(--muted);margin-left:8px;">
+    {{ 'Courrier' if modele.type == 'courrier' else 'Ordonnance' }}
+  </span>
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin_document_modeles') }}" class="btn btn-secondary btn-sm">← Modèles</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start;max-width:1100px;">
+
+  {# ── Éditeur de blocs ── #}
+  <div>
+    {# Propriétés #}
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-header"><h2>Propriétés</h2></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_document_modele_modifier', modele_id=modele.id) }}"
+              style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="field-group" style="flex:1;min-width:180px;">
+            <label class="field-label">Nom</label>
+            <input type="text" name="nom" value="{{ modele.nom }}" required>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Type</label>
+            <select name="type" style="width:auto;">
+              <option value="courrier" {{ 'selected' if modele.type == 'courrier' }}>Courrier</option>
+              <option value="ordonnance" {{ 'selected' if modele.type == 'ordonnance' }}>Ordonnance</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Statut</label>
+            <select name="actif" style="width:auto;">
+              <option value="1" {{ 'selected' if modele.actif }}>Actif</option>
+              <option value="0" {{ 'selected' if not modele.actif }}>Désactivé</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        </form>
+      </div>
+    </div>
+
+    {# Blocs #}
+    <div class="card">
+      <div class="card-header">
+        <h2>Blocs de contenu</h2>
+        <span class="badge badge-gray">{{ modele.blocs|length }}</span>
+        <span class="text-sm text-muted" style="margin-left:auto;">Glissez pour réordonner</span>
+      </div>
+
+      <div id="blocs-list" style="padding:8px;">
+        {% for bloc in modele.blocs %}
+        <div class="bloc-row" data-id="{{ bloc.id }}"
+             style="border:1px solid var(--border);border-radius:8px;
+                    margin-bottom:6px;background:var(--surface);">
+
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:grab;">
+            <span style="color:var(--muted);font-size:14px;cursor:grab;">⠿</span>
+            <span class="badge {{ 'badge-green' if bloc.type == 'texte' else 'badge-gray' }}"
+                  style="font-size:10px;">
+              {{ 'Texte' if bloc.type == 'texte' else 'Sections bilan' }}
+            </span>
+            {% if bloc.type == 'texte' %}
+            <span class="text-sm text-muted" style="flex:1;overflow:hidden;text-overflow:ellipsis;
+                         white-space:nowrap;max-width:300px;">
+              {{ bloc.contenu[:80] }}{% if bloc.contenu|length > 80 %}…{% endif %}
+            </span>
+            {% else %}
+            <span class="text-sm text-muted" style="flex:1;">
+              Insérer les sections sélectionnées lors de la génération
+            </span>
+            {% endif %}
+            <button type="button" onclick="toggleBloc({{ bloc.id }})"
+                    class="btn btn-secondary btn-sm" tabindex="-1">✎</button>
+          </div>
+
+          <div id="edit-bloc-{{ bloc.id }}" style="display:none;padding:0 12px 12px;
+               border-top:1px solid var(--border);">
+            {% if bloc.type == 'texte' %}
+            <div style="margin-top:10px;">
+              <label class="field-label">Contenu (variables {{'{{'}}variable{{'}}'}} supportées)</label>
+              <textarea id="ta-{{ bloc.id }}" style="min-height:100px;margin-top:4px;
+                        font-family:monospace;font-size:13px;">{{ bloc.contenu }}</textarea>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button type="button" class="btn btn-primary btn-sm"
+                        onclick="sauverBloc({{ bloc.id }})">Enregistrer</button>
+              </div>
+            </div>
+            {% endif %}
+            <form method="POST"
+                  action="{{ url_for('admin_document_bloc_supprimer', bloc_id=bloc.id) }}"
+                  style="margin-top:10px;"
+                  onsubmit="return confirm('Supprimer ce bloc ?')">
+              <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# Ajouter un bloc #}
+      <div style="padding:12px 16px;border-top:1px solid var(--border);">
+        <div style="display:flex;gap:8px;">
+          <form method="POST" action="{{ url_for('admin_document_bloc_nouveau', modele_id=modele.id) }}"
+                style="display:flex;gap:8px;flex:1;">
+            <input type="hidden" name="type" value="texte">
+            <input type="hidden" name="contenu" value="">
+            <button type="submit" class="btn btn-secondary btn-sm">+ Bloc texte</button>
+          </form>
+          <form method="POST" action="{{ url_for('admin_document_bloc_nouveau', modele_id=modele.id) }}">
+            <input type="hidden" name="type" value="section_bilan">
+            <input type="hidden" name="contenu" value="sections">
+            <button type="submit" class="btn btn-secondary btn-sm">+ Bloc sections bilan</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {# Supprimer #}
+    <form method="POST"
+          action="{{ url_for('admin_document_modele_supprimer', modele_id=modele.id) }}"
+          style="margin-top:12px;"
+          onsubmit="return confirm('Supprimer ce modèle ?')">
+      <button type="submit" class="btn btn-danger btn-sm">Supprimer ce modèle</button>
+    </form>
+  </div>
+
+  {# ── Navigation + variables ── #}
+  <div style="position:sticky;top:80px;">
+
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2 style="font-size:13px;">Autres modèles</h2></div>
+      <div style="padding:8px;max-height:200px;overflow-y:auto;">
+        {% for m in modeles %}
+        <a href="{{ url_for('admin_document_modele_detail', modele_id=m.id) }}"
+           style="display:block;padding:6px 10px;border-radius:6px;margin-bottom:2px;
+                  font-size:12px;text-decoration:none;
+                  background:{{ 'var(--accent-lt)' if m.id == modele.id else 'transparent' }};
+                  color:{{ 'var(--accent-dk)' if m.id == modele.id else 'var(--text)' }};">
+          {{ m.nom }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2 style="font-size:13px;">Variables</h2></div>
+      <div style="padding:8px 12px;font-size:11px;">
+        {% for v in ['{{patient.nom}}','{{patient.ddn}}','{{patient.age}}','{{patient.medecin}}',
+                     '{{date}}','{{praticien.nom}}','{{praticien.rpps}}',
+                     '{{praticien.adeli}}','{{praticien.forme}}',
+                     '{{cabinet.nom}}','{{cabinet.adresse}}','{{cabinet.tel}}'] %}
+        <code style="display:block;background:var(--bg);padding:2px 6px;border-radius:4px;
+                     margin-bottom:2px;color:var(--accent);cursor:pointer;"
+              onclick="navigator.clipboard.writeText('{{ v }}')">{{ v }}</code>
+        {% endfor %}
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Cliquer pour copier</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleBloc(id) {
+  const el = document.getElementById('edit-bloc-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function sauverBloc(id) {
+  const ta = document.getElementById('ta-' + id);
+  if (!ta) return;
+  const fd = new FormData();
+  fd.append('contenu', ta.value);
+  fetch('/admin/document-bloc/' + id + '/modifier', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(() => {
+      const row = ta.closest('.bloc-row');
+      const preview = row.querySelector('.text-sm.text-muted');
+      if (preview) {
+        const txt = ta.value.substring(0, 80);
+        preview.textContent = txt + (ta.value.length > 80 ? '…' : '');
+      }
+      toggleBloc(id);
+    });
+}
+
+// Drag & drop blocs
+const list = document.getElementById('blocs-list');
+let dragged = null;
+list.querySelectorAll('.bloc-row').forEach(row => {
+  row.setAttribute('draggable', 'true');
+  row.addEventListener('dragstart', e => { dragged = row; row.style.opacity = '.4'; });
+  row.addEventListener('dragend',   () => { row.style.opacity = '1'; dragged = null; saveOrder(); });
+  row.addEventListener('dragover',  e => {
+    e.preventDefault();
+    if (row !== dragged) {
+      const after = e.clientY > row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2;
+      list.insertBefore(dragged, after ? row.nextSibling : row);
+    }
+  });
+});
+
+function saveOrder() {
+  const ordre = Array.from(list.querySelectorAll('.bloc-row')).map(r => parseInt(r.dataset.id));
+  fetch('/admin/document-blocs/reordonner', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ordre })
+  });
+}
+</script>
+{% endblock %}

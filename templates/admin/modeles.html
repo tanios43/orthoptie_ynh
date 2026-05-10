@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Modèles de bilan{% endblock %}
+{% block page_title %}Modèles de bilan{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;max-width:1000px;">
+
+  {# ── Créer un modèle ── #}
+  <div>
+    <div class="card">
+      <div class="card-header"><h2>Nouveau modèle</h2></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_modele_nouveau') }}">
+
+          <div class="field-group" style="margin-bottom:12px;">
+            <label class="field-label">Nom du modèle *</label>
+            <input type="text" name="nom" placeholder="Ex : Bilan enfant strabisme" required autofocus>
+          </div>
+
+          <div class="field-group" style="margin-bottom:14px;">
+            <label class="field-label">Motif pré-rempli
+              <span style="font-weight:400;color:var(--muted);font-size:10px;margin-left:4px;">
+                (remplira automatiquement le champ motif)
+              </span>
+            </label>
+            <input type="text" name="motif" placeholder="Ex : Bilan orthoptique initial">
+          </div>
+
+          <div class="field-group" style="margin-bottom:16px;">
+            <label class="field-label">Sections incluses</label>
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+              {% for key in sections_ordre %}
+              {% set sec = sections_dispo[key] %}
+              <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;
+                            cursor:pointer;border-bottom:1px solid var(--border);
+                            transition:background .1s;"
+                     onmouseover="this.style.background='var(--bg)'"
+                     onmouseout="this.style.background=''">
+                <input type="checkbox" name="sections[]" value="{{ key }}"
+                       style="width:15px;height:15px;accent-color:var(--accent);">
+                <span style="font-size:13px;">{{ sec.label }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Créer le modèle</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Liste des modèles ── #}
+  <div>
+    {% if modeles %}
+    {% for m in modeles %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header">
+        <h2>{{ m.nom }}</h2>
+        {% if not m.actif %}
+        <span class="badge badge-warn" style="margin-left:6px;">désactivé</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+
+        <form method="POST" action="{{ url_for('admin_modele_modifier', modele_id=m.id) }}">
+          <div class="field-grid field-grid-2" style="gap:10px;margin-bottom:12px;">
+            <div class="field-group">
+              <label class="field-label">Nom</label>
+              <input type="text" name="nom" value="{{ m.nom }}" required>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Motif</label>
+              <input type="text" name="motif" value="{{ m.motif or '' }}" placeholder="Motif du bilan">
+            </div>
+          </div>
+
+          <div class="field-group" style="margin-bottom:12px;">
+            <label class="field-label">Sections</label>
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;
+                        max-height:280px;overflow-y:auto;">
+              {% set selected_keys = m.sections | map(attribute='type_key') | list %}
+              {% for key in sections_ordre %}
+              {% set sec = sections_dispo[key] %}
+              <label style="display:flex;align-items:center;gap:10px;padding:7px 12px;
+                            cursor:pointer;border-bottom:1px solid var(--border);
+                            transition:background .1s;"
+                     onmouseover="this.style.background='var(--bg)'"
+                     onmouseout="this.style.background=''">
+                <input type="checkbox" name="sections[]" value="{{ key }}"
+                       {{ 'checked' if key in selected_keys }}
+                       style="width:14px;height:14px;accent-color:var(--accent);">
+                <span style="font-size:13px;">{{ sec.label }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="field-group" style="margin-bottom:12px;">
+            <label class="field-label">Statut</label>
+            <select name="actif" style="width:auto;">
+              <option value="1" {{ 'selected' if m.actif }}>Actif</option>
+              <option value="0" {{ 'selected' if not m.actif }}>Désactivé</option>
+            </select>
+          </div>
+
+          <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+          </div>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_modele_supprimer', modele_id=m.id) }}"
+              style="margin-top:8px;"
+              onsubmit="return confirm('Supprimer ce modèle ?')">
+          <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+        </form>
+
+      </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📋</div>
+      <p>Aucun modèle créé.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

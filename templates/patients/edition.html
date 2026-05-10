@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Modifier' if patient else 'Nouveau' }} patient{% endblock %}
+{% block page_title %}{{ 'Modifier le patient' if patient else 'Nouveau patient' }}{% endblock %}
+
+{% block topbar_actions %}
+  {% if patient %}
+    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">← Retour</a>
+  {% else %}
+    <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Retour</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form method="POST" style="max-width: 720px;">
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Identité</h2>
+    </div>
+    <div class="card-body">
+      <div class="field-grid field-grid-2">
+        <div class="field-group">
+          <label class="field-label">Nom *</label>
+          <input type="text" name="nom" value="{{ patient.nom if patient else '' }}" required placeholder="DUPONT">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Prénom *</label>
+          <input type="text" name="prenom" value="{{ patient.prenom if patient else '' }}" required placeholder="Marie">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Date de naissance</label>
+          <input type="date" name="date_naissance"
+            value="{{ patient.date_naissance.strftime('%Y-%m-%d') if patient and patient.date_naissance else '' }}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Sexe</label>
+          <select name="sexe">
+            <option value="">—</option>
+            <option value="M" {{ 'selected' if patient and patient.sexe == 'M' }}>Masculin</option>
+            <option value="F" {{ 'selected' if patient and patient.sexe == 'F' }}>Féminin</option>
+            <option value="Autre" {{ 'selected' if patient and patient.sexe == 'Autre' }}>Autre</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-2">
+    <div class="card-header"><h2>Coordonnées</h2></div>
+    <div class="card-body">
+      <div class="field-grid field-grid-2">
+        <div class="field-group">
+          <label class="field-label">Téléphone</label>
+          <input type="tel" name="telephone" value="{{ patient.telephone if patient else '' }}" placeholder="06 00 00 00 00">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <input type="email" name="email" value="{{ patient.email if patient else '' }}" placeholder="marie@exemple.fr">
+        </div>
+        <div class="field-group" style="grid-column: span 2;">
+          <label class="field-label">Rue</label>
+          <input type="text" name="rue" value="{{ patient.rue if patient else '' }}" placeholder="12 rue de la Paix">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Code postal</label>
+          <input type="text" id="input-cp" name="code_postal"
+                 value="{{ patient.code_postal if patient else '' }}"
+                 placeholder="63000"
+                 maxlength="5"
+                 oninput="rechercherCommunes(this.value)"
+                 autocomplete="off">
+        </div>
+        <div class="field-group" style="position:relative;">
+          <label class="field-label">Commune</label>
+          <input type="text" id="input-commune" name="commune"
+                 value="{{ patient.commune if patient else '' }}"
+                 placeholder="Clermont-Ferrand"
+                 autocomplete="off">
+          <div id="communes-list"
+               style="display:none;position:absolute;z-index:200;background:var(--surface);
+                      border:1px solid var(--border);border-radius:8px;
+                      box-shadow:var(--shadow);max-height:200px;overflow-y:auto;
+                      min-width:220px;margin-top:2px;">
+          </div>
+        </div>
+      </div>
+
+<script>
+let cpTimeout = null;
+
+function rechercherCommunes(cp) {
+  clearTimeout(cpTimeout);
+  const list = document.getElementById('communes-list');
+  const communeInput = document.getElementById('input-commune');
+  if (cp.length < 2) { list.style.display = 'none'; return; }
+  cpTimeout = setTimeout(() => {
+    fetch('/api/communes?cp=' + encodeURIComponent(cp))
+      .then(r => r.json())
+      .then(communes => {
+        list.innerHTML = '';
+        if (!communes.length) { list.style.display = 'none'; return; }
+        communes.forEach(nom => {
+          const div = document.createElement('div');
+          div.textContent = nom;
+          div.style.cssText = 'padding:8px 14px;font-size:14px;cursor:pointer;';
+          div.onmouseover = () => div.style.background = 'var(--accent-lt)';
+          div.onmouseout  = () => div.style.background = '';
+          div.onclick = () => {
+            communeInput.value = nom;
+            list.style.display = 'none';
+          };
+          list.appendChild(div);
+        });
+        // Auto-sélectionner si une seule commune
+        if (communes.length === 1) {
+          communeInput.value = communes[0];
+          list.style.display = 'none';
+        } else {
+          list.style.display = 'block';
+          communeInput.value = '';
+        }
+      })
+      .catch(() => { list.style.display = 'none'; });
+  }, 300);
+}
+
+// Fermer la liste si clic ailleurs
+document.addEventListener('click', e => {
+  const list = document.getElementById('communes-list');
+  if (list && !list.contains(e.target) && e.target.id !== 'input-cp') {
+    list.style.display = 'none';
+  }
+});
+
+// Déclencher la recherche si code postal déjà rempli (mode édition)
+window.addEventListener('DOMContentLoaded', () => {
+  const cp = document.getElementById('input-cp');
+  if (cp && cp.value.length >= 2) rechercherCommunes(cp.value);
+});
+</script>
+    </div>
+  </div>
+
+  <div class="card mt-2">
+    <div class="card-header"><h2>Informations médicales</h2></div>
+    <div class="card-body">
+      <div class="field-grid field-grid-2">
+        <div class="field-group">
+          <label class="field-label">Médecin référent</label>
+          <input type="text" name="medecin_referent" value="{{ patient.medecin_referent if patient else '' }}" placeholder="Dr Martin">
+        </div>
+        <div class="field-group">
+          <label class="field-label">N° Sécurité sociale</label>
+          <input type="text" name="num_secu" value="{{ patient.num_secu if patient else '' }}" placeholder="1 85 06 63 001 000 00" maxlength="15">
+        </div>
+        <div class="field-group" style="grid-column: span 2;">
+          <label class="field-label">Notes administratives</label>
+          <textarea name="notes_admin" placeholder="Informations diverses, mutuelle, allergies connues…">{{ patient.notes_admin if patient else '' }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary">
+      {{ 'Enregistrer les modifications' if patient else 'Créer le patient' }}
+    </button>
+    {% if patient %}
+      <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary">Annuler</a>
+    {% else %}
+      <a href="{{ url_for('index') }}" class="btn btn-secondary">Annuler</a>
+    {% endif %}
+  </div>
+
+</form>
+{% endblock %}

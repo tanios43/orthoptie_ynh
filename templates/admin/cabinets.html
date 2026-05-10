@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Gestion des cabinets{% endblock %}
+{% block page_title %}Gestion des cabinets{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;max-width:1100px;">
+
+  {# ── Créer un cabinet ── #}
+  <div>
+    <div class="card">
+      <div class="card-header"><h2>Nouveau cabinet</h2></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_cabinet_nouveau') }}">
+          <div class="field-group" style="margin-bottom:10px;">
+            <label class="field-label">Nom *</label>
+            <input type="text" name="nom" placeholder="Cabinet Centre" required autofocus>
+          </div>
+          <div class="field-group" style="margin-bottom:10px;">
+            <label class="field-label">Rue</label>
+            <input type="text" name="rue" placeholder="12 rue de la Paix">
+          </div>
+          <div class="field-grid field-grid-2" style="margin-bottom:10px;">
+            <div class="field-group">
+              <label class="field-label">Code postal</label>
+              <input type="text" name="code_postal" placeholder="63000">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Commune</label>
+              <input type="text" name="commune" placeholder="Clermont-Ferrand">
+            </div>
+          </div>
+          <div class="field-grid field-grid-2" style="margin-bottom:10px;">
+            <div class="field-group">
+              <label class="field-label">Téléphone</label>
+              <input type="text" name="telephone" placeholder="04 73 00 00 00">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Fax</label>
+              <input type="text" name="fax" placeholder="04 73 00 00 01">
+            </div>
+          </div>
+          <div class="field-group" style="margin-bottom:14px;">
+            <label class="field-label">Email du cabinet</label>
+            <input type="email" name="email" placeholder="contact@cabinet.fr">
+          </div>
+          <div class="field-group" style="margin-bottom:14px;">
+            <label class="field-label">Couleur</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="color" name="couleur" value="#1C2B3A"
+                     style="width:44px;height:36px;padding:2px;border-radius:7px;
+                            border:1px solid var(--border);cursor:pointer;">
+              <span style="font-size:12px;color:var(--muted);">Badge du cabinet</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Créer</button>
+        </form>
+      </div>
+    </div>
+
+    {# ── Lier praticien ↔ cabinet ── #}
+    <div class="card" style="margin-top:16px;">
+      <div class="card-header"><h2>Lier un praticien à un cabinet</h2></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_praticien_cabinet_lier') }}">
+          <div class="field-grid field-grid-2" style="gap:10px;margin-bottom:10px;">
+            <div class="field-group">
+              <label class="field-label">Praticien</label>
+              <select name="praticien_id" required>
+                <option value="">Choisir…</option>
+                {% for p in praticiens %}
+                <option value="{{ p.id }}">{{ p.prenom }} {{ p.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Cabinet</label>
+              <select name="cabinet_id" required>
+                <option value="">Choisir…</option>
+                {% for c in cabinets %}
+                <option value="{{ c.id }}">{{ c.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">N° ADELI</label>
+              <input type="text" name="adeli" placeholder="630012345" maxlength="9">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Forme juridique</label>
+              <input list="dl-forme" name="forme_juridique" placeholder="EI, SELARL…">
+              <datalist id="dl-forme">
+                <option value="EI">
+                <option value="SELARL">
+                <option value="SEL">
+                <option value="SCP">
+              </datalist>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm">Enregistrer la liaison</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Liste des cabinets ── #}
+  <div>
+    {% for c in cabinets %}
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-header">
+        <h2>{{ c.nom }}</h2>
+        {% if not c.actif %}
+          <span class="badge badge-warn" style="margin-left:6px;">désactivé</span>
+        {% endif %}
+      </div>
+      <div class="card-body" style="padding:14px 16px;">
+
+        {# Formulaire édition cabinet #}
+        <form method="POST" action="{{ url_for('admin_cabinet_modifier', cabinet_id=c.id) }}">
+          <div class="field-group" style="margin-bottom:8px;">
+            <label class="field-label">Nom</label>
+            <input type="text" name="nom" value="{{ c.nom }}" required>
+          </div>
+          <div class="field-group" style="margin-bottom:8px;">
+            <label class="field-label">Rue</label>
+            <input type="text" name="rue" value="{{ c.rue or '' }}">
+          </div>
+          <div class="field-grid field-grid-2" style="margin-bottom:8px;">
+            <div class="field-group">
+              <label class="field-label">CP</label>
+              <input type="text" name="code_postal" value="{{ c.code_postal or '' }}">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Commune</label>
+              <input type="text" name="commune" value="{{ c.commune or '' }}">
+            </div>
+          </div>
+          <div class="field-grid field-grid-2" style="margin-bottom:8px;">
+            <div class="field-group">
+              <label class="field-label">Tél.</label>
+              <input type="text" name="telephone" value="{{ c.telephone or '' }}">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Fax</label>
+              <input type="text" name="fax" value="{{ c.fax or '' }}">
+            </div>
+          </div>
+          <div class="field-group" style="margin-bottom:8px;">
+            <label class="field-label">Email</label>
+            <input type="email" name="email" value="{{ c.email or '' }}">
+          </div>
+          <div class="field-group" style="margin-bottom:8px;">
+            <label class="field-label">Couleur</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="color" name="couleur" value="{{ c.couleur or '#1C2B3A' }}"
+                     style="width:44px;height:36px;padding:2px;border-radius:7px;
+                            border:1px solid var(--border);cursor:pointer;">
+              <span style="font-size:12px;color:var(--muted);">Badge du cabinet</span>
+            </div>
+          </div>
+          <div class="field-group" style="margin-bottom:10px;">
+            <label class="field-label">Statut</label>
+            <select name="actif" style="width:auto;">
+              <option value="1" {{ 'selected' if c.actif }}>Actif</option>
+              <option value="0" {{ 'selected' if not c.actif }}>Désactivé</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        </form>
+
+        {# Praticiens liés #}
+        {% if c.praticiens %}
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                      letter-spacing:.5px;margin-bottom:8px;">Praticiens rattachés</div>
+          {% for pc in c.praticiens %}
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;
+                      border-bottom:1px solid var(--border);">
+            <div style="flex:1;">
+              <span style="font-size:13px;font-weight:500;">
+                {{ pc.praticien.titre }} {{ pc.praticien.prenom }} {{ pc.praticien.nom }}
+              </span>
+              {% if pc.adeli %}
+              <span class="text-sm text-muted" style="margin-left:8px;">ADELI : {{ pc.adeli }}</span>
+              {% endif %}
+              {% if pc.forme_juridique %}
+              <span class="badge badge-gray" style="margin-left:6px;font-size:10px;">{{ pc.forme_juridique }}</span>
+              {% endif %}
+            </div>
+            <form method="POST"
+                  action="{{ url_for('admin_praticien_cabinet_supprimer', pc_id=pc.id) }}"
+                  onsubmit="return confirm('Supprimer cette liaison ?')">
+              <button type="submit"
+                      style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;"
+                      onmouseover="this.style.color='var(--danger)'"
+                      onmouseout="this.style.color='var(--muted)'">✕</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('admin_cabinet_supprimer', cabinet_id=c.id) }}"
+              style="margin-top:10px;"
+              onsubmit="return confirm('Supprimer définitivement ce cabinet ?')">
+          <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+        </form>
+
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if not cabinets %}
+    <div class="empty-state">
+      <div class="icon">🏥</div>
+      <p>Aucun cabinet créé.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}{% endblock %}

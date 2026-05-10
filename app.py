@@ -1,0 +1,2216 @@
+"""
+Application Flask — Cabinet d'orthoptie multi-praticiens
+Architecture v3 : sections de bilan pilotées par la base de données.
+
+Installation :
+    pip install flask flask-login flask-sqlalchemy
+
+Lancement :
+    python app.py  →  http://localhost:5000
+"""
+
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify, session
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from datetime import datetime, date
+from werkzeug.utils import secure_filename
+import json, os, re, unicodedata
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
+
+# ── Configuration WOPI / Collabora ──────────────────────────────────────────
+# URL publique de CE serveur Flask (accessible par Collabora)
+# Exemples :
+#   ngrok      : 'https://abc123.ngrok.io'
+#   YunoHost   : 'https://dossiers.orthoptistes-yssingeaux.fr'
+#   local test : 'http://host.docker.internal:5000'
+WOPI_BASE_URL = 'https://brick-variably-pentagram.ngrok-free.dev'   # ← MODIFIER selon votre déploiement
+
+# URL de votre serveur Collabora Online
+COLLABORA_URL = 'https://collabora.orthoptistes-yssingeaux.fr'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orthoptie_v2.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx'}
+
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Veuillez vous connecter.'
+
+# ============================================================
+# MODÈLES
+# ============================================================
+
+class Praticien(UserMixin, db.Model):
+    __tablename__ = 'praticien'
+    id            = db.Column(db.Integer, primary_key=True)
+    nom           = db.Column(db.String(100), nullable=False)
+    prenom        = db.Column(db.String(100), nullable=False)
+    titre         = db.Column(db.String(50), default='Orthoptiste')
+    email         = db.Column(db.String(200), unique=True)
+    login         = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200))
+    rpps          = db.Column(db.String(11))   # N° RPPS national fixe
+    couleur       = db.Column(db.String(7), default='#2E7D6B')  # couleur hex
+    actif         = db.Column(db.Boolean, default=True)
+    role          = db.Column(db.String(20), default='praticien')  # 'admin' ou 'praticien'
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
+
+    def set_password(self, password):
+        from werkzeug.security import generate_password_hash
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        from werkzeug.security import check_password_hash
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self): return f'{self.titre} {self.prenom} {self.nom}'
+
+
+class Patient(db.Model):
+    __tablename__ = 'patient'
+    id               = db.Column(db.Integer, primary_key=True)
+    nom              = db.Column(db.String(100), nullable=False)
+    prenom           = db.Column(db.String(100), nullable=False)
+    date_naissance   = db.Column(db.Date)
+    sexe             = db.Column(db.String(10))
+    rue              = db.Column(db.String(200))
+    code_postal      = db.Column(db.String(10))
+    commune          = db.Column(db.String(100))
+    telephone        = db.Column(db.String(20))
+    email            = db.Column(db.String(200))
+    medecin_referent = db.Column(db.String(200))
+    num_secu         = db.Column(db.String(15))
+    praticien_id     = db.Column(db.Integer, db.ForeignKey('praticien.id'))
+    notes_admin      = db.Column(db.Text)
+    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at       = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    consultations    = db.relationship('Consultation', backref='patient', lazy=True,
+                                       order_by='Consultation.date_consult.desc()')
+    @property
+    def age(self):
+        if self.date_naissance:
+            today = date.today()
+            return today.year - self.date_naissance.year - (
+                (today.month, today.day) < (self.date_naissance.month, self.date_naissance.day))
+        return None
+    def __repr__(self): return f'{self.nom} {self.prenom}'
+
+
+class Consultation(db.Model):
+    __tablename__ = 'consultation'
+    id           = db.Column(db.Integer, primary_key=True)
+    patient_id   = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    date_consult = db.Column(db.Date, nullable=False, default=date.today)
+    motif                 = db.Column(db.Text)
+    medecin_prescripteur  = db.Column(db.String(200))
+    classe_profession     = db.Column(db.String(200))
+    cabinet_id            = db.Column(db.Integer, db.ForeignKey('cabinet.id'))
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    praticien    = db.relationship('Praticien', backref='consultations')
+    cabinet      = db.relationship('Cabinet')
+    sections     = db.relationship('SectionBilan', backref='consultation', lazy=True,
+                                   order_by='SectionBilan.ordre', cascade='all, delete-orphan')
+    fichiers     = db.relationship('FichierBilan', backref='consultation', lazy=True,
+                                   order_by='FichierBilan.created_at', cascade='all, delete-orphan')
+    fichiers_sec = db.relationship('FichierSection', backref='consultation', lazy=True,
+                                   order_by='FichierSection.section_ordre',
+                                   cascade='all, delete-orphan')
+
+
+class SectionBilan(db.Model):
+    __tablename__ = 'section_bilan'
+    id              = db.Column(db.Integer, primary_key=True)
+    consultation_id = db.Column(db.Integer, db.ForeignKey('consultation.id'), nullable=False)
+    type            = db.Column(db.String(50), nullable=False)
+    ordre           = db.Column(db.Integer, nullable=False)
+    titre           = db.Column(db.String(200))
+    observations    = db.Column(db.Text)
+    donnees         = db.Column(db.Text, default='{}')
+    def get_donnees(self):
+        try: return json.loads(self.donnees or '{}')
+        except: return {}
+    @property
+    def label(self):
+        sd = SectionDef.query.filter_by(type_key=self.type).first()
+        return sd.label if sd else self.type
+
+
+class FichierBilan(db.Model):
+    __tablename__ = 'fichier_bilan'
+    id              = db.Column(db.Integer, primary_key=True)
+    consultation_id = db.Column(db.Integer, db.ForeignKey('consultation.id'), nullable=False)
+    nom_original    = db.Column(db.String(255), nullable=False)
+    nom_stocke      = db.Column(db.String(255), nullable=False)
+    type_fichier    = db.Column(db.String(10))
+    titre           = db.Column(db.String(255), default='')
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class FichierSection(db.Model):
+    """Fichier attaché à une section précise d'un bilan."""
+    __tablename__ = 'fichier_section'
+    id              = db.Column(db.Integer, primary_key=True)
+    consultation_id = db.Column(db.Integer, db.ForeignKey('consultation.id'), nullable=False)
+    section_ordre   = db.Column(db.Integer, nullable=False)   # ordre de la section dans le bilan
+    champ_name      = db.Column(db.String(50), nullable=False) # nom du champ fichier
+    nom_original    = db.Column(db.String(255), nullable=False)
+    nom_stocke      = db.Column(db.String(255), nullable=False)
+    type_fichier    = db.Column(db.String(10))
+    titre           = db.Column(db.String(255), default='')
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class JournalAcces(db.Model):
+    __tablename__ = 'journal_acces'
+    id              = db.Column(db.Integer, primary_key=True)
+    praticien_id    = db.Column(db.Integer, db.ForeignKey('praticien.id'))
+    patient_id      = db.Column(db.Integer, db.ForeignKey('patient.id'))
+    consultation_id = db.Column(db.Integer, db.ForeignKey('consultation.id'))
+    action          = db.Column(db.String(50), nullable=False)
+    ip_address      = db.Column(db.String(45))
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Cabinet(db.Model):
+    """Cabinet médical — coordonnées."""
+    __tablename__ = 'cabinet'
+    id          = db.Column(db.Integer, primary_key=True)
+    nom         = db.Column(db.String(100), nullable=False)
+    rue         = db.Column(db.String(200))
+    code_postal = db.Column(db.String(10))
+    commune     = db.Column(db.String(100))
+    telephone   = db.Column(db.String(20))
+    fax         = db.Column(db.String(20))
+    email       = db.Column(db.String(200))
+    couleur     = db.Column(db.String(7), default='#1C2B3A')
+    actif       = db.Column(db.Boolean, default=True)
+
+    praticiens  = db.relationship('PraticienCabinet', backref='cabinet',
+                                  cascade='all, delete-orphan')
+
+    @property
+    def adresse_complete(self):
+        parts = [self.rue, f'{self.code_postal} {self.commune}'.strip()]
+        return ', '.join(p for p in parts if p and p.strip())
+
+    def __repr__(self): return self.nom
+
+
+class PraticienCabinet(db.Model):
+    """Liaison praticien ↔ cabinet avec données spécifiques."""
+    __tablename__ = 'praticien_cabinet'
+    id            = db.Column(db.Integer, primary_key=True)
+    praticien_id  = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    cabinet_id    = db.Column(db.Integer, db.ForeignKey('cabinet.id'), nullable=False)
+    adeli         = db.Column(db.String(9))    # N° ADELI propre à ce cabinet
+    forme_juridique = db.Column(db.String(50)) # EI, SELARL, etc.
+    __table_args__ = (db.UniqueConstraint('praticien_id', 'cabinet_id'),)
+
+    praticien = db.relationship('Praticien', backref='cabinets')
+
+
+class DocumentModele(db.Model):
+    """Modèle de document (courrier ou ordonnance)."""
+    __tablename__ = 'document_modele'
+    id      = db.Column(db.Integer, primary_key=True)
+    nom     = db.Column(db.String(100), nullable=False)
+    type    = db.Column(db.String(20), nullable=False)
+    actif   = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    blocs   = db.relationship('DocumentBloc', backref='modele',
+                               order_by='DocumentBloc.ordre',
+                               cascade='all, delete-orphan')
+
+
+class DocumentBloc(db.Model):
+    """Bloc dans un modèle de document."""
+    __tablename__ = 'document_bloc'
+    id         = db.Column(db.Integer, primary_key=True)
+    modele_id  = db.Column(db.Integer, db.ForeignKey('document_modele.id'), nullable=False)
+    type       = db.Column(db.String(20), nullable=False)  # 'texte' ou 'section_bilan'
+    contenu    = db.Column(db.Text, default='')
+    ordre      = db.Column(db.Integer, default=99)
+
+
+
+class WopiSession(db.Model):
+    """Session WOPI temporaire pour l'édition Collabora."""
+    __tablename__ = 'wopi_session'
+    id              = db.Column(db.Integer, primary_key=True)
+    token           = db.Column(db.String(64), unique=True, nullable=False)
+    consultation_id = db.Column(db.Integer, db.ForeignKey('consultation.id'), nullable=False)
+    section_type    = db.Column(db.String(50))   # 'courrier' ou 'prescription'
+    nom_fichier     = db.Column(db.String(255), nullable=False)
+    chemin_fichier  = db.Column(db.String(500), nullable=False)  # chemin local du .docx
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at      = db.Column(db.DateTime)
+
+
+class SectionDef(db.Model):
+    __tablename__ = 'section_def'
+    id       = db.Column(db.Integer, primary_key=True)
+    type_key = db.Column(db.String(50), unique=True, nullable=False)
+    label    = db.Column(db.String(100), nullable=False)
+    ordre    = db.Column(db.Integer, default=99)
+    builtin  = db.Column(db.Boolean, default=False)
+    actif            = db.Column(db.Boolean, default=True)
+    obs_defaut       = db.Column(db.Text, default='')    # pré-rempli dans le champ observations
+    avec_observations = db.Column(db.Boolean, default=True)  # afficher le champ observations
+    champs     = db.relationship('ChampDef', backref='section',
+                               order_by='ChampDef.ordre', cascade='all, delete-orphan')
+    def to_dict(self):
+        return {'label': self.label,
+                'obs_defaut': self.obs_defaut or '',
+                'avec_observations': self.avec_observations if self.avec_observations is not None else True,
+                'champs': [c.to_dict() for c in self.champs if c.actif]}
+
+
+class ChampDef(db.Model):
+    __tablename__ = 'champ_def'
+    id         = db.Column(db.Integer, primary_key=True)
+    section_id = db.Column(db.Integer, db.ForeignKey('section_def.id'), nullable=False)
+    name       = db.Column(db.String(50), nullable=False)
+    label      = db.Column(db.String(100), nullable=False)
+    type       = db.Column(db.String(20), default='text')
+    ordre      = db.Column(db.Integer, default=99)
+    actif      = db.Column(db.Boolean, default=True)
+    options    = db.relationship('OptionDef', backref='champ',
+                                 order_by='OptionDef.ordre', cascade='all, delete-orphan')
+    def to_dict(self):
+        d = {'name': self.name, 'label': self.label, 'type': self.type}
+        if self.type == 'select':
+            d['options'] = [o.valeur for o in self.options if o.actif]
+        return d
+
+
+class OptionDef(db.Model):
+    __tablename__ = 'option_def'
+    id       = db.Column(db.Integer, primary_key=True)
+    champ_id = db.Column(db.Integer, db.ForeignKey('champ_def.id'), nullable=False)
+    valeur   = db.Column(db.String(100), nullable=False)
+    ordre    = db.Column(db.Integer, default=99)
+    actif    = db.Column(db.Boolean, default=True)
+
+
+class ModeleBilan(db.Model):
+    """Modèle de bilan réutilisable."""
+    __tablename__ = 'modele_bilan'
+    id      = db.Column(db.Integer, primary_key=True)
+    nom     = db.Column(db.String(100), nullable=False)
+    motif   = db.Column(db.String(200), default='')
+    actif   = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    sections = db.relationship('ModeleBilanSection', backref='modele',
+                               order_by='ModeleBilanSection.ordre',
+                               cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nom': self.nom,
+            'motif': self.motif or '',
+            'sections': [s.type_key for s in self.sections]
+        }
+
+
+class ModeleBilanSection(db.Model):
+    __tablename__ = 'modele_bilan_section'
+    id        = db.Column(db.Integer, primary_key=True)
+    modele_id = db.Column(db.Integer, db.ForeignKey('modele_bilan.id'), nullable=False)
+    type_key  = db.Column(db.String(50), nullable=False)
+    ordre     = db.Column(db.Integer, default=99)
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def admin_required(f):
+    """Décorateur : réserve la route aux admins."""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash('Accès réservé aux administrateurs.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def get_current_cabinet():
+    """Retourne le cabinet sélectionné en session, ou None."""
+    cab_id = session.get('cabinet_id')
+    if cab_id:
+        return Cabinet.query.get(cab_id)
+    return None
+
+
+def get_cabinets_praticien():
+    """Cabinets où le praticien courant est rattaché."""
+    if not current_user.is_authenticated:
+        return []
+    pcs = PraticienCabinet.query.filter_by(
+        praticien_id=current_user.id).join(Cabinet).filter(Cabinet.actif==True).all()
+    return [pc.cabinet for pc in pcs]
+
+
+def get_sections():
+    secs = SectionDef.query.filter_by(actif=True).order_by(SectionDef.ordre).all()
+    return {s.type_key: s.to_dict() for s in secs}, [s.type_key for s in secs]
+
+
+def slugify(text):
+    text = unicodedata.normalize('NFD', text.lower())
+    text = ''.join(c for c in text if unicodedata.category(c) != 'Mn')
+    return re.sub(r'[^a-z0-9]+', '_', text).strip('_')[:40]
+
+
+def _parse_date(val):
+    if not val: return None
+    try: return datetime.strptime(val, '%Y-%m-%d').date()
+    except ValueError: return None
+
+
+# ============================================================
+# AUTH
+# ============================================================
+
+@login_manager.user_loader
+def load_user(user_id): return Praticien.query.get(int(user_id))
+
+
+def log_action(action, patient_id=None, consultation_id=None):
+    db.session.add(JournalAcces(
+        praticien_id=current_user.id if current_user.is_authenticated else None,
+        patient_id=patient_id, consultation_id=consultation_id,
+        action=action, ip_address=request.remote_addr))
+    db.session.commit()
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        p = Praticien.query.filter_by(login=request.form.get('login'), actif=True).first()
+        if p and p.check_password(request.form.get('password', '')):
+            login_user(p)
+            return redirect(url_for('index'))
+        flash('Identifiants ou mot de passe incorrects.', 'danger')
+    return render_template('login.html')
+
+
+@app.route('/logout')
+@login_required
+def logout(): logout_user(); return redirect(url_for('login'))
+
+
+@app.route('/changer-cabinet', methods=['POST'])
+@login_required
+def changer_cabinet():
+    cab_id = request.form.get('cabinet_id', type=int)
+    if cab_id:
+        session['cabinet_id'] = cab_id
+    else:
+        session.pop('cabinet_id', None)
+    return redirect(request.referrer or url_for('index'))
+
+
+@app.route('/api/historique_section')
+@login_required
+def api_historique_section():
+    """Retourne l'historique d'un type de section pour un patient donné."""
+    patient_id   = request.args.get('patient_id', type=int)
+    type_key     = request.args.get('type_key', '')
+    exclude_id   = request.args.get('exclude_id', type=int)  # consultation courante à exclure
+
+    if not patient_id or not type_key:
+        return jsonify([])
+
+    # Récupérer toutes les consultations du patient sauf la courante
+    query = Consultation.query.filter(Consultation.patient_id == patient_id)
+    if exclude_id:
+        query = query.filter(Consultation.id != exclude_id)
+    consultations = query.order_by(Consultation.date_consult.desc()).all()
+
+    results = []
+    for c in consultations:
+        sections = [s for s in c.sections if s.type == type_key]
+        for sec in sections:
+            results.append({
+                'consultation_id': c.id,
+                'date': c.date_consult.strftime('%d/%m/%Y'),
+                'motif': c.motif or '',
+                'observations': sec.observations or '',
+                'donnees': sec.get_donnees(),
+            })
+
+    return jsonify(results)
+
+
+@app.route('/api/communes')
+@login_required
+def api_communes():
+    """Retourne les communes pour un code postal via l'API geo.api.gouv.fr."""
+    import urllib.request, urllib.parse
+    cp = request.args.get('cp', '').strip()
+    if len(cp) < 2:
+        return jsonify([])
+    try:
+        url = f"https://geo.api.gouv.fr/communes?codePostal={urllib.parse.quote(cp)}&fields=nom&format=json&geometry=centre"
+        with urllib.request.urlopen(url, timeout=3) as r:
+            data = json.loads(r.read().decode())
+        communes = sorted(set(c['nom'] for c in data))
+        return jsonify(communes)
+    except Exception:
+        return jsonify([])
+
+
+# ============================================================
+# PATIENTS
+# ============================================================
+
+@app.route('/')
+@login_required
+def index():
+    patients = Patient.query.order_by(Patient.nom).all()
+    return render_template('patients/liste.html', patients=patients)
+
+
+@app.route('/patient/nouveau', methods=['GET', 'POST'])
+@login_required
+def patient_nouveau():
+    if request.method == 'POST':
+        p = Patient(nom=request.form['nom'].strip().upper(),
+                    prenom=request.form['prenom'].strip().capitalize(),
+                    date_naissance=_parse_date(request.form.get('date_naissance')),
+                    sexe=request.form.get('sexe'),
+                    rue=request.form.get('rue'),
+                    code_postal=request.form.get('code_postal'),
+                    commune=request.form.get('commune'),
+                    telephone=request.form.get('telephone'),
+                    email=request.form.get('email'),
+                    medecin_referent=request.form.get('medecin_referent'),
+                    num_secu=request.form.get('num_secu'),
+                    notes_admin=request.form.get('notes_admin'), praticien_id=current_user.id)
+        db.session.add(p); db.session.commit()
+        log_action('creation_patient', patient_id=p.id)
+        flash(f'Patient {p} créé.', 'success')
+        return redirect(url_for('patient_detail', patient_id=p.id))
+    return render_template('patients/edition.html', patient=None)
+
+
+@app.route('/patient/<int:patient_id>')
+@login_required
+def patient_detail(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    sections, _ = get_sections()
+    log_action('lecture_patient', patient_id=patient_id)
+    return render_template('patients/fiche.html', patient=patient, sections_def=sections)
+
+
+@app.route('/patient/<int:patient_id>/modifier', methods=['GET', 'POST'])
+@login_required
+def patient_modifier(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    if request.method == 'POST':
+        patient.nom=request.form['nom'].strip().upper()
+        patient.prenom=request.form['prenom'].strip().capitalize()
+        patient.date_naissance=_parse_date(request.form.get('date_naissance'))
+        patient.sexe=request.form.get('sexe')
+        patient.rue=request.form.get('rue')
+        patient.code_postal=request.form.get('code_postal')
+        patient.commune=request.form.get('commune')
+        patient.telephone=request.form.get('telephone')
+        patient.email=request.form.get('email')
+        patient.medecin_referent=request.form.get('medecin_referent')
+        patient.num_secu=request.form.get('num_secu'); patient.notes_admin=request.form.get('notes_admin')
+        db.session.commit(); log_action('modification_patient', patient_id=patient_id)
+        flash('Fiche patient mise à jour.', 'success')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    return render_template('patients/edition.html', patient=patient)
+
+
+@app.route('/recherche')
+@login_required
+def recherche():
+    q = request.args.get('q', '').strip(); patients = []
+    if q:
+        dn = None
+        for fmt in ('%d/%m/%Y', '%d/%m/%y', '%Y-%m-%d'):
+            try: dn = datetime.strptime(q, fmt).date(); break
+            except ValueError: pass
+        if dn:
+            patients = Patient.query.filter(Patient.date_naissance == dn).order_by(Patient.nom).all()
+        else:
+            conds = [db.or_(Patient.nom.ilike(f'%{m}%'), Patient.prenom.ilike(f'%{m}%')) for m in q.split()]
+            patients = Patient.query.filter(db.and_(*conds)).order_by(Patient.nom).all()
+    return render_template('patients/recherche.html', patients=patients, q=q)
+
+
+# ============================================================
+# CONSULTATIONS
+# ============================================================
+
+@app.route('/patient/<int:patient_id>/consultation/nouvelle', methods=['GET', 'POST'])
+@login_required
+def consultation_nouvelle(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    sections, ordre = get_sections()
+    if request.method == 'POST':
+        cab = get_current_cabinet()
+        c = Consultation(patient_id=patient_id, praticien_id=current_user.id,
+                         date_consult=_parse_date(request.form.get('date_consult')) or date.today(),
+                         motif=request.form.get('motif'),
+                         medecin_prescripteur=request.form.get('medecin_prescripteur','').strip() or None,
+                         classe_profession=request.form.get('classe_profession','').strip() or None,
+                         cabinet_id=cab.id if cab else None)
+        db.session.add(c); db.session.flush()
+        _save_sections(c.id, request.form, sections, request.files)
+        _save_fichiers(c.id, request.files, request.form)
+        db.session.commit()
+        log_action('creation_consultation', patient_id=patient_id, consultation_id=c.id)
+        flash('Bilan enregistré.', 'success')
+        return redirect(url_for('consultation_detail', consultation_id=c.id))
+    autres = Consultation.query.filter(Consultation.patient_id == patient_id)\
+                               .order_by(Consultation.date_consult.asc()).all()
+    modeles = ModeleBilan.query.filter_by(actif=True).order_by(ModeleBilan.nom).all()
+    if not get_current_cabinet():
+        flash('⚠️ Veuillez sélectionner un cabinet avant de créer un bilan.', 'warning')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    return render_template('consultations/saisie.html', patient=patient, consultation=None,
+                           sections_dispo=sections, sections_ordre=ordre,
+                           autres_consultations=autres, sections_def=sections,
+                           modeles=modeles, modeles_json=[m.to_dict() for m in modeles])
+
+
+@app.route('/consultation/<int:consultation_id>')
+@login_required
+def consultation_detail(consultation_id):
+    c = Consultation.query.get_or_404(consultation_id)
+    sections, _ = get_sections()
+    log_action('lecture_consultation', patient_id=c.patient_id, consultation_id=consultation_id)
+    return render_template('consultations/bilan.html', consultation=c, sections_def=sections)
+
+
+@app.route('/consultation/<int:consultation_id>/modifier', methods=['GET', 'POST'])
+@login_required
+def consultation_modifier(consultation_id):
+    c = Consultation.query.get_or_404(consultation_id)
+    sections, ordre = get_sections()
+    if request.method == 'POST':
+        c.date_consult = _parse_date(request.form.get('date_consult')) or c.date_consult
+        c.motif = request.form.get('motif')
+        c.medecin_prescripteur = request.form.get('medecin_prescripteur','').strip() or None
+        c.classe_profession    = request.form.get('classe_profession','').strip() or None
+        for s in list(c.sections): db.session.delete(s)
+        db.session.flush()
+        _save_sections(c.id, request.form, sections, request.files)
+        _save_fichiers(c.id, request.files, request.form)
+        db.session.commit()
+        log_action('modification_consultation', patient_id=c.patient_id, consultation_id=c.id)
+        flash('Bilan mis à jour.', 'success')
+        redirect_after = request.form.get('redirect_after', '').strip()
+        if redirect_after:
+            return redirect(redirect_after)
+        return redirect(url_for('consultation_detail', consultation_id=c.id))
+    autres = Consultation.query.filter(Consultation.patient_id == c.patient_id,
+                                       Consultation.id != c.id)\
+                               .order_by(Consultation.date_consult.asc()).all()
+    return render_template('consultations/saisie.html', patient=c.patient, consultation=c,
+                           sections_dispo=sections, sections_ordre=ordre,
+                           autres_consultations=autres, sections_def=sections,
+                           modeles=[], modeles_json=[])
+
+
+@app.route('/consultation/<int:consultation_id>/supprimer', methods=['POST'])
+@login_required
+def consultation_supprimer(consultation_id):
+    c = Consultation.query.get_or_404(consultation_id)
+    pid = c.patient_id; pnom = f'{c.patient.prenom} {c.patient.nom}'
+    dstr = c.date_consult.strftime('%d/%m/%Y')
+    log_action('suppression_consultation', patient_id=pid, consultation_id=consultation_id)
+    db.session.delete(c); db.session.commit()
+    flash(f'Bilan du {dstr} pour {pnom} supprimé définitivement.', 'danger')
+    return redirect(url_for('patient_detail', patient_id=pid))
+
+
+# ============================================================
+# FICHIERS
+# ============================================================
+
+def allowed_file(fn):
+    return '.' in fn and fn.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/uploads/<int:consultation_id>/<filename>')
+@login_required
+def uploaded_file(consultation_id, filename):
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(consultation_id)), filename)
+
+
+@app.route('/uploads/section/<int:consultation_id>/<filename>')
+@login_required
+def uploaded_file_section(consultation_id, filename):
+    folder = os.path.join(app.config['UPLOAD_FOLDER'], 'sections', str(consultation_id))
+    return send_from_directory(folder, filename)
+
+
+@app.route('/fichier_section/<int:fichier_id>/supprimer', methods=['POST'])
+@login_required
+def fichier_section_supprimer(fichier_id):
+    f = FichierSection.query.get_or_404(fichier_id)
+    cid = f.consultation_id
+    chemin = os.path.join(app.config['UPLOAD_FOLDER'], 'sections', str(cid), f.nom_stocke)
+    if os.path.exists(chemin): os.remove(chemin)
+    db.session.delete(f); db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/fichier/<int:fichier_id>/titre', methods=['POST'])
+@login_required
+def fichier_titre(fichier_id):
+    f = FichierBilan.query.get_or_404(fichier_id)
+    f.titre = request.form.get('titre', '').strip(); db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/fichier/<int:fichier_id>/supprimer', methods=['POST'])
+@login_required
+def fichier_supprimer(fichier_id):
+    f = FichierBilan.query.get_or_404(fichier_id)
+    cid = f.consultation_id
+    chemin = os.path.join(app.config['UPLOAD_FOLDER'], str(cid), f.nom_stocke)
+    if os.path.exists(chemin): os.remove(chemin)
+    db.session.delete(f); db.session.commit()
+    if request.headers.get('X-Requested-With') == 'fetch':
+        return jsonify({'ok': True})
+    flash(f'Fichier « {f.nom_original} » supprimé.', 'success')
+    return redirect(url_for('consultation_modifier', consultation_id=cid))
+
+
+def _save_fichiers(consultation_id, files, form=None):
+    import uuid
+    uploaded = files.getlist('fichiers[]')
+    titres = form.getlist('fichiers_titres[]') if form else []
+    if not uploaded: return
+    folder = os.path.join(app.config['UPLOAD_FOLDER'], str(consultation_id))
+    os.makedirs(folder, exist_ok=True)
+    ti = 0
+    for f in uploaded:
+        if f and f.filename and allowed_file(f.filename):
+            ext = f.filename.rsplit('.', 1)[1].lower()
+            ns = f"{uuid.uuid4().hex}.{ext}"
+            tf = 'pdf' if ext == 'pdf' else ('word' if ext in ('doc','docx') else 'image')
+            f.save(os.path.join(folder, ns))
+            db.session.add(FichierBilan(consultation_id=consultation_id,
+                nom_original=secure_filename(f.filename), nom_stocke=ns, type_fichier=tf,
+                titre=(titres[ti] if ti < len(titres) else '').strip()))
+            ti += 1
+
+
+def _save_sections(consultation_id, form, sections, files=None):
+    import uuid
+    types = form.getlist('sections_types[]')
+    obs_list = form.getlist('sections_obs[]')
+    for ordre, (stype, obs) in enumerate(zip(types, obs_list)):
+        if stype not in sections: continue
+        donnees = {}
+        for champ in sections[stype]['champs']:
+            if champ['type'] == 'fichier':
+                # Géré séparément via _save_fichiers_section
+                continue
+            val = form.get(f"champ__{ordre}__{champ['name']}", '').strip()
+            if val: donnees[champ['name']] = val
+        db.session.add(SectionBilan(consultation_id=consultation_id, type=stype,
+            ordre=ordre, titre='', observations=obs.strip() if obs else '',
+            donnees=json.dumps(donnees, ensure_ascii=False)))
+    # Sauvegarder les fichiers de section
+    if files:
+        _save_fichiers_section(consultation_id, form, files, sections)
+
+
+def _save_fichiers_section(consultation_id, form, files, sections):
+    import uuid
+    types = form.getlist('sections_types[]')
+    for ordre, stype in enumerate(types):
+        if stype not in sections: continue
+        for champ in sections[stype]['champs']:
+            if champ['type'] != 'fichier': continue
+            key = f"champ__{ordre}__{champ['name']}"
+            uploaded = files.getlist(key)
+            for f in uploaded:
+                if not f or not f.filename or not allowed_file(f.filename): continue
+                ext = f.filename.rsplit('.', 1)[1].lower()
+                ns = f"{uuid.uuid4().hex}.{ext}"
+                tf = 'pdf' if ext=='pdf' else ('word' if ext in ('doc','docx') else 'image')
+                folder = os.path.join(app.config['UPLOAD_FOLDER'], 'sections', str(consultation_id))
+                os.makedirs(folder, exist_ok=True)
+                f.save(os.path.join(folder, ns))
+                db.session.add(FichierSection(
+                    consultation_id=consultation_id,
+                    section_ordre=ordre,
+                    champ_name=champ['name'],
+                    nom_original=secure_filename(f.filename),
+                    nom_stocke=ns,
+                    type_fichier=tf,
+                    titre='',
+                ))
+
+
+# ============================================================
+# ADMIN — SECTIONS
+# ============================================================
+
+# ============================================================
+# ADMIN — CABINETS
+# ============================================================
+
+@app.route('/admin/cabinets')
+@login_required
+@admin_required
+def admin_cabinets():
+    cabinets = Cabinet.query.order_by(Cabinet.nom).all()
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
+    return render_template('admin/cabinets.html', cabinets=cabinets, praticiens=praticiens)
+
+
+@app.route('/admin/cabinet/nouveau', methods=['POST'])
+@login_required
+@admin_required
+def admin_cabinet_nouveau():
+    nom = request.form.get('nom', '').strip()
+    if not nom: flash('Le nom est requis.', 'danger'); return redirect(url_for('admin_cabinets'))
+    c = Cabinet(nom=nom, rue=request.form.get('rue','').strip(),
+                code_postal=request.form.get('code_postal','').strip(),
+                commune=request.form.get('commune','').strip(),
+                telephone=request.form.get('telephone','').strip(),
+                fax=request.form.get('fax','').strip(),
+                email=request.form.get('email','').strip(),
+                couleur=request.form.get('couleur','#1C2B3A').strip())
+    db.session.add(c); db.session.commit()
+    flash(f'Cabinet « {nom} » créé.', 'success')
+    return redirect(url_for('admin_cabinets'))
+
+
+@app.route('/admin/cabinet/<int:cabinet_id>/modifier', methods=['POST'])
+@login_required
+@admin_required
+def admin_cabinet_modifier(cabinet_id):
+    c = Cabinet.query.get_or_404(cabinet_id)
+    c.nom         = request.form.get('nom', c.nom).strip()
+    c.rue         = request.form.get('rue', '').strip()
+    c.code_postal = request.form.get('code_postal', '').strip()
+    c.commune     = request.form.get('commune', '').strip()
+    c.telephone   = request.form.get('telephone', '').strip()
+    c.fax         = request.form.get('fax', '').strip()
+    c.email       = request.form.get('email', '').strip()
+    c.couleur     = request.form.get('couleur', c.couleur or '#1C2B3A').strip()
+    c.actif       = request.form.get('actif') == '1'
+    db.session.commit(); flash('Cabinet mis à jour.', 'success')
+    return redirect(url_for('admin_cabinets'))
+
+
+@app.route('/admin/cabinet/<int:cabinet_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_cabinet_supprimer(cabinet_id):
+    c = Cabinet.query.get_or_404(cabinet_id)
+    nom = c.nom; db.session.delete(c); db.session.commit()
+    flash(f'Cabinet « {nom} » supprimé.', 'success')
+    return redirect(url_for('admin_cabinets'))
+
+
+@app.route('/admin/praticien-cabinet/lier', methods=['POST'])
+@login_required
+@admin_required
+def admin_praticien_cabinet_lier():
+    """Lie un praticien à un cabinet avec son ADELI et forme juridique."""
+    p_id  = request.form.get('praticien_id', type=int)
+    c_id  = request.form.get('cabinet_id', type=int)
+    adeli = request.form.get('adeli', '').strip()
+    forme = request.form.get('forme_juridique', '').strip()
+    existing = PraticienCabinet.query.filter_by(praticien_id=p_id, cabinet_id=c_id).first()
+    if existing:
+        existing.adeli = adeli; existing.forme_juridique = forme
+    else:
+        db.session.add(PraticienCabinet(praticien_id=p_id, cabinet_id=c_id,
+                                        adeli=adeli, forme_juridique=forme))
+    db.session.commit(); flash('Liaison mise à jour.', 'success')
+    return redirect(url_for('admin_cabinets'))
+
+
+@app.route('/admin/praticien-cabinet/<int:pc_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_praticien_cabinet_supprimer(pc_id):
+    pc = PraticienCabinet.query.get_or_404(pc_id)
+    db.session.delete(pc); db.session.commit()
+    flash('Liaison supprimée.', 'success')
+    return redirect(url_for('admin_cabinets'))
+
+
+# ============================================================
+# ADMIN — PRATICIENS
+# ============================================================
+
+@app.route('/admin/praticiens')
+@login_required
+@admin_required
+def admin_praticiens():
+    praticiens = Praticien.query.order_by(Praticien.nom).all()
+    return render_template('admin/praticiens.html', praticiens=praticiens)
+
+
+@app.route('/admin/praticien/nouveau', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_praticien_nouveau():
+    if request.method == 'POST':
+        login = request.form.get('login', '').strip().lower()
+        if Praticien.query.filter_by(login=login).first():
+            flash('Ce login est déjà utilisé.', 'danger')
+            return redirect(url_for('admin_praticien_nouveau'))
+        p = Praticien(
+            nom    = request.form.get('nom', '').strip().upper(),
+            prenom = request.form.get('prenom', '').strip().capitalize(),
+            titre  = request.form.get('titre', 'Orthoptiste').strip(),
+            email  = request.form.get('email', '').strip() or None,
+            login  = login,
+            rpps    = request.form.get('rpps', '').strip() or None,
+            couleur = request.form.get('couleur', '#2E7D6B').strip(),
+            role   = request.form.get('role', 'praticien'),
+            actif  = True,
+        )
+        pwd = request.form.get('password', '').strip()
+        if pwd:
+            p.set_password(pwd)
+        db.session.add(p); db.session.commit()
+        flash(f'Praticien {p} créé.', 'success')
+        return redirect(url_for('admin_praticiens'))
+    return render_template('admin/praticien_form.html', praticien=None)
+
+
+@app.route('/admin/praticien/<int:praticien_id>/modifier', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_praticien_modifier(praticien_id):
+    p = Praticien.query.get_or_404(praticien_id)
+    if request.method == 'POST':
+        login = request.form.get('login', '').strip().lower()
+        existing = Praticien.query.filter_by(login=login).first()
+        if existing and existing.id != p.id:
+            flash('Ce login est déjà utilisé.', 'danger')
+            return redirect(url_for('admin_praticien_modifier', praticien_id=praticien_id))
+        p.nom    = request.form.get('nom', '').strip().upper()
+        p.prenom = request.form.get('prenom', '').strip().capitalize()
+        p.titre  = request.form.get('titre', 'Orthoptiste').strip()
+        p.email  = request.form.get('email', '').strip() or None
+        p.login  = login
+        p.rpps    = request.form.get('rpps', '').strip() or None
+        p.couleur = request.form.get('couleur', '#2E7D6B').strip()
+        p.role   = request.form.get('role', 'praticien')
+        p.actif  = request.form.get('actif') == '1'
+        pwd  = request.form.get('password', '').strip()
+        pwd2 = request.form.get('password2', '').strip()
+        if pwd:
+            if pwd != pwd2:
+                flash('Les mots de passe ne correspondent pas.', 'danger')
+                return redirect(url_for('admin_praticien_modifier', praticien_id=praticien_id))
+            p.set_password(pwd)
+        db.session.commit()
+        flash(f'Praticien {p} mis à jour.', 'success')
+        return redirect(url_for('admin_praticiens'))
+    return render_template('admin/praticien_form.html', praticien=p)
+
+
+@app.route('/admin/praticien/<int:praticien_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_praticien_supprimer(praticien_id):
+    p = Praticien.query.get_or_404(praticien_id)
+    if p.id == current_user.id:
+        flash('Vous ne pouvez pas supprimer votre propre compte.', 'danger')
+        return redirect(url_for('admin_praticiens'))
+    if p.role == 'admin':
+        nb_admins = Praticien.query.filter_by(role='admin', actif=True).count()
+        if nb_admins <= 1:
+            flash('Impossible de supprimer le dernier administrateur.', 'danger')
+            return redirect(url_for('admin_praticiens'))
+    # Bloquer si le praticien a des consultations
+    nb_consultations = Consultation.query.filter_by(praticien_id=p.id).count()
+    if nb_consultations > 0:
+        flash(
+            f'{p} a {nb_consultations} consultation(s) enregistrée(s) et ne peut pas être supprimé. '
+            f'Désactivez-le à la place.',
+            'danger'
+        )
+        return redirect(url_for('admin_praticien_modifier', praticien_id=praticien_id))
+    nom = str(p)
+    db.session.delete(p)
+    db.session.commit()
+    flash(f'Praticien {nom} supprimé.', 'success')
+    return redirect(url_for('admin_praticiens'))
+
+
+
+    p = Praticien.query.get_or_404(praticien_id)
+    if request.method == 'POST':
+        login = request.form.get('login', '').strip().lower()
+        existing = Praticien.query.filter_by(login=login).first()
+        if existing and existing.id != p.id:
+            flash('Ce login est déjà utilisé.', 'danger')
+            return redirect(url_for('admin_praticien_modifier', praticien_id=praticien_id))
+        p.nom    = request.form.get('nom', '').strip().upper()
+        p.prenom = request.form.get('prenom', '').strip().capitalize()
+        p.titre  = request.form.get('titre', 'Orthoptiste').strip()
+        p.email  = request.form.get('email', '').strip() or None
+        p.login  = login
+        p.rpps    = request.form.get('rpps', '').strip() or None
+        p.couleur = request.form.get('couleur', '#2E7D6B').strip()
+        p.role   = request.form.get('role', 'praticien')
+        p.actif  = request.form.get('actif') == '1'
+        pwd  = request.form.get('password', '').strip()
+        pwd2 = request.form.get('password2', '').strip()
+        if pwd:
+            if pwd != pwd2:
+                flash('Les mots de passe ne correspondent pas.', 'danger')
+                return redirect(url_for('admin_praticien_modifier', praticien_id=praticien_id))
+            p.set_password(pwd)
+        db.session.commit()
+        flash(f'Praticien {p} mis à jour.', 'success')
+        return redirect(url_for('admin_praticiens'))
+    return render_template('admin/praticien_form.html', praticien=p)
+
+
+@app.route('/profil', methods=['GET', 'POST'])
+@login_required
+def profil():
+    """Chaque praticien peut modifier son propre profil."""
+    p = current_user
+    if request.method == 'POST':
+        p.prenom  = request.form.get('prenom', '').strip().capitalize()
+        p.nom     = request.form.get('nom', '').strip().upper()
+        p.titre   = request.form.get('titre', 'Orthoptiste').strip()
+        p.email   = request.form.get('email', '').strip() or None
+        p.couleur = request.form.get('couleur', p.couleur or '#2E7D6B').strip()
+        pwd = request.form.get('password', '').strip()
+        pwd2 = request.form.get('password2', '').strip()
+        if pwd:
+            if pwd != pwd2:
+                flash('Les mots de passe ne correspondent pas.', 'danger')
+                return redirect(url_for('profil'))
+            p.set_password(pwd)
+        db.session.commit()
+        flash('Profil mis à jour.', 'success')
+        return redirect(url_for('profil'))
+    return render_template('admin/profil.html', praticien=p)
+
+
+@app.route('/admin/sections')
+@login_required
+def admin_sections():
+    sections = SectionDef.query.order_by(SectionDef.ordre).all()
+    return render_template('admin/sections.html', sections=sections)
+
+
+@app.route('/admin/section/nouvelle', methods=['POST'])
+@login_required
+@admin_required
+def admin_section_nouvelle():
+    label = request.form.get('label', '').strip()
+    if not label: flash('Le nom est requis.', 'danger'); return redirect(url_for('admin_sections'))
+    key = slugify(label); i = 2
+    while SectionDef.query.filter_by(type_key=key).first():
+        key = f'{slugify(label)}_{i}'; i += 1
+    max_o = db.session.query(db.func.max(SectionDef.ordre)).scalar() or 0
+    s = SectionDef(type_key=key, label=label, ordre=max_o+1, builtin=False)
+    db.session.add(s); db.session.commit()
+    flash(f'Section « {label} » créée.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=s.id))
+
+
+@app.route('/admin/section/<int:section_id>')
+@login_required
+@admin_required
+def admin_section_detail(section_id):
+    section = SectionDef.query.get_or_404(section_id)
+    all_sections = SectionDef.query.order_by(SectionDef.ordre).all()
+    return render_template('admin/section_detail.html', section=section, all_sections=all_sections)
+
+
+@app.route('/admin/section/<int:section_id>/modifier', methods=['POST'])
+@login_required
+@admin_required
+def admin_section_modifier(section_id):
+    s = SectionDef.query.get_or_404(section_id)
+    s.label             = request.form.get('label', s.label).strip()
+    s.actif             = request.form.get('actif') == '1'
+    s.obs_defaut        = request.form.get('obs_defaut', '').strip()
+    s.avec_observations = request.form.get('avec_observations') == '1'
+    db.session.commit(); flash('Section mise à jour.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=section_id))
+
+
+@app.route('/admin/section/<int:section_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_section_supprimer(section_id):
+    s = SectionDef.query.get_or_404(section_id)
+    if s.builtin:
+        flash('Section native : désactivez-la plutôt que la supprimer.', 'danger')
+        return redirect(url_for('admin_section_detail', section_id=section_id))
+    label = s.label; db.session.delete(s); db.session.commit()
+    flash(f'Section « {label} » supprimée.', 'success')
+    return redirect(url_for('admin_sections'))
+
+
+@app.route('/admin/sections/reordonner', methods=['POST'])
+@login_required
+@admin_required
+def admin_sections_reordonner():
+    for i, sid in enumerate(request.json.get('ordre', [])):
+        s = SectionDef.query.get(sid)
+        if s: s.ordre = i
+    db.session.commit(); return jsonify({'ok': True})
+
+
+# ── Champs ──
+
+@app.route('/admin/section/<int:section_id>/champ/nouveau', methods=['POST'])
+@login_required
+@admin_required
+def admin_champ_nouveau(section_id):
+    s = SectionDef.query.get_or_404(section_id)
+    label = request.form.get('label', '').strip()
+    type_ = request.form.get('type', 'text')
+    # Label vide autorisé — on laisse vide ou on met un défaut pour fichier
+    if not label and type_ == 'fichier':
+        label = 'Pièces jointes'
+    name = slugify(label) if label else 'pieces_jointes'; existing = [c.name for c in s.champs]; i = 2; orig = name
+    while name in existing: name = f'{orig}_{i}'; i += 1
+    max_o = max((c.ordre for c in s.champs), default=0)
+    db.session.add(ChampDef(section_id=section_id, name=name, label=label,
+                             type=type_, ordre=max_o+1))
+    db.session.commit(); flash(f'Champ « {label} » ajouté.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=section_id))
+
+
+@app.route('/admin/champ/<int:champ_id>/modifier', methods=['POST'])
+@login_required
+@admin_required
+def admin_champ_modifier(champ_id):
+    c = ChampDef.query.get_or_404(champ_id)
+    c.label = request.form.get('label', c.label).strip()
+    c.type  = request.form.get('type', c.type)
+    c.actif = request.form.get('actif') == '1'
+    db.session.commit(); flash('Champ mis à jour.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=c.section_id))
+
+
+@app.route('/admin/champ/<int:champ_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_champ_supprimer(champ_id):
+    c = ChampDef.query.get_or_404(champ_id); sid = c.section_id
+    db.session.delete(c); db.session.commit(); flash('Champ supprimé.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=sid))
+
+
+@app.route('/admin/champs/reordonner', methods=['POST'])
+@login_required
+@admin_required
+def admin_champs_reordonner():
+    for i, cid in enumerate(request.json.get('ordre', [])):
+        c = ChampDef.query.get(cid)
+        if c: c.ordre = i
+    db.session.commit(); return jsonify({'ok': True})
+
+
+# ── Options ──
+
+@app.route('/admin/champ/<int:champ_id>/options_json')
+@login_required
+@admin_required
+def admin_options_json(champ_id):
+    c = ChampDef.query.get_or_404(champ_id)
+    return jsonify({'options': [
+        {'id': o.id, 'valeur': o.valeur}
+        for o in c.options if o.actif
+    ]})
+
+
+@app.route('/admin/champ/<int:champ_id>/option/nouvelle', methods=['POST'])
+@login_required
+@admin_required
+def admin_option_nouvelle(champ_id):
+    c = ChampDef.query.get_or_404(champ_id)
+    valeur = request.form.get('valeur', '').strip()
+    if not valeur: flash('La valeur est requise.', 'danger'); return redirect(url_for('admin_section_detail', section_id=c.section_id))
+    max_o = max((o.ordre for o in c.options), default=0)
+    db.session.add(OptionDef(champ_id=champ_id, valeur=valeur, ordre=max_o+1))
+    db.session.commit(); flash(f'Valeur « {valeur} » ajoutée.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=c.section_id))
+
+
+@app.route('/admin/option/<int:option_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_option_supprimer(option_id):
+    o = OptionDef.query.get_or_404(option_id); sid = o.champ.section_id; v = o.valeur
+    db.session.delete(o); db.session.commit(); flash(f'Valeur « {v} » supprimée.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=sid))
+
+
+@app.route('/admin/options/reordonner', methods=['POST'])
+@login_required
+@admin_required
+def admin_options_reordonner():
+    for i, oid in enumerate(request.json.get('ordre', [])):
+        o = OptionDef.query.get(oid)
+        if o: o.ordre = i
+    db.session.commit(); return jsonify({'ok': True})
+
+
+# ============================================================
+# ADMIN — MODÈLES DE BILAN
+# ============================================================
+
+@app.route('/admin/modeles')
+@login_required
+@admin_required
+def admin_modeles():
+    modeles = ModeleBilan.query.order_by(ModeleBilan.nom).all()
+    sections, ordre = get_sections()
+    return render_template('admin/modeles.html', modeles=modeles,
+                           sections_dispo=sections, sections_ordre=ordre)
+
+
+@app.route('/admin/modele/nouveau', methods=['POST'])
+@login_required
+@admin_required
+def admin_modele_nouveau():
+    nom = request.form.get('nom', '').strip()
+    if not nom:
+        flash('Le nom du modèle est requis.', 'danger')
+        return redirect(url_for('admin_modeles'))
+    m = ModeleBilan(nom=nom, motif=request.form.get('motif', '').strip())
+    db.session.add(m); db.session.flush()
+    types = request.form.getlist('sections[]')
+    sections, ordre = get_sections()
+    # Trier selon l'ordre canonique
+    types_sorted = [t for t in ordre if t in types]
+    for i, t in enumerate(types_sorted):
+        db.session.add(ModeleBilanSection(modele_id=m.id, type_key=t, ordre=i))
+    db.session.commit()
+    flash(f'Modèle « {nom} » créé.', 'success')
+    return redirect(url_for('admin_modeles'))
+
+
+@app.route('/admin/modele/<int:modele_id>/modifier', methods=['POST'])
+@login_required
+@admin_required
+def admin_modele_modifier(modele_id):
+    m = ModeleBilan.query.get_or_404(modele_id)
+    m.nom   = request.form.get('nom', m.nom).strip()
+    m.motif = request.form.get('motif', '').strip()
+    m.actif = request.form.get('actif') == '1'
+    for s in list(m.sections): db.session.delete(s)
+    db.session.flush()
+    types = request.form.getlist('sections[]')
+    sections, ordre = get_sections()
+    types_sorted = [t for t in ordre if t in types]
+    for i, t in enumerate(types_sorted):
+        db.session.add(ModeleBilanSection(modele_id=m.id, type_key=t, ordre=i))
+    db.session.commit()
+    flash('Modèle mis à jour.', 'success')
+    return redirect(url_for('admin_modeles'))
+
+
+@app.route('/admin/modele/<int:modele_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_modele_supprimer(modele_id):
+    m = ModeleBilan.query.get_or_404(modele_id)
+    nom = m.nom; db.session.delete(m); db.session.commit()
+    flash(f'Modèle « {nom} » supprimé.', 'success')
+    return redirect(url_for('admin_modeles'))
+
+
+# ============================================================
+# DONNÉES INITIALES
+# ============================================================
+
+BUILTIN_SECTIONS = [
+    ('anam','Anamnèse',[('entretien','Entretien','textarea',[]),('plan_general','Plan général','textarea',[]),('antecedents','Antécédents','textarea',[])]),
+    ('correction_portee','Correction portée',[('od_sph','OD sphère','sph',[]),('od_cyl','OD cylindre','text',[]),('od_axe','OD axe','number',[]),('od_add','Add OD','number',[]),('og_sph','OG sphère','sph',[]),('og_cyl','OG cylindre','text',[]),('og_axe','OG axe','number',[]),('og_add','Add OG','number',[])]),
+    ('acuite','Acuité visuelle',[
+        ('av_bino','Binoculaire','select',['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10']),
+        ('av_correction','Correction','select',['sans correction','avec correction habituelle','avec correction optimale','avec addition']),
+        ('av_od_loin','OD de loin','select',['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10']),
+        ('av_od_pres','OD de près','select',['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1']),
+        ('av_og_loin','OG de loin','select',['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10']),
+        ('av_og_pres','OG de près','select',['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'])]),
+    ('refraction_obj','Réfraction objective',[('od_sph','OD sphère','sph',[]),('od_cyl','OD cylindre','text',[]),('od_axe','OD axe','number',[]),('og_sph','OG sphère','sph',[]),('og_cyl','OG cylindre','text',[]),('og_axe','OG axe','number',[])]),
+    ('refraction_subj','Réfraction subjective',[('od_sph','OD sphère','sph',[]),('od_cyl','OD cylindre','text',[]),('od_axe','OD axe','number',[]),('od_add','Add OD','number',[]),('og_sph','OG sphère','sph',[]),('og_cyl','OG cylindre','text',[]),('og_axe','OG axe','number',[]),('og_add','Add OG','number',[]),
+        ('od_av_loin','AV OD de loin','select',['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10']),
+        ('od_av_pres','AV OD de près','select',['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1']),
+        ('og_av_loin','AV OG de loin','select',['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10']),
+        ('og_av_pres','AV OG de près','select',['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'])]),
+    ('swaine','Swaine inverse',[('swaine_od','OD /10','number',[]),('swaine_og','OG /10','number',[])]),
+    ('stereoscopie','Vision stéréoscopique',[('tno','TNO (norme ≤60")','select',['480"','240"','120"','60"','30"','15"','non réalisable']),('lang','Lang','select',['positif','négatif','non réalisable'])]),
+    ('cover','Examen sous écran',[('cover_loin','Cover de loin','select',['orthophorie','ésophorie','exophorie','hypophorie OD','hyperphorie OD','ésotropie','exotropie','hypertropie OD','hypertropie OG']),('cover_pres','Cover de près','select',['orthophorie','ésophorie','exophorie','hypophorie OD','hyperphorie OD','ésotropie','exotropie','hypertropie OD','hypertropie OG']),('dip_mm','DIP (mm)','number',[]),('ac_a','AC/A (norme 4±2)','number',[])]),
+    ('motilite','Motilité',[('motilite','Résultat','textarea',[])]),
+    ('ppc','PPC',[('ppc_cm',"Suit jusqu'à (norme ≤5cm)",'select',['2 cm','3 cm','4 cm','5 cm','6 cm','7 cm','8 cm','10 cm','>10 cm','non réalisé'])]),
+    ('maddox','Maddox',[('maddox_loin','De loin','select',['orthophorie','ésophorie','exophorie','hypophorie','hyperphorie','cyclophorie']),('maddox_pres','De près','select',['orthophorie','ésophorie','exophorie','hypophorie','hyperphorie','cyclophorie'])]),
+    ('angle','Angle objectif',[('angle_loin','De loin','select',['orthotropie','ésotropie <10Δ','ésotropie 10-20Δ','ésotropie >20Δ','exotropie <10Δ','exotropie 10-20Δ','exotropie >20Δ','hypertropie']),('angle_pres','De près','select',['orthotropie','ésotropie <10Δ','ésotropie 10-20Δ','ésotropie >20Δ','exotropie <10Δ','exotropie 10-20Δ','exotropie >20Δ','hypertropie'])]),
+    ('prismes','Prismes — amplitudes de fusion',[('conv_loin','Convergence de loin (norme 30Δ)','select',['<10Δ','10-20Δ','20-30Δ','30-40Δ','>40Δ']),('conv_pres','Convergence de près (norme 40Δ)','select',['<10Δ','10-20Δ','20-40Δ','40-50Δ','>50Δ']),('div_loin','Divergence de loin (norme 8Δ)','select',['<4Δ','4-8Δ','8-12Δ','>12Δ']),('div_pres','Divergence de près (norme 12Δ)','select',['<6Δ','6-12Δ','12-16Δ','>16Δ'])]),
+    ('facilites_accom',"Facilités d'accommodation",[('accom_cpm','Résultat (cpm)','select',['<3 cpm','3-5 cpm','5-8 cpm','8-10 cpm','>10 cpm','non réalisé']),('accom_lenteur','Lenteur en','select',['+','−','± égal','non précisé'])]),
+    ('facilites_verg','Facilités de vergences',[('verg_cpm','Résultat (cpm) (norme 15±3)','select',['<6 cpm','6-9 cpm','9-12 cpm','12-15 cpm','15-18 cpm','>18 cpm','non réalisé'])]),
+    ('conclusions','Conclusions',[('conclusions','Conclusions','textarea',[]),('recommandations','Recommandations','textarea',[])]),
+]
+
+
+@app.context_processor
+def inject_cabinet():
+    """Rend cabinet_courant et cabinets_dispo disponibles dans tous les templates."""
+    if current_user.is_authenticated:
+        return {
+            'cabinet_courant': get_current_cabinet(),
+            'cabinets_dispo':  get_cabinets_praticien(),
+        }
+    return {'cabinet_courant': None, 'cabinets_dispo': []}
+
+
+def init_db():
+    with app.app_context():
+        db.create_all()
+        if not Praticien.query.first():
+            p = Praticien(nom='Dupont', prenom='Marie', login='marie.dupont',
+                          email='marie@cabinet.fr', role='admin')
+            p.set_password('admin')
+            db.session.add(p); db.session.commit()
+            print('Praticien admin créé : login=marie.dupont  mot de passe=admin')
+            print('⚠  Changez ce mot de passe dès la première connexion !')
+        if not SectionDef.query.first():
+            for ordre, (key, label, champs) in enumerate(BUILTIN_SECTIONS):
+                sd = SectionDef(type_key=key, label=label, ordre=ordre, builtin=True)
+                db.session.add(sd); db.session.flush()
+                for co, (name, cl, ct, opts) in enumerate(champs):
+                    cd = ChampDef(section_id=sd.id, name=name, label=cl, type=ct, ordre=co)
+                    db.session.add(cd); db.session.flush()
+                    for oo, v in enumerate(opts):
+                        db.session.add(OptionDef(champ_id=cd.id, valeur=v, ordre=oo))
+            db.session.commit(); print('Sections built-in injectées.')
+
+
+
+
+# ============================================================
+# ADMIN — MODÈLES DE DOCUMENTS
+# ============================================================
+
+@app.route('/admin/document-modeles')
+@login_required
+@admin_required
+def admin_document_modeles():
+    modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
+    sections, ordre = get_sections()
+    return render_template('admin/document_modeles.html',
+                           modeles=modeles, sections_dispo=sections, sections_ordre=ordre)
+
+
+@app.route('/admin/document-modele/nouveau', methods=['POST'])
+@login_required
+@admin_required
+def admin_document_modele_nouveau():
+    nom   = request.form.get('nom', '').strip()
+    type_ = request.form.get('type', 'courrier')
+    if not nom:
+        flash('Le nom est requis.', 'danger')
+        return redirect(url_for('admin_document_modeles'))
+    m = DocumentModele(nom=nom, type=type_)
+    db.session.add(m); db.session.commit()
+    flash(f'Modèle « {nom} » créé.', 'success')
+    return redirect(url_for('admin_document_modele_detail', modele_id=m.id))
+
+
+@app.route('/admin/document-modele/<int:modele_id>')
+@login_required
+@admin_required
+def admin_document_modele_detail(modele_id):
+    m = DocumentModele.query.get_or_404(modele_id)
+    modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
+    sections, ordre = get_sections()
+    return render_template('admin/document_modele_detail.html',
+                           modele=m, modeles=modeles,
+                           sections_dispo=sections, sections_ordre=ordre)
+
+
+@app.route('/admin/document-modele/<int:modele_id>/modifier', methods=['POST'])
+@login_required
+@admin_required
+def admin_document_modele_modifier(modele_id):
+    m = DocumentModele.query.get_or_404(modele_id)
+    m.nom   = request.form.get('nom', m.nom).strip()
+    m.type  = request.form.get('type', m.type)
+    m.actif = request.form.get('actif') == '1'
+    db.session.commit(); flash('Modèle mis à jour.', 'success')
+    return redirect(url_for('admin_document_modele_detail', modele_id=modele_id))
+
+
+@app.route('/admin/document-modele/<int:modele_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_document_modele_supprimer(modele_id):
+    m = DocumentModele.query.get_or_404(modele_id)
+    nom = m.nom; db.session.delete(m); db.session.commit()
+    flash(f'Modèle « {nom} » supprimé.', 'success')
+    return redirect(url_for('admin_document_modeles'))
+
+
+@app.route('/admin/document-modele/<int:modele_id>/bloc/nouveau', methods=['POST'])
+@login_required
+@admin_required
+def admin_document_bloc_nouveau(modele_id):
+    m = DocumentModele.query.get_or_404(modele_id)
+    max_o = max((b.ordre for b in m.blocs), default=0)
+    b = DocumentBloc(modele_id=modele_id,
+                     type=request.form.get('type', 'texte'),
+                     contenu=request.form.get('contenu', '').strip(),
+                     ordre=max_o + 1)
+    db.session.add(b); db.session.commit()
+    flash('Bloc ajouté.', 'success')
+    return redirect(url_for('admin_document_modele_detail', modele_id=modele_id))
+
+
+@app.route('/admin/document-bloc/<int:bloc_id>/modifier', methods=['POST'])
+@login_required
+@admin_required
+def admin_document_bloc_modifier(bloc_id):
+    b = DocumentBloc.query.get_or_404(bloc_id)
+    b.contenu = request.form.get('contenu', '').strip()
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/admin/document-bloc/<int:bloc_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_document_bloc_supprimer(bloc_id):
+    b = DocumentBloc.query.get_or_404(bloc_id)
+    mid = b.modele_id; db.session.delete(b); db.session.commit()
+    flash('Bloc supprimé.', 'success')
+    return redirect(url_for('admin_document_modele_detail', modele_id=mid))
+
+
+@app.route('/admin/document-blocs/reordonner', methods=['POST'])
+@login_required
+@admin_required
+def admin_document_blocs_reordonner():
+    for i, bid in enumerate(request.json.get('ordre', [])):
+        b = DocumentBloc.query.get(bid)
+        if b: b.ordre = i
+    db.session.commit(); return jsonify({'ok': True})
+
+
+# ============================================================
+# GÉNÉRATION DE DOCUMENTS
+# ============================================================
+
+@app.route('/consultation/<int:consultation_id>/document', methods=['GET', 'POST'])
+@login_required
+def generer_document(consultation_id):
+    c = Consultation.query.get_or_404(consultation_id)
+    modeles = DocumentModele.query.filter_by(actif=True)\
+                                  .order_by(DocumentModele.type, DocumentModele.nom).all()
+    sections, _ = get_sections()
+
+    if request.method == 'POST':
+        modele_id     = request.form.get('modele_id', type=int)
+        sections_sel  = request.form.getlist('sections_incluses[]')
+        modele = DocumentModele.query.get_or_404(modele_id)
+        docx_path = _generer_docx(c, modele, sections_sel)
+        from flask import send_file
+        nom_fichier = (f"{c.patient.nom}_{c.patient.prenom}_"
+                       f"{c.date_consult.strftime('%Y%m%d')}_{modele.nom}.docx")
+        return send_file(docx_path, as_attachment=True, download_name=nom_fichier,
+                         mimetype='application/vnd.openxmlformats-officedocument'
+                                  '.wordprocessingml.document')
+
+    section_origine = request.args.get('section', '')
+    # Pré-filtrer les modèles selon la section origine
+    type_doc = None
+    if section_origine == 'prescription':
+        type_doc = 'ordonnance'
+    elif section_origine == 'courrier':
+        type_doc = 'courrier'
+    modeles_filtres = [m for m in modeles if not type_doc or m.type == type_doc]
+
+    return render_template('consultations/generer_document.html',
+                           consultation=c, modeles=modeles_filtres,
+                           sections_def=sections,
+                           section_origine=section_origine,
+                           type_doc=type_doc)
+
+
+def _resoudre_variables(texte, consultation, praticien, cabinet, pc):
+    p = consultation.patient
+    age = ''
+    if p.date_naissance:
+        d = consultation.date_consult
+        age = str(d.year - p.date_naissance.year -
+                  ((d.month, d.day) < (p.date_naissance.month, p.date_naissance.day)))
+    replacements = {
+        '{{patient.nom}}':      f'{p.nom} {p.prenom}',
+        '{{patient.prenom}}':   p.prenom or '',
+        '{{patient.nom_seul}}': p.nom or '',
+        '{{patient.ddn}}':      p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '',
+        '{{patient.age}}':      age,
+        '{{patient.medecin}}':  p.medecin_referent or '',
+        '{{consultation.classe}}': consultation.classe_profession or '',
+        '{{date}}':             consultation.date_consult.strftime('%d/%m/%Y'),
+        '{{praticien.nom}}':    f'{praticien.prenom} {praticien.nom}',
+        '{{praticien.titre}}':  praticien.titre or '',
+        '{{praticien.rpps}}':   praticien.rpps or '',
+        '{{praticien.adeli}}':  pc.adeli if pc else '',
+        '{{praticien.forme}}':  pc.forme_juridique if pc else '',
+        '{{cabinet.nom}}':      cabinet.nom if cabinet else '',
+        '{{cabinet.adresse}}':  cabinet.adresse_complete if cabinet else '',
+        '{{cabinet.tel}}':      cabinet.telephone if cabinet else '',
+        '{{cabinet.email}}':    cabinet.email if cabinet else '',
+        '{{cabinet.commune}}':  cabinet.commune if cabinet else '',
+    }
+    for k, v in replacements.items():
+        texte = texte.replace(k, v or '')
+    return texte
+
+
+def _generer_docx(consultation, modele, sections_incluses):
+    """
+    Génère un .docx en clonant l'en-tête depuis le template fourni
+    et en ajoutant le corps via Node.js/docx.
+    Retourne le chemin du fichier généré.
+    """
+    import tempfile, os, shutil, zipfile, re
+
+    praticien = consultation.praticien
+    cabinet   = consultation.cabinet
+    pc = None
+    if cabinet:
+        pc = PraticienCabinet.query.filter_by(
+            praticien_id=praticien.id, cabinet_id=cabinet.id).first()
+
+    p = consultation.patient
+
+    # ── Préparer les valeurs de substitution ──────────────────────────
+    adeli = (pc.adeli if pc else '') or ''
+    forme = (pc.forme_juridique if pc else '') or ''
+
+    # Lignes adresse cabinet
+    cab_rue     = (cabinet.rue         if cabinet else '') or ''
+    cab_cp_comm = ''
+    if cabinet:
+        if cabinet.code_postal and cabinet.commune:
+            cab_cp_comm = f'{cabinet.code_postal} {cabinet.commune}'
+        elif cabinet.commune:
+            cab_cp_comm = cabinet.commune
+    cab_tel     = (cabinet.telephone   if cabinet else '') or ''
+    cab_email   = (cabinet.email       if cabinet else '') or ''
+    cab_commune = (cabinet.commune     if cabinet else '') or ''
+
+    prat_nom    = f'{praticien.prenom} {praticien.nom}'
+    prat_titre  = (praticien.titre or 'Orthoptiste').upper()
+    prat_rpps   = praticien.rpps or ''
+
+    pat_nom     = f'{p.nom} {p.prenom}'
+    pat_ddn     = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
+    pat_medecin = consultation.medecin_prescripteur or p.medecin_referent or ''
+    date_str    = consultation.date_consult.strftime('%d/%m/%Y')
+
+    type_label  = 'ORDONNANCE' if modele.type == 'ordonnance' else 'COURRIER'
+    motif       = consultation.motif or ''
+
+    # ── Charger le template docx ──────────────────────────────────────
+    template_path = os.path.join(os.path.dirname(__file__), 'entete.docx')
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(
+            "Fichier entete.docx introuvable. "
+            "Placez-le dans le même dossier que app.py.")
+
+    tmpdir  = tempfile.mkdtemp()
+    out_path = os.path.join(tmpdir, 'document.docx')
+    shutil.copy2(template_path, out_path)
+
+    # ── Lire le document.xml du template ─────────────────────────────
+    with zipfile.ZipFile(out_path, 'r') as z:
+        doc_xml = z.read('word/document.xml').decode('utf-8')
+        all_files = {name: z.read(name) for name in z.namelist()}
+
+    # ── Substitutions dans l'en-tête ─────────────────────────────────
+    def sub(xml, old, new):
+        """Remplace old par new dans le XML, en gérant l'espace insécable."""
+        new_escaped = new.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        return xml.replace(old, new_escaped)
+
+    # Zone adresse (Rectangle 1)
+    doc_xml = sub(doc_xml, '130, Boulevard de la Paix', cab_rue)
+    # Supprimer le paragraphe "Résidence les jardinières" entièrement (ligne vide sinon)
+    doc_xml = doc_xml.replace(
+        '<w:p w14:paraId="28548EE2" w14:textId="77777777" w:rsidR="00E16D2D" w:rsidRPr="00204C39" w:rsidRDefault="00E16D2D" w:rsidP="00095667"><w:pPr><w:pStyle w:val="En-tte"/><w:rPr><w:color w:val="000000" w:themeColor="text1"/></w:rPr></w:pPr><w:r w:rsidRPr="00204C39"><w:rPr><w:color w:val="000000" w:themeColor="text1"/></w:rPr><w:t>Résidence les jardinières</w:t></w:r></w:p>',
+        ''
+    )
+    doc_xml = sub(doc_xml, '43200 Yssingeaux', cab_cp_comm)
+    doc_xml = sub(doc_xml, '04 71 59 01 38', cab_tel)
+    doc_xml = sub(doc_xml, 'orthoptistes-yssingeaux@outlook.fr', cab_email)
+
+    # Zone ADELI/RPPS
+    doc_xml = sub(doc_xml, 'ADELI\xa0: 439287145', f'ADELI : {adeli}' if adeli else '')
+    doc_xml = sub(doc_xml, 'RPPS\xa0: 10010253291', f'RPPS : {prat_rpps}' if prat_rpps else '')
+
+    # Zone praticien
+    doc_xml = sub(doc_xml, 'SELARL', forme)
+    doc_xml = sub(doc_xml, ' Cyprien Nesme', f' {prat_nom}')
+    doc_xml = sub(doc_xml, 'ORTHOPTISTE', prat_titre)
+
+    # Type de document (BILAN ORTHOPTIQUE → COURRIER ou ORDONNANCE)
+    doc_xml = doc_xml.replace('BILAN ORTHOPTIQU</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val=\"32\"/><w:szCs w:val=\"32\"/><w:lang w:val=\"it-IT\"/></w:rPr><w:t>E',
+                              type_label + '</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val=\"32\"/><w:szCs w:val=\"32\"/><w:lang w:val=\"it-IT\"/></w:rPr><w:t>')
+
+    # Patient (SDT Nom)
+    doc_xml = re.sub(
+        r'(<w:sdt>.*?<w:alias w:val="Nom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
+        lambda m: m.group(1) + f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{pat_nom}</w:t></w:r>' + m.group(3),
+        doc_xml, flags=re.DOTALL
+    )
+    # Prénom (SDT Prénom) - on l'efface car nom complet déjà dans Nom
+    doc_xml = re.sub(
+        r'(<w:sdt>.*?<w:alias w:val="Prénom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
+        lambda m: m.group(1) + '<w:r><w:t></w:t></w:r>' + m.group(3),
+        doc_xml, flags=re.DOTALL
+    )
+    # DDN
+    doc_xml = re.sub(
+        r'(<w:sdt>.*?<w:alias w:val="Commentaires.*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
+        lambda m: m.group(1) + f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{pat_ddn}</w:t></w:r>' + m.group(3),
+        doc_xml, flags=re.DOTALL
+    )
+
+    # Calcul de l'âge à la date du bilan
+    age_str = ''
+    if p.date_naissance:
+        d = consultation.date_consult
+        age_str = str(d.year - p.date_naissance.year -
+                      ((d.month, d.day) < (p.date_naissance.month, p.date_naissance.day)))
+
+    # Médecin prescripteur — depuis le champ de la consultation ou du patient
+    medecin_str = pat_medecin  # déjà défini = p.medecin_referent
+    esc = lambda s: s.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+    doc_xml = doc_xml.replace(
+        'Médecin prescripteur : Dr </w:t>',
+        f'Médecin prescripteur : {esc(medecin_str)}</w:t>'
+    )
+
+    # Âge — insérer dans le run qui suit "Âge : "
+    doc_xml = doc_xml.replace(
+        'Âge : </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="it-IT"/></w:rPr><w:tab/>',
+        f'Âge : </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="it-IT"/></w:rPr><w:t>{esc(age_str)} ans</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="it-IT"/></w:rPr><w:tab/>'
+    )
+
+    # Commune et date
+    # Commune dans "A [commune], le" — substitution directe sans échappement
+    # Classe / profession dans l'en-tête
+    classe_str = (consultation.classe_profession or '')
+    doc_xml = doc_xml.replace(
+        'Classe : </w:t></w:r></w:p>',
+        f'Classe : {esc(classe_str)}</w:t></w:r></w:p>'
+    )
+    doc_xml = doc_xml.replace('>Yssingeaux<', f'>{cab_commune.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")}<')
+    # La date (après "le ") — insérer après le bookmarkEnd
+    doc_xml = doc_xml.replace(
+        '<w:t xml:space="preserve">le </w:t></w:r><w:bookmarkEnd w:id="0"/>',
+        f'<w:t xml:space="preserve">le {date_str}</w:t></w:r><w:bookmarkEnd w:id="0"/>'
+    )
+
+    # ── Construire le corps du document ──────────────────────────────
+    sections_db, _ = get_sections()
+    sections_data = []
+
+    def fmt_sph(v):
+        """Formate une valeur sphère/cylindre avec signe et 2 décimales."""
+        if not v: return ''
+        try:
+            f = float(str(v).replace(',', '.'))
+            return f'+{f:.2f}' if f >= 0 else f'{f:.2f}'
+        except ValueError:
+            return v
+
+    def fmt_refraction(d, prefix):
+        """Construit la chaîne sph(cyl)axe° pour un œil."""
+        sph = fmt_sph(d.get(f'{prefix}_sph', ''))
+        cyl = fmt_sph(d.get(f'{prefix}_cyl', ''))
+        axe = d.get(f'{prefix}_axe', '')
+        parts = sph
+        if cyl: parts += f'({cyl})'
+        if axe:  parts += f'{axe}°'
+        return parts
+
+    for sec in consultation.sections:
+        if sec.type not in sections_incluses:
+            continue
+        d = sec.get_donnees()
+        lignes = []
+
+        if sec.type in ('refraction_obj', 'correction_portee'):
+            od = fmt_refraction(d, 'od')
+            og = fmt_refraction(d, 'og')
+            if od or og:
+                lignes.append(('', f'{od}  /  {og}'))
+
+        elif sec.type == 'refraction_subj':
+            # Format OD : sph(cyl)axe° = AV loin   Add = AV près
+            # puis OG : sph(cyl)axe° = AV loin   Add = AV près
+            od_ref = fmt_refraction(d, 'od')
+            og_ref = fmt_refraction(d, 'og')
+            od_add  = fmt_sph(d.get('od_add', ''))
+            og_add  = fmt_sph(d.get('og_add', ''))
+            od_loin = d.get('od_av_loin', '')
+            od_pres = d.get('od_av_pres', '')
+            og_loin = d.get('og_av_loin', '')
+            og_pres = d.get('og_av_pres', '')
+            od_line = f'OD : {od_ref}'
+            if od_loin: od_line += f' = {od_loin}'
+            if od_add:  od_line += f'   Add {od_add}'
+            if od_pres: od_line += f' = {od_pres}'
+            og_line = f'OG : {og_ref}'
+            if og_loin: og_line += f' = {og_loin}'
+            if og_add:  og_line += f'   Add {og_add}'
+            if og_pres: og_line += f' = {og_pres}'
+            if od_line.strip() != 'OD :': lignes.append(('', od_line))
+            if og_line.strip() != 'OG :': lignes.append(('', og_line))
+
+        elif sec.type == 'acuite':
+            # Même format que l'historique patient
+            corr   = d.get('av_correction', '')
+            bino   = d.get('av_bino', '')
+            od_l   = d.get('av_od_loin', '')
+            od_p   = d.get('av_od_pres', '')
+            og_l   = d.get('av_og_loin', '')
+            og_p   = d.get('av_og_pres', '')
+            if corr:  lignes.append(('Correction', corr))
+            if bino:  lignes.append(('Binoculaire', bino))
+            od_str = ''
+            if od_l: od_str += f'loin : {od_l}'
+            if od_p: od_str += f'  près : {od_p}'
+            if od_str: lignes.append(('OD', od_str.strip()))
+            og_str = ''
+            if og_l: og_str += f'loin : {og_l}'
+            if og_p: og_str += f'  près : {og_p}'
+            if og_str: lignes.append(('OG', og_str.strip()))
+
+        else:
+            # Cas général
+            champs = sections_db.get(sec.type, {}).get('champs', [])
+            lignes = [(ch['label'], d[ch['name']])
+                      for ch in champs
+                      if ch['type'] != 'fichier' and d.get(ch['name'])]
+
+        sections_data.append({
+            'label': sec.label,
+            'observations': sec.observations or '',
+            'lignes': lignes,
+        })
+
+    blocs_resolus = []
+    sections_inserees = False
+    for bloc in modele.blocs:
+        if bloc.type == 'texte':
+            blocs_resolus.append({
+                'type': 'texte',
+                'contenu': _resoudre_variables(bloc.contenu, consultation, praticien, cabinet, pc)
+            })
+        elif bloc.type == 'section_bilan' and not sections_inserees:
+            blocs_resolus.append({'type': 'sections', 'sections': sections_data})
+            sections_inserees = True
+
+    # ── Générer le XML des paragraphes du corps ───────────────────────
+    def esc(t):
+        return t.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    body_paras = []
+    for bloc in blocs_resolus:
+        if bloc['type'] == 'texte' and bloc['contenu']:
+            for line in bloc['contenu'].split('\n'):
+                body_paras.append(
+                    f'<w:p><w:pPr><w:spacing w:after="120"/></w:pPr>'
+                    f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                    f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(line)}</w:t></w:r></w:p>'
+                )
+        elif bloc['type'] == 'sections':
+            for sec in bloc['sections']:
+                # Titre section
+                body_paras.append(
+                    f'<w:p><w:pPr><w:spacing w:before="240" w:after="80"/>'
+                    f'<w:pBdr><w:bottom w:val="single" w:sz="2" w:space="1" w:color="CCCCCC"/></w:pBdr>'
+                    f'</w:pPr>'
+                    f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                    f'<w:color w:val="2E7D6B"/><w:sz w:val="20"/></w:rPr>'
+                    f'<w:t>{esc(sec["label"])}</w:t></w:r></w:p>'
+                )
+                if sec['observations']:
+                    body_paras.append(
+                        f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
+                        f'<w:r><w:rPr><w:i/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                        f'<w:sz w:val="20"/></w:rPr>'
+                        f'<w:t xml:space="preserve">{esc(sec["observations"])}</w:t></w:r></w:p>'
+                    )
+                for label, valeur in sec['lignes']:
+                    body_paras.append(
+                        f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
+                        f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                        f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(label) + " : " if label.strip() else ""}</w:t></w:r>'
+                        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                        f'<w:sz w:val="20"/></w:rPr><w:t>{esc(valeur)}</w:t></w:r></w:p>'
+                    )
+
+    # Signature
+    body_paras.append(
+        f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="720"/></w:pPr>'
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+        f'<w:sz w:val="20"/></w:rPr>'
+        f'<w:t>{esc((praticien.titre or "") + " " + prat_nom)}</w:t></w:r></w:p>'
+    )
+
+    # ── Insérer le corps avant </w:body> ─────────────────────────────
+    body_xml = '\n'.join(body_paras)
+    doc_xml = doc_xml.replace('</w:body>', body_xml + '</w:body>')
+
+    # ── Réécrire le docx ──────────────────────────────────────────────
+    new_out = os.path.join(tmpdir, 'final.docx')
+    with zipfile.ZipFile(out_path, 'r') as zin:
+        with zipfile.ZipFile(new_out, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                if item.filename == 'word/document.xml':
+                    zout.writestr(item, doc_xml.encode('utf-8'))
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+
+    return new_out
+
+
+def _build_docx_js(consultation, praticien, cabinet, pc, blocs, out_path, modele):
+    import json as _json
+
+    commune  = (cabinet.commune if cabinet else '') or ''
+    date_str = consultation.date_consult.strftime('%d/%m/%Y')
+    adeli    = (pc.adeli if pc else '') or ''
+    forme    = (pc.forme_juridique if pc else '') or ''
+    p        = consultation.patient
+
+    # Colonne gauche : coordonnées cabinet + identifiants praticien
+    left_lines = []
+    if cabinet:
+        if cabinet.rue:        left_lines.append(cabinet.rue)
+        if cabinet.code_postal and cabinet.commune:
+            left_lines.append(f'{cabinet.code_postal} {cabinet.commune}')
+        elif cabinet.commune:
+            left_lines.append(cabinet.commune)
+        if cabinet.telephone:  left_lines.append(cabinet.telephone)
+        if cabinet.email:      left_lines.append(cabinet.email)
+    if adeli:                  left_lines.append(f'ADELI : {adeli}')
+    if praticien.rpps:         left_lines.append(f'RPPS : {praticien.rpps}')
+    if forme:                  left_lines.append(forme)
+    left_lines.append(f'{praticien.prenom} {praticien.nom}')
+    left_lines.append((praticien.titre or 'Orthoptiste').upper())
+
+    type_label  = 'ORDONNANCE' if modele.type == 'ordonnance' else 'COURRIER'
+    patient_nom = f'{p.nom} {p.prenom}'
+    ddn_str     = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
+
+    # Lignes colonne droite
+    right_lines = []
+    right_lines.append({'text': type_label, 'bold': True, 'size': 28, 'center': True, 'underline': True})
+    right_lines.append({'text': f'Patient : {patient_nom}', 'bold': False, 'size': 20, 'center': False})
+    if ddn_str:
+        right_lines.append({'text': f'DDN : {ddn_str}', 'bold': False, 'size': 20, 'center': False})
+    if p.medecin_referent:
+        right_lines.append({'text': f'Médecin prescripteur : {p.medecin_referent}', 'bold': False, 'size': 20, 'center': False})
+    lieu = f'À {commune}, le {date_str}' if commune else f'Le {date_str}'
+    right_lines.append({'text': lieu, 'bold': False, 'size': 20, 'center': False})
+
+    data = {
+        'leftLines':    left_lines,
+        'rightLines':   right_lines,
+        'blocs':        blocs,
+        'praticienNom': f'{praticien.titre or ""} {praticien.prenom} {praticien.nom}'.strip(),
+        'outPath':      out_path,
+    }
+
+    js_data = _json.dumps(data, ensure_ascii=False)
+
+    return r"""
+const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+        AlignmentType, WidthType, BorderStyle, ShadingType, UnderlineType } = require('docx');
+const fs = require('fs');
+
+const D = """ + js_data + r""";
+
+// ── Bordures ──────────────────────────────────────────────────────
+const noBorder   = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+// Ligne verte en bas uniquement (séparateur en-tête)
+const sepBorder  = {
+    top: noBorder, left: noBorder, right: noBorder,
+    bottom: { style: BorderStyle.SINGLE, size: 6, color: '2E7D6B' }
+};
+
+// ── Colonne gauche ────────────────────────────────────────────────
+// Adresse + coordonnées + ADELI/RPPS + forme + praticien + titre
+const leftParas = D.leftLines.map((line, i) => {
+    // Dernières lignes (praticien + titre) en taille normale
+    const isIdent = i >= D.leftLines.length - 2;
+    return new Paragraph({
+        children: [new TextRun({
+            text: line,
+            size: isIdent ? 20 : 16,
+            font: 'Verdana',
+            bold: isIdent,
+        })],
+        spacing: { after: isIdent ? 20 : 30 }
+    });
+});
+
+// ── Colonne droite ────────────────────────────────────────────────
+const rightParas = D.rightLines.map((l, i) => new Paragraph({
+    alignment: l.center ? AlignmentType.CENTER : AlignmentType.LEFT,
+    children: [new TextRun({
+        text: l.text,
+        bold: l.bold,
+        size: l.size,
+        font: 'Verdana',
+        underline: l.underline ? { type: UnderlineType.SINGLE } : undefined,
+    })],
+    spacing: { after: i === 0 ? 160 : 60 }
+}));
+
+// ── Table en-tête 2 colonnes ──────────────────────────────────────
+// Page A4 : 11906 DXA, marges 1417 DXA → contenu = 9072 DXA
+// Colonne gauche : 38% = ~3447 DXA | Droite : 62% = ~5625 DXA
+const headerTable = new Table({
+    width: { size: 9072, type: WidthType.DXA },
+    columnWidths: [3447, 5625],
+    rows: [new TableRow({
+        children: [
+            new TableCell({
+                borders: sepBorder,
+                width: { size: 3447, type: WidthType.DXA },
+                margins: { top: 0, bottom: 120, left: 0, right: 280 },
+                children: leftParas,
+            }),
+            new TableCell({
+                borders: sepBorder,
+                width: { size: 5625, type: WidthType.DXA },
+                margins: { top: 0, bottom: 120, left: 280, right: 0 },
+                children: rightParas,
+            }),
+        ]
+    })]
+});
+
+// ── Corps du document ─────────────────────────────────────────────
+const bodyChildren = [];
+
+D.blocs.forEach(bloc => {
+    if (bloc.type === 'texte' && bloc.contenu) {
+        bloc.contenu.split('\n').forEach(line => {
+            bodyChildren.push(new Paragraph({
+                children: [new TextRun({ text: line, size: 22, font: 'Arial' })],
+                spacing: { after: 100 }
+            }));
+        });
+    } else if (bloc.type === 'sections') {
+        bloc.sections.forEach(sec => {
+            // Titre section
+            bodyChildren.push(new Paragraph({
+                children: [new TextRun({ text: sec.label, bold: true, size: 22,
+                                         font: 'Arial', color: '2E7D6B' })],
+                spacing: { before: 240, after: 80 },
+                border: {
+                    bottom: { style: BorderStyle.SINGLE, size: 2, color: 'CCCCCC' },
+                    top: noBorder, left: noBorder, right: noBorder
+                }
+            }));
+            // Observations
+            if (sec.observations) {
+                bodyChildren.push(new Paragraph({
+                    children: [new TextRun({ text: sec.observations, size: 20,
+                                             font: 'Arial', italics: true })],
+                    spacing: { after: 80 }
+                }));
+            }
+            // Champs structurés
+            sec.lignes.forEach(([label, valeur]) => {
+                bodyChildren.push(new Paragraph({
+                    children: [
+                        new TextRun({ text: label + ' : ', size: 20, font: 'Arial', bold: true }),
+                        new TextRun({ text: valeur, size: 20, font: 'Arial' })
+                    ],
+                    spacing: { after: 60 }
+                }));
+            });
+        });
+    }
+});
+
+// ── Signature ─────────────────────────────────────────────────────
+bodyChildren.push(new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    spacing: { before: 720 },
+    children: [new TextRun({ text: D.praticienNom, size: 20, font: 'Arial' })]
+}));
+
+// ── Document final ────────────────────────────────────────────────
+const doc = new Document({
+    sections: [{
+        properties: {
+            page: {
+                size: { width: 11906, height: 16838 },
+                margin: { top: 1417, right: 1417, bottom: 1417, left: 1417 }
+            }
+        },
+        children: [
+            headerTable,
+            new Paragraph({ children: [], spacing: { after: 300 } }),
+            ...bodyChildren,
+        ]
+    }]
+});
+
+Packer.toBuffer(doc).then(buf => { fs.writeFileSync(D.outPath, buf); });
+"""
+
+
+
+
+
+# ============================================================
+# WOPI — Protocole d'intégration Collabora Online
+# ============================================================
+
+import secrets as _secrets
+from datetime import timedelta
+
+def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier):
+    """Crée une session WOPI et retourne le token."""
+    token = _secrets.token_urlsafe(32)
+    expires = datetime.utcnow() + timedelta(hours=4)
+    sess = WopiSession(
+        token=token,
+        consultation_id=consultation_id,
+        section_type=section_type,
+        nom_fichier=nom_fichier,
+        chemin_fichier=docx_path,
+        expires_at=expires,
+    )
+    db.session.add(sess); db.session.commit()
+    return token
+
+
+def _get_collabora_url(filename):
+    """Retourne l'URL Collabora pour ouvrir un fichier .docx en édition."""
+    import urllib.request, re
+    discovery_url = f"{COLLABORA_URL}/hosting/discovery"
+    try:
+        req = urllib.request.Request(
+            discovery_url,
+            headers={'User-Agent': 'Mozilla/5.0'}
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            discovery_xml = r.read().decode('utf-8')
+        # Chercher l'action edit pour les docx
+        m = re.search(
+            r'<action name="edit" urlsrc="([^"]+)"[^/]*/>\s*</app>',
+            discovery_xml)
+        if not m:
+            m = re.search(r'urlsrc="([^"]+lool[^"]+)"', discovery_xml)
+        if not m:
+            m = re.search(r'urlsrc="([^"]+)"', discovery_xml)
+        if m:
+            url = m.group(1)
+            # S'assurer qu'elle se termine par ? ou &
+            if '?' in url:
+                return url if url.endswith('&') else url + '&'
+            return url + '?'
+    except Exception as e:
+        app.logger.warning(f"Collabora discovery échoué ({e}), utilisation URL directe")
+
+    # Fallback : URL directe standard Collabora/CODE
+    # Format : https://collabora.domain.fr/browser/dist/cool.html?
+    return f"{COLLABORA_URL}/browser/dist/cool.html?"
+
+
+@app.route('/wopi/files/<token>')
+def wopi_check_file_info(token):
+    """WOPI CheckFileInfo — retourne les métadonnées du fichier."""
+    sess = WopiSession.query.filter_by(token=token).first_or_404()
+    if sess.expires_at and sess.expires_at < datetime.utcnow():
+        return jsonify({'error': 'Token expiré'}), 401
+    import os
+    size = os.path.getsize(sess.chemin_fichier) if os.path.exists(sess.chemin_fichier) else 0
+    resp = jsonify({
+        'BaseFileName':          sess.nom_fichier,
+        'Size':                  size,
+        'OwnerId':               str(sess.consultation_id),
+        'UserId':                'praticien',
+        'UserFriendlyName':      'Praticien',
+        'UserCanWrite':          True,
+        'SupportsUpdate':        True,
+        'SupportsLocks':         False,
+        'PostMessageOrigin':     COLLABORA_URL,
+        'DisableExport':         False,
+        'DisablePrint':          False,
+        'EnableOwnerTermination': True,
+    })
+    resp.headers['ngrok-skip-browser-warning'] = 'true'
+    return resp
+
+
+@app.route('/wopi/files/<token>/contents', methods=['GET', 'POST'])
+def wopi_file_contents(token):
+    """WOPI GetFile / PutFile — lit ou écrit le fichier."""
+    sess = WopiSession.query.filter_by(token=token).first_or_404()
+    if sess.expires_at and sess.expires_at < datetime.utcnow():
+        return jsonify({'error': 'Token expiré'}), 401
+
+    if request.method == 'GET':
+        # Collabora demande le fichier
+        from flask import send_file
+        resp = send_file(sess.chemin_fichier,
+                         mimetype='application/vnd.openxmlformats-officedocument'
+                                  '.wordprocessingml.document')
+        resp.headers['ngrok-skip-browser-warning'] = 'true'
+        return resp
+
+    elif request.method == 'POST':
+        # Collabora envoie le fichier modifié — on le sauvegarde
+        import os, uuid, shutil
+        data = request.get_data()
+
+        # Mettre à jour le fichier temporaire
+        with open(sess.chemin_fichier, 'wb') as f:
+            f.write(data)
+
+        # Sauvegarder comme pièce jointe de la section correspondante
+        c = Consultation.query.get(sess.consultation_id)
+        if c:
+            # Trouver la section correspondante
+            section = next((s for s in c.sections
+                            if s.type == sess.section_type), None)
+            section_ordre = section.ordre if section else 0
+
+            # Créer le dossier et copier le fichier
+            folder = os.path.join(app.config['UPLOAD_FOLDER'],
+                                  'sections', str(sess.consultation_id))
+            os.makedirs(folder, exist_ok=True)
+            nom_stocke = f"{uuid.uuid4().hex}.docx"
+            dest = os.path.join(folder, nom_stocke)
+            shutil.copy2(sess.chemin_fichier, dest)
+
+            # Vérifier si une pièce jointe WOPI existe déjà pour cette session
+            # (mise à jour plutôt que duplication)
+            existing = FichierSection.query.filter_by(
+                consultation_id=sess.consultation_id,
+                section_ordre=section_ordre,
+                champ_name='wopi_doc',
+                titre=sess.nom_fichier
+            ).first()
+
+            if existing:
+                # Supprimer l'ancien fichier
+                old_path = os.path.join(folder, existing.nom_stocke)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+                existing.nom_stocke = nom_stocke
+                existing.created_at = datetime.utcnow()
+            else:
+                db.session.add(FichierSection(
+                    consultation_id=sess.consultation_id,
+                    section_ordre=section_ordre,
+                    champ_name='wopi_doc',
+                    nom_original=sess.nom_fichier,
+                    nom_stocke=nom_stocke,
+                    type_fichier='word',
+                    titre=sess.nom_fichier,
+                ))
+            db.session.commit()
+
+        return '', 200
+
+
+@app.route('/consultation/<int:consultation_id>/editer-collabora', methods=['GET'])
+@login_required
+def editer_collabora(consultation_id):
+    """Génère le .docx et ouvre l'éditeur Collabora."""
+    c = Consultation.query.get_or_404(consultation_id)
+    modele_id    = request.args.get('modele_id', type=int)
+    sections_sel = request.args.getlist('sections_incluses[]')
+    section_type = request.args.get('section', 'courrier')
+
+    if not modele_id:
+        flash('Aucun modèle sélectionné.', 'danger')
+        return redirect(url_for('generer_document', consultation_id=consultation_id,
+                                section=section_type))
+
+    modele = DocumentModele.query.get_or_404(modele_id)
+
+    # Générer le .docx dans un dossier permanent (pas tmpdir)
+    import os, tempfile, urllib.parse
+    wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
+    os.makedirs(wopi_dir, exist_ok=True)
+
+    docx_path = _generer_docx(c, modele, sections_sel)
+
+    # Copier dans le dossier WOPI permanent
+    import shutil, uuid
+    nom_fichier = (f"{c.patient.nom}_{c.patient.prenom}_"
+                   f"{c.date_consult.strftime('%Y%m%d')}_{modele.nom}.docx")
+    permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
+    shutil.copy2(docx_path, permanent_path)
+
+    # Créer la session WOPI
+    token = _wopi_token_for(consultation_id, section_type, permanent_path, nom_fichier)
+
+    # URL WOPI
+    wopi_src = f"{WOPI_BASE_URL}/wopi/files/{token}"
+
+    # URL Collabora
+    collabora_action_url = _get_collabora_url(nom_fichier)
+    print(f"[WOPI] src: {wopi_src}")
+    print(f"[WOPI] Collabora action URL: {collabora_action_url}")
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}"
+    # Nettoyer les doubles ? ou & parasites
+    editor_url = editor_url.replace('?&', '?').replace('&&', '&')
+    print(f"[WOPI] Editor URL finale: {editor_url}")
+
+    return render_template('consultations/collabora_editor.html',
+                           consultation=c,
+                           editor_url=editor_url,
+                           nom_fichier=nom_fichier,
+                           token=token,
+                           section_type=section_type,
+                           collabora_url=COLLABORA_URL,
+                           open_in_tab=True)
+
+if __name__ == '__main__':
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    init_db()
+    app.run(debug=True, port=5000)

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Mes patients{% endblock %}
+{% block page_title %}Mes patients{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('patient_nouveau') }}" class="btn btn-primary btn-sm">+ Nouveau patient</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h2>Patients suivis</h2>
+    <span class="badge badge-gray">{{ patients|length }} patient{{ 's' if patients|length != 1 }}</span>
+    <a href="{{ url_for('recherche') }}" class="btn btn-secondary btn-sm" style="margin-left:auto">⌕ Rechercher</a>
+  </div>
+
+  {% if patients %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nom / Prénom</th>
+        <th>Date de naissance</th>
+        <th>Âge</th>
+        <th>Téléphone</th>
+        <th>Commune</th>
+        <th>Médecin référent</th>
+        <th>Dernière consultation</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in patients %}
+      <tr>
+        <td>
+          <a href="{{ url_for('patient_detail', patient_id=p.id) }}">
+            {{ p.nom }} {{ p.prenom }}
+          </a>
+        </td>
+        <td class="text-muted text-sm">
+          {% if p.date_naissance %}
+            {{ p.date_naissance.strftime('%d/%m/%Y') }}
+          {% else %}—{% endif %}
+        </td>
+        <td class="text-muted text-sm">
+          {% if p.age %}{{ p.age }} ans{% else %}—{% endif %}
+        </td>
+        <td class="text-muted text-sm">{{ p.telephone or '—' }}</td>
+        <td class="text-muted text-sm">{{ p.commune or '—' }}</td>
+        <td class="text-muted text-sm">{{ p.medecin_referent or '—' }}</td>
+        <td class="text-sm">
+          {% if p.consultations %}
+            <span class="badge badge-green">
+              {{ p.consultations[0].date_consult.strftime('%d/%m/%Y') }}
+            </span>
+          {% else %}
+            <span class="badge badge-gray">Aucune</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('consultation_nouvelle', patient_id=p.id) }}"
+             class="btn btn-secondary btn-sm">+ Bilan</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">👤</div>
+    <p>Aucun patient pour le moment.</p>
+    <a href="{{ url_for('patient_nouveau') }}" class="btn btn-primary mt-2">Créer le premier patient</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
