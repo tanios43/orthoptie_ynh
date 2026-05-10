@@ -1,5 +1,4 @@
 #!/bin/bash
-source _common.sh
 source /usr/share/yunohost/helpers
 
 ynh_script_progression --message="Sauvegarde des fichiers de l'application..." --weight=1

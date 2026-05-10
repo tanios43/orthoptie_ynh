@@ -1,5 +1,4 @@
 #!/bin/bash
-source _common.sh
 source /usr/share/yunohost/helpers
 
 #=================================================
@@ -8,15 +7,18 @@ source /usr/share/yunohost/helpers
 ynh_script_progression --message="Installation des dépendances Python..." --weight=5
 
 python3 -m venv "$install_dir/venv"
-"$install_dir/venv/bin/pip" install --upgrade pip
-"$install_dir/venv/bin/pip" install flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug
+"$install_dir/venv/bin/pip" install --upgrade pip --quiet
+"$install_dir/venv/bin/pip" install flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug --quiet
 
 #=================================================
-# COPY FILES
+# COPY SOURCE FILES
 #=================================================
 ynh_script_progression --message="Copie des fichiers de l'application..." --weight=2
 
-cp -r "$install_dir/source/." "$install_dir/"
+# YunoHost extrait les sources dans $install_dir directement avec le nouveau packaging
+cp -r "$YNH_APP_BASEDIR/sources/main/." "$install_dir/" 2>/dev/null || \
+cp -r "/var/cache/yunohost/download/$app/main/." "$install_dir/" 2>/dev/null || \
+true
 
 #=================================================
 # CREATE DATA DIRECTORY
@@ -27,7 +29,7 @@ mkdir -p "$data_dir/uploads/wopi"
 mkdir -p "$data_dir/uploads/sections"
 mkdir -p "$data_dir/uploads/bilans"
 
-# Lien symbolique vers data_dir pour les uploads
+# Lien symbolique uploads
 ln -sf "$data_dir/uploads" "$install_dir/uploads"
 
 # Base de données
