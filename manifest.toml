@@ -19,7 +19,7 @@ architectures = "all"
 multi_instance = false
 ldap = false
 sso = false
-disk = "200M"
+disk = "500M"
 ram.build = "200M"
 ram.runtime = "100M"
 
@@ -34,25 +34,11 @@ ram.runtime = "100M"
 
 [resources]
 
-    [resources.sources]
-
-        [resources.sources.main]
-        url = "https://github.com/tanios43/orthoptie_ynh/archive/refs/tags/v1.3.tar.gz"
-        sha256 = "f46b96d8f97e9a8ad44150fb1a8fe0f872c2ac11924a60420ee2398b42dd8f75"
-        format = "tar.gz"
-        extract = true
-        autoupdate.strategy = "latest_github_commit"
-
     [resources.system_user]
 
     [resources.install_dir]
-    dir = "/var/www/__APP__"
-    owner = "__APP__:rwx"
-    group = "www-data:r-x"
 
     [resources.data_dir]
-    dir = "/home/yunohost.app/__APP__"
-    owner = "__APP__:rwx"
 
     [resources.permissions]
     main.url = "/"
