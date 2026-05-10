@@ -25,7 +25,7 @@ app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
 #   ngrok      : 'https://abc123.ngrok.io'
 #   YunoHost   : 'https://dossiers.orthoptistes-yssingeaux.fr'
 #   local test : 'http://host.docker.internal:5000'
-WOPI_BASE_URL = 'https://brick-variably-pentagram.ngrok-free.dev'   # ← MODIFIER selon votre déploiement
+WOPI_BASE_URL = 'https://dossiers.cyps.ynh.fr'   # ← MODIFIER selon votre déploiement
 
 # URL de votre serveur Collabora Online
 COLLABORA_URL = 'https://collabora.orthoptistes-yssingeaux.fr'
