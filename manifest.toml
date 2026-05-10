@@ -37,8 +37,8 @@ ram.runtime = "100M"
     [resources.sources]
 
         [resources.sources.main]
-        url = "https://github.com/tanios43/orthoptie_ynh/archive/refs/heads/master.tar.gz"
-        sha256 = "af879dbd610f5e4d0a59f32c60170f4c7597f4bd5d04ae35916880e232b5ea3f"
+        url = "https://github.com/tanios43/orthoptie_ynh/archive/refs/tags/v1.0.tar.gz"
+        sha256 = "75bb1bacf662cf673d93bb8d2d970e0ddffa2c4c766128b066634ed84c60cbca"
         format = "tar.gz"
         extract = true
         autoupdate.strategy = "latest_github_commit"
