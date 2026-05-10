@@ -1,0 +1,35 @@
+#!/bin/bash
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STOP SERVICE
+#=================================================
+ynh_script_progression --message="Arrêt du service..." --weight=1
+
+ynh_systemd_action --service_name="$app" --action="stop"
+yunohost service remove "$app"
+
+#=================================================
+# REMOVE NGINX CONFIG
+#=================================================
+ynh_script_progression --message="Suppression de la configuration nginx..." --weight=1
+
+ynh_remove_nginx_config
+
+#=================================================
+# REMOVE SYSTEMD CONFIG
+#=================================================
+ynh_script_progression --message="Suppression du service systemd..." --weight=1
+
+ynh_remove_systemd_config
+
+#=================================================
+# REMOVE FILES
+#=================================================
+ynh_script_progression --message="Suppression des fichiers..." --weight=2
+
+# Les données (uploads, DB) sont conservées dans $data_dir
+# sauf si --purge est passé (géré automatiquement par YunoHost)
+
+ynh_script_progression --message="Désinstallation terminée !" --last

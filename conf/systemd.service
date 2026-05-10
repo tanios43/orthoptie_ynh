@@ -1,0 +1,22 @@
+[Unit]
+Description=Dossiers Patients Orthoptie
+After=network.target
+
+[Service]
+Type=simple
+User=__APP__
+Group=www-data
+WorkingDirectory=__INSTALL_DIR__
+Environment="PATH=__INSTALL_DIR__/venv/bin:/usr/bin"
+ExecStart=__INSTALL_DIR__/venv/bin/gunicorn \
+    --workers 2 \
+    --bind 127.0.0.1:__PORT__ \
+    --timeout 120 \
+    --log-file /var/log/__APP__/__APP__.log \
+    --access-logfile /var/log/__APP__/access.log \
+    app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,78 @@
+#!/bin/bash
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# INSTALL DEPENDENCIES
+#=================================================
+ynh_script_progression --message="Installation des dépendances Python..." --weight=5
+
+python3 -m venv "$install_dir/venv"
+"$install_dir/venv/bin/pip" install --upgrade pip
+"$install_dir/venv/bin/pip" install flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug
+
+#=================================================
+# COPY FILES
+#=================================================
+ynh_script_progression --message="Copie des fichiers de l'application..." --weight=2
+
+cp -r "$install_dir/source/." "$install_dir/"
+
+#=================================================
+# CREATE DATA DIRECTORY
+#=================================================
+ynh_script_progression --message="Création des dossiers de données..." --weight=1
+
+mkdir -p "$data_dir/uploads/wopi"
+mkdir -p "$data_dir/uploads/sections"
+mkdir -p "$data_dir/uploads/bilans"
+
+# Lien symbolique vers data_dir pour les uploads
+ln -sf "$data_dir/uploads" "$install_dir/uploads"
+
+# Base de données
+touch "$data_dir/orthoptie.db"
+ln -sf "$data_dir/orthoptie.db" "$install_dir/orthoptie_v2.db"
+
+#=================================================
+# NGINX CONFIGURATION
+#=================================================
+ynh_script_progression --message="Configuration de nginx..." --weight=2
+
+ynh_add_nginx_config
+
+#=================================================
+# SYSTEMD CONFIGURATION
+#=================================================
+ynh_script_progression --message="Configuration du service systemd..." --weight=1
+
+ynh_add_systemd_config
+yunohost service add "$app" --description="Dossiers Patients Orthoptie" --log="/var/log/$app/$app.log"
+
+#=================================================
+# MIGRATION BASE DE DONNÉES
+#=================================================
+ynh_script_progression --message="Initialisation de la base de données..." --weight=2
+
+pushd "$install_dir"
+    "$install_dir/venv/bin/python3" migrate.py
+popd
+
+#=================================================
+# PERMISSIONS
+#=================================================
+ynh_script_progression --message="Configuration des permissions..." --weight=1
+
+chown -R "$app:www-data" "$install_dir"
+chown -R "$app:$app" "$data_dir"
+chmod -R o-rwx "$install_dir"
+chmod -R o-rwx "$data_dir"
+
+#=================================================
+# START SERVICE
+#=================================================
+ynh_script_progression --message="Démarrage du service..." --weight=1
+
+ynh_systemd_action --service_name="$app" --action="start" --log_path="/var/log/$app/$app.log"
+
+ynh_script_progression --message="Installation terminée !" --last
