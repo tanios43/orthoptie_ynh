@@ -11,16 +11,6 @@ python3 -m venv "$install_dir/venv"
 "$install_dir/venv/bin/pip" install flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug --quiet
 
 #=================================================
-# COPY SOURCE FILES
-#=================================================
-ynh_script_progression --message="Copie des fichiers de l'application..." --weight=2
-
-# YunoHost extrait les sources dans $install_dir directement avec le nouveau packaging
-cp -r "$YNH_APP_BASEDIR/sources/main/." "$install_dir/" 2>/dev/null || \
-cp -r "/var/cache/yunohost/download/$app/main/." "$install_dir/" 2>/dev/null || \
-true
-
-#=================================================
 # CREATE DATA DIRECTORY
 #=================================================
 ynh_script_progression --message="Création des dossiers de données..." --weight=1
@@ -30,6 +20,7 @@ mkdir -p "$data_dir/uploads/sections"
 mkdir -p "$data_dir/uploads/bilans"
 
 # Lien symbolique uploads
+rm -rf "$install_dir/uploads"
 ln -sf "$data_dir/uploads" "$install_dir/uploads"
 
 # Base de données
@@ -57,7 +48,7 @@ yunohost service add "$app" --description="Dossiers Patients Orthoptie" --log="/
 ynh_script_progression --message="Initialisation de la base de données..." --weight=2
 
 pushd "$install_dir"
-    "$install_dir/venv/bin/python3" migrate.py
+    "$install_dir/venv/bin/python3" "$install_dir/migrate.py"
 popd
 
 #=================================================
