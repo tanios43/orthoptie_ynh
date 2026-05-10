@@ -9,18 +9,26 @@ ynh_script_progression --message="Arrêt du service..." --weight=1
 ynh_systemd_action --service_name="$app" --action="stop"
 
 #=================================================
-# UPDATE FILES
+# COPY APP FILES
 #=================================================
 ynh_script_progression --message="Mise à jour des fichiers..." --weight=3
 
-cp -r "$install_dir/source/." "$install_dir/"
+if [ -d "$YNH_APP_BASEDIR/sources/extra_files/app" ]; then
+    cp -r "$YNH_APP_BASEDIR/sources/extra_files/app/." "$install_dir/"
+fi
 
 #=================================================
 # UPDATE DEPENDENCIES
 #=================================================
 ynh_script_progression --message="Mise à jour des dépendances..." --weight=3
 
-"$install_dir/venv/bin/pip" install --upgrade flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug
+"$install_dir/venv/bin/pip" install --upgrade flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug --quiet
+
+#=================================================
+# CREATE LOG DIRECTORY
+#=================================================
+mkdir -p "/var/log/$app"
+chown "$app:$app" "/var/log/$app"
 
 #=================================================
 # MIGRATION BASE DE DONNÉES
@@ -28,7 +36,11 @@ ynh_script_progression --message="Mise à jour des dépendances..." --weight=3
 ynh_script_progression --message="Migration de la base de données..." --weight=2
 
 pushd "$install_dir"
-    "$install_dir/venv/bin/python3" migrate.py
+    "$install_dir/venv/bin/python3" -c "from app import app, db
+with app.app_context():
+    db.create_all()
+"
+    "$install_dir/venv/bin/python3" "$install_dir/migrate.py"
 popd
 
 #=================================================
