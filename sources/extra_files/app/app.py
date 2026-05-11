@@ -1628,22 +1628,32 @@ def _generer_docx(consultation, modele, sections_incluses):
         f'Médecin prescripteur : {esc(medecin_str)}</w:t>'
     )
 
-    # Âge — insérer dans le run qui suit "Âge : "
-    doc_xml = doc_xml.replace(
-        'Âge : </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="it-IT"/></w:rPr><w:tab/>',
-        f'Âge : </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="it-IT"/></w:rPr><w:t>{esc(age_str)} ans</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="it-IT"/></w:rPr><w:tab/>'
-    )
-
-    # Commune et date
-    # Commune dans "A [commune], le" — substitution directe sans échappement
-    # Classe / profession dans l'en-tête
+    # Classe / profession
     classe_str = (consultation.classe_profession or '')
     doc_xml = doc_xml.replace(
         'Classe : </w:t></w:r></w:p>',
         f'Classe : {esc(classe_str)}</w:t></w:r></w:p>'
     )
+    # Fallback avec tab
+    doc_xml = doc_xml.replace(
+        'Classe : </w:t>',
+        f'Classe : {esc(classe_str)}</w:t>'
+    )
+
+    # Âge — pattern adapté au template YunoHost
+    doc_xml = doc_xml.replace(
+        'Âge : </w:t><w:tab/><w:tab/>',
+        f'Âge : {esc(age_str)} ans</w:t><w:tab/><w:tab/>'
+    )
+
+    # Commune et date — pattern adapté
+    # "A Yssingeaux, le " → "A [commune], le [date]"
+    doc_xml = doc_xml.replace(
+        f'A\xa0Yssingeaux, le </w:t></w:r><w:bookmarkEnd w:id="0"/>',
+        f'A\xa0{esc(cab_commune)}, le {date_str}</w:t></w:r><w:bookmarkEnd w:id="0"/>'
+    )
+    # Fallback ancienne version
     doc_xml = doc_xml.replace('>Yssingeaux<', f'>{cab_commune.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")}<')
-    # La date (après "le ") — insérer après le bookmarkEnd
     doc_xml = doc_xml.replace(
         '<w:t xml:space="preserve">le </w:t></w:r><w:bookmarkEnd w:id="0"/>',
         f'<w:t xml:space="preserve">le {date_str}</w:t></w:r><w:bookmarkEnd w:id="0"/>'
