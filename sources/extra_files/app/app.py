@@ -257,9 +257,10 @@ class WopiSession(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     token           = db.Column(db.String(64), unique=True, nullable=False)
     consultation_id = db.Column(db.Integer, db.ForeignKey('consultation.id'), nullable=False)
-    section_type    = db.Column(db.String(50))   # 'courrier' ou 'prescription'
+    section_type    = db.Column(db.String(50))
+    section_ordre   = db.Column(db.Integer, default=0)
     nom_fichier     = db.Column(db.String(255), nullable=False)
-    chemin_fichier  = db.Column(db.String(500), nullable=False)  # chemin local du .docx
+    chemin_fichier  = db.Column(db.String(500), nullable=False)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at      = db.Column(db.DateTime)
 
@@ -2015,7 +2016,7 @@ Packer.toBuffer(doc).then(buf => { fs.writeFileSync(D.outPath, buf); });
 import secrets as _secrets
 from datetime import timedelta
 
-def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier):
+def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier, section_ordre=0):
     """Crée une session WOPI et retourne le token."""
     token = _secrets.token_urlsafe(32)
     expires = datetime.utcnow() + timedelta(hours=4)
@@ -2023,6 +2024,7 @@ def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier):
         token=token,
         consultation_id=consultation_id,
         section_type=section_type,
+        section_ordre=section_ordre,
         nom_fichier=nom_fichier,
         chemin_fichier=docx_path,
         expires_at=expires,
@@ -2129,9 +2131,13 @@ def wopi_file_contents(token):
 
         c = Consultation.query.get(sess.consultation_id)
         if c:
-            section = next((s for s in c.sections
-                            if s.type == sess.section_type), None)
-            section_ordre = section.ordre if section else 0
+            # Utiliser section_ordre de la session (évite le bug avec champ_name='wopi_doc')
+            if sess.section_ordre:
+                section_ordre = sess.section_ordre
+            else:
+                section = next((s for s in c.sections
+                                if s.type == sess.section_type), None)
+                section_ordre = section.ordre if section else 0
 
             folder = os.path.join(app.config['UPLOAD_FOLDER'],
                                   'sections', str(sess.consultation_id))
@@ -2195,8 +2201,9 @@ def editer_fichier_collabora(consultation_id, fichier_id):
         flash('Fichier introuvable.', 'danger')
         return redirect(url_for('consultation_modifier', consultation_id=consultation_id))
 
-    # Créer une session WOPI pointant vers ce fichier
-    token = _wopi_token_for(consultation_id, f.champ_name, file_path, f.nom_original)
+    # Créer une session WOPI pointant vers ce fichier existant
+    token = _wopi_token_for(consultation_id, f.champ_name, file_path, f.nom_original,
+                            section_ordre=f.section_ordre)
 
     wopi_src           = f"{WOPI_BASE_URL}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(f.nom_original)

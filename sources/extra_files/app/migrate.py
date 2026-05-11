@@ -112,4 +112,17 @@ with app.app_context():
         msg = str(e).lower()
         if 'already exists' in msg: print("Present : table wopi_session")
         else: print(f"ERREUR  : wopi_session — {e}")
+
+    # section_ordre sur wopi_session
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE wopi_session ADD COLUMN section_ordre INTEGER DEFAULT 0"))
+            conn.commit()
+        print("OK      : section_ordre sur wopi_session")
+    except Exception as e:
+        msg = str(e).lower()
+        if 'duplicate column' in msg or 'already exists' in msg:
+            print("Present : section_ordre sur wopi_session")
+        else:
+            print(f"ERREUR  : section_ordre — {e}")
     print("\nMigration terminee.")
