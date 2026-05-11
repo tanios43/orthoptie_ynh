@@ -1238,6 +1238,13 @@ function supprimerFichierSection(fichierId, elId) {
     .then(() => { const el = document.getElementById(elId); if (el) el.remove(); });
 }
 
+function supprimerWopiDoc(fichierId, btn) {
+  if (!confirm('Supprimer ce document ?')) return;
+  fetch('/fichier_section/' + fichierId + '/supprimer', {method:'POST'})
+    .then(r => r.json())
+    .then(() => { btn.closest('div[style]').remove(); });
+}
+
 // ── Mise à jour du titre d'un fichier existant via fetch ──
 function sauverTitreFichier(id, titre) {
   const fd = new FormData();
@@ -1400,6 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="flex:1;font-size:12px;font-weight:500;color:var(--accent-dk);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${nom}">${nom}</span>
                 <a href="${dlUrl}" target="_blank" style="font-size:10px;color:var(--accent);text-decoration:none;padding:2px 7px;border:1px solid var(--accent);border-radius:4px;background:white;flex-shrink:0;">📥 Télécharger</a>
                 <a href="${editUrl}" style="font-size:10px;color:white;text-decoration:none;padding:2px 7px;border-radius:4px;background:var(--accent);flex-shrink:0;">✎ Modifier</a>
+                <button onclick="supprimerWopiDoc(${f.id}, this)" style="font-size:10px;color:white;padding:2px 7px;border-radius:4px;background:#e53e3e;border:none;cursor:pointer;flex-shrink:0;">🗑 Supprimer</button>
               `;
               wopiList.appendChild(row);
             });
