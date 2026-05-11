@@ -403,7 +403,7 @@
             "label":   {{ sec.label | tojson }},
             "obs":     {{ (sec.observations or '') | tojson }},
             "donnees": {{ sec.get_donnees() | tojson }},
-            "fichiers_sec": [{% if consultation %}{% for f in consultation.fichiers_sec %}{% if f.section_ordre == loop.index0 %}{
+            "fichiers_sec": [{% if consultation %}{% for f in consultation.fichiers_sec %}{% if f.section_ordre == sec.ordre %}{
               "id": {{ f.id }},
               "champ_name": {{ f.champ_name | tojson }},
               "nom_original": {{ f.nom_original | tojson }},
