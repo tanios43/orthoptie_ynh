@@ -17,6 +17,12 @@ from werkzeug.utils import secure_filename
 import json, os, re, unicodedata
 
 app = Flask(__name__)
+
+@app.after_request
+def add_ngrok_header(response):
+    """Désactive l'interstitiel ngrok pour toutes les réponses."""
+    response.headers['ngrok-skip-browser-warning'] = 'true'
+    return response
 app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
 
 # ── Configuration WOPI / Collabora ──────────────────────────────────────────
@@ -25,7 +31,7 @@ app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
 #   ngrok      : 'https://abc123.ngrok.io'
 #   YunoHost   : 'https://dossiers.orthoptistes-yssingeaux.fr'
 #   local test : 'http://host.docker.internal:5000'
-WOPI_BASE_URL = 'https://dossiers.cyps.ynh.fr'   # ← MODIFIER selon votre déploiement
+WOPI_BASE_URL = 'https://brick-variably-pentagram.ngrok-free.dev'   # ← MODIFIER selon votre déploiement
 
 # URL de votre serveur Collabora Online
 COLLABORA_URL = 'https://collabora.orthoptistes-yssingeaux.fr'
@@ -2074,7 +2080,10 @@ def wopi_check_file_info(token):
         'UserFriendlyName':      'Praticien',
         'UserCanWrite':          True,
         'SupportsUpdate':        True,
-        'SupportsLocks':         False,
+        'SupportsLocks':         True,
+        'SupportsGetLock':       True,
+        'UserCanNotWriteRelative': True,
+        'SupportsExtendedLockLength': True,
         'PostMessageOrigin':     COLLABORA_URL,
         'DisableExport':         False,
         'DisablePrint':          False,
@@ -2092,7 +2101,6 @@ def wopi_file_contents(token):
         return jsonify({'error': 'Token expiré'}), 401
 
     if request.method == 'GET':
-        # Collabora demande le fichier
         from flask import send_file
         resp = send_file(sess.chemin_fichier,
                          mimetype='application/vnd.openxmlformats-officedocument'
@@ -2101,23 +2109,21 @@ def wopi_file_contents(token):
         return resp
 
     elif request.method == 'POST':
-        # Collabora envoie le fichier modifié — on le sauvegarde
+        # Collabora envoie le fichier modifié
         import os, uuid, shutil
         data = request.get_data()
+        if not data:
+            return '', 200
 
-        # Mettre à jour le fichier temporaire
         with open(sess.chemin_fichier, 'wb') as f:
             f.write(data)
 
-        # Sauvegarder comme pièce jointe de la section correspondante
         c = Consultation.query.get(sess.consultation_id)
         if c:
-            # Trouver la section correspondante
             section = next((s for s in c.sections
                             if s.type == sess.section_type), None)
             section_ordre = section.ordre if section else 0
 
-            # Créer le dossier et copier le fichier
             folder = os.path.join(app.config['UPLOAD_FOLDER'],
                                   'sections', str(sess.consultation_id))
             os.makedirs(folder, exist_ok=True)
@@ -2125,8 +2131,6 @@ def wopi_file_contents(token):
             dest = os.path.join(folder, nom_stocke)
             shutil.copy2(sess.chemin_fichier, dest)
 
-            # Vérifier si une pièce jointe WOPI existe déjà pour cette session
-            # (mise à jour plutôt que duplication)
             existing = FichierSection.query.filter_by(
                 consultation_id=sess.consultation_id,
                 section_ordre=section_ordre,
@@ -2135,7 +2139,6 @@ def wopi_file_contents(token):
             ).first()
 
             if existing:
-                # Supprimer l'ancien fichier
                 old_path = os.path.join(folder, existing.nom_stocke)
                 if os.path.exists(old_path):
                     os.remove(old_path)
@@ -2152,8 +2155,19 @@ def wopi_file_contents(token):
                     titre=sess.nom_fichier,
                 ))
             db.session.commit()
+            app.logger.info(f"WOPI: fichier sauvegardé {nom_stocke}")
 
         return '', 200
+
+
+@app.route('/wopi/files/<token>', methods=['POST'])
+def wopi_file_lock(token):
+    """WOPI Lock/Unlock/RefreshLock — nécessaire pour Collabora."""
+    override = request.headers.get('X-WOPI-Override', '')
+    app.logger.info(f"WOPI Lock operation: {override} for token {token[:20]}")
+    if override in ('LOCK', 'REFRESH_LOCK', 'UNLOCK', 'GET_LOCK', 'PUT_RELATIVE'):
+        return '', 200
+    return '', 200
 
 
 @app.route('/consultation/<int:consultation_id>/editer-collabora', methods=['GET'])
