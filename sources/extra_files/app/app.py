@@ -2219,6 +2219,7 @@ def editer_fichier_collabora(consultation_id, fichier_id):
                            collabora_url=COLLABORA_URL)
 
 
+@app.route('/consultation/<int:consultation_id>/editer-collabora', methods=['GET'])
 @login_required
 def editer_collabora(consultation_id):
     """Génère le .docx et ouvre l'éditeur Collabora."""
