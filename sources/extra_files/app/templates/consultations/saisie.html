@@ -1384,30 +1384,26 @@ document.addEventListener('DOMContentLoaded', () => {
           const body = el.querySelector('.bilan-section-body');
           if (body) {
             const wopiZone = document.createElement('div');
-            wopiZone.style.cssText = 'margin-top:8px;padding-top:8px;border-top:1px solid var(--border);';
-            wopiZone.innerHTML = '<div style="font-size:10px;color:var(--accent);font-weight:500;margin-bottom:6px;">📝 Documents édités</div>';
-            const wopiRow = document.createElement('div');
-            wopiRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+            wopiZone.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
+            wopiZone.innerHTML = '<div style="font-size:11px;color:var(--accent);font-weight:500;margin-bottom:6px;">📝 Documents édités</div>';
+            const wopiList = document.createElement('div');
+            wopiList.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
             wopiFics.forEach(f => {
-              const url = `/uploads/section/{{ consultation.id if consultation else 0 }}/` + f.nom_stocke;
-              const editUrl = `/consultation/{{ consultation.id if consultation else 0 }}/fichier-section/${f.id}/editer-collabora`;
-              const a = document.createElement('a');
-              a.href = url;
-              a.target = '_blank';
-              a.style.cssText = 'display:flex;flex-direction:column;align-items:center;text-decoration:none;border:1px solid var(--accent);border-radius:6px;overflow:hidden;background:var(--accent-lt);width:64px;';
-              a.innerHTML = `<div style="width:64px;height:46px;display:flex;align-items:center;justify-content:center;font-size:20px;">📝</div>
-                <div style="font-size:8px;color:var(--muted);padding:2px 3px;width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">${f.titre || f.nom_original}</div>`;
-              const editBtn = document.createElement('a');
-              editBtn.href = editUrl;
-              editBtn.style.cssText = 'font-size:9px;color:var(--accent);text-decoration:none;padding:1px 5px;border:1px solid var(--accent);border-radius:4px;margin-top:2px;';
-              editBtn.textContent = '✎ Modifier';
-              const wrapper = document.createElement('div');
-              wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
-              wrapper.appendChild(a);
-              wrapper.appendChild(editBtn);
-              wopiRow.appendChild(wrapper);
+              const consId = {{ consultation.id if consultation else 0 }};
+              const editUrl = `/consultation/${consId}/fichier-section/${f.id}/editer-collabora`;
+              const dlUrl = `/uploads/section/${consId}/` + f.nom_stocke;
+              const nom = f.titre || f.nom_original;
+              const row = document.createElement('div');
+              row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--accent-lt);border:1px solid var(--accent);border-radius:7px;';
+              row.innerHTML = `
+                <span style="font-size:18px;flex-shrink:0;">📝</span>
+                <span style="flex:1;font-size:12px;font-weight:500;color:var(--accent-dk);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${nom}">${nom}</span>
+                <a href="${dlUrl}" target="_blank" style="font-size:10px;color:var(--accent);text-decoration:none;padding:2px 7px;border:1px solid var(--accent);border-radius:4px;background:white;flex-shrink:0;">📥 Télécharger</a>
+                <a href="${editUrl}" style="font-size:10px;color:white;text-decoration:none;padding:2px 7px;border-radius:4px;background:var(--accent);flex-shrink:0;">✎ Modifier</a>
+              `;
+              wopiList.appendChild(row);
             });
-            wopiZone.appendChild(wopiRow);
+            wopiZone.appendChild(wopiList);
             body.appendChild(wopiZone);
           }
         }
