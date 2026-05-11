@@ -301,18 +301,21 @@
                 {% if wopi_fics %}
                 <div style="margin:4px 0;">
                   <div style="font-size:10px;color:var(--accent);font-weight:500;margin-bottom:4px;">📝 Documents édités</div>
-                  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                  <div style="display:flex;flex-direction:column;gap:4px;">
                     {% for f in wopi_fics %}
-                    <a href="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
-                       target="_blank"
-                       style="display:flex;flex-direction:column;align-items:center;
-                              text-decoration:none;border:1px solid var(--accent);
-                              border-radius:6px;overflow:hidden;background:var(--accent-lt);width:60px;">
-                      <div style="width:60px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px;">📝</div>
-                      <div style="font-size:8px;color:var(--muted);padding:2px 3px;width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;
+                                background:var(--accent-lt);border:1px solid var(--accent);border-radius:6px;">
+                      <span style="font-size:14px;">📝</span>
+                      <span style="flex:1;font-size:11px;font-weight:500;color:var(--accent-dk);
+                                   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                         {{ f.titre if f.titre else f.nom_original }}
-                      </div>
-                    </a>
+                      </span>
+                      <a href="{{ url_for('editer_fichier_collabora', consultation_id=c.id, fichier_id=f.id) }}"
+                         style="font-size:10px;color:white;text-decoration:none;padding:2px 6px;
+                                border-radius:4px;background:var(--accent);flex-shrink:0;">
+                        ✎ Modifier
+                      </a>
+                    </div>
                     {% endfor %}
                   </div>
                 </div>
