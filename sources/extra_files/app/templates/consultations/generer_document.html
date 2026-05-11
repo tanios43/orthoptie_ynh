@@ -131,6 +131,19 @@
     {% endif %}
 
     <input type="hidden" name="section" value="{{ section_origine }}">
+
+    {# Nom du document #}
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-header"><h2>Nom du document</h2></div>
+      <div class="card-body">
+        <input type="text" name="nom_document"
+               placeholder="Ex: Courrier Dr Martin, Compte-rendu séance 1…"
+               style="width:100%;font-size:13px;">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+          Laissez vide pour utiliser le nom par défaut
+        </div>
+      </div>
+    </div>
     <button type="submit" class="btn btn-primary" {{ 'disabled' if not modeles }}>
       {{ '✉️' if type_doc == 'courrier' else '📋' }}
       {{ 'Rédiger le courrier' if type_doc == 'courrier' else "Rédiger l'ordonnance" }}

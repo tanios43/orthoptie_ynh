@@ -2165,7 +2165,6 @@ def wopi_file_contents(token):
                 champ_name='wopi_doc',
                 titre=sess.nom_fichier
             ).first()
-
             if existing:
                 old_path = os.path.join(folder, existing.nom_stocke)
                 if os.path.exists(old_path):
@@ -2257,8 +2256,10 @@ def editer_collabora(consultation_id):
 
     # Copier dans le dossier WOPI permanent
     import shutil, uuid
+    nom_custom = request.args.get('nom_document', '').strip()
+    nom_base   = nom_custom if nom_custom else modele.nom
     nom_fichier = (f"{c.patient.nom}_{c.patient.prenom}_"
-                   f"{c.date_consult.strftime('%Y%m%d')}_{modele.nom}.docx")
+                   f"{c.date_consult.strftime('%Y%m%d')}_{nom_base}.docx")
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
     shutil.copy2(docx_path, permanent_path)
 
