@@ -296,6 +296,27 @@
                   </div>
                   {% endif %}
                 {% endfor %}
+                {# Documents WOPI #}
+                {% set wopi_fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', 'wopi_doc') | list %}
+                {% if wopi_fics %}
+                <div style="margin:4px 0;">
+                  <div style="font-size:10px;color:var(--accent);font-weight:500;margin-bottom:4px;">📝 Documents édités</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    {% for f in wopi_fics %}
+                    <a href="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
+                       target="_blank"
+                       style="display:flex;flex-direction:column;align-items:center;
+                              text-decoration:none;border:1px solid var(--accent);
+                              border-radius:6px;overflow:hidden;background:var(--accent-lt);width:60px;">
+                      <div style="width:60px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px;">📝</div>
+                      <div style="font-size:8px;color:var(--muted);padding:2px 3px;width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                        {{ f.titre if f.titre else f.nom_original }}
+                      </div>
+                    </a>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
                 {% endif %}
 
               </div>
