@@ -31,7 +31,7 @@ app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
 #   ngrok      : 'https://abc123.ngrok.io'
 #   YunoHost   : 'https://dossiers.orthoptistes-yssingeaux.fr'
 #   local test : 'http://host.docker.internal:5000'
-WOPI_BASE_URL = 'https://dossiers.cyps.ynh.fr'   # ← MODIFIER selon votre déploiement
+WOPI_BASE_URL = 'https://dossiers.cyps.ynh.fr'   # URL publique de ce serveur Flask
 
 # URL de votre serveur Collabora Online
 COLLABORA_URL = 'https://collabora.orthoptistes-yssingeaux.fr'
@@ -2067,7 +2067,16 @@ def _get_collabora_url(filename):
 @app.route('/wopi/files/<token>')
 def wopi_check_file_info(token):
     """WOPI CheckFileInfo — retourne les métadonnées du fichier."""
-    sess = WopiSession.query.filter_by(token=token).first_or_404()
+    # Accepter aussi le token depuis access_token en query string
+    if token == 'access_token':
+        token = request.args.get('access_token', token)
+    sess = WopiSession.query.filter_by(token=token).first()
+    if not sess:
+        # Chercher via access_token dans query string
+        access_token = request.args.get('access_token', '')
+        sess = WopiSession.query.filter_by(token=access_token).first()
+    if not sess:
+        return jsonify({'error': 'Session introuvable'}), 404
     if sess.expires_at and sess.expires_at < datetime.utcnow():
         return jsonify({'error': 'Token expiré'}), 401
     import os
@@ -2210,7 +2219,7 @@ def editer_collabora(consultation_id):
     collabora_action_url = _get_collabora_url(nom_fichier)
     print(f"[WOPI] src: {wopi_src}")
     print(f"[WOPI] Collabora action URL: {collabora_action_url}")
-    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}"
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}"
     # Nettoyer les doubles ? ou & parasites
     editor_url = editor_url.replace('?&', '?').replace('&&', '&')
     print(f"[WOPI] Editor URL finale: {editor_url}")
