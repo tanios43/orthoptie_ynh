@@ -2179,7 +2179,39 @@ def wopi_file_lock(token):
     return '', 200
 
 
-@app.route('/consultation/<int:consultation_id>/editer-collabora', methods=['GET'])
+@app.route('/consultation/<int:consultation_id>/fichier-section/<int:fichier_id>/editer-collabora')
+@login_required
+def editer_fichier_collabora(consultation_id, fichier_id):
+    """Ouvre un fichier de section existant dans Collabora pour édition."""
+    import os, urllib.parse
+    c  = Consultation.query.get_or_404(consultation_id)
+    f  = FichierSection.query.get_or_404(fichier_id)
+
+    # Chemin réel du fichier
+    folder    = os.path.join(app.config['UPLOAD_FOLDER'], 'sections', str(consultation_id))
+    file_path = os.path.join(folder, f.nom_stocke)
+
+    if not os.path.exists(file_path):
+        flash('Fichier introuvable.', 'danger')
+        return redirect(url_for('consultation_modifier', consultation_id=consultation_id))
+
+    # Créer une session WOPI pointant vers ce fichier
+    token = _wopi_token_for(consultation_id, f.champ_name, file_path, f.nom_original)
+
+    wopi_src           = f"{WOPI_BASE_URL}/wopi/files/{token}"
+    collabora_action_url = _get_collabora_url(f.nom_original)
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}"
+    editor_url = editor_url.replace('?&', '?').replace('&&', '&')
+
+    return render_template('consultations/collabora_editor.html',
+                           consultation=c,
+                           editor_url=editor_url,
+                           nom_fichier=f.nom_original,
+                           token=token,
+                           section_type=f.champ_name,
+                           collabora_url=COLLABORA_URL)
+
+
 @login_required
 def editer_collabora(consultation_id):
     """Génère le .docx et ouvre l'éditeur Collabora."""
