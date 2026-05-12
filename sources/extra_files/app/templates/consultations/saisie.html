@@ -1242,7 +1242,14 @@ function supprimerWopiDoc(fichierId, btn) {
   if (!confirm('Supprimer ce document ?')) return;
   fetch('/fichier_section/' + fichierId + '/supprimer', {method:'POST'})
     .then(r => r.json())
-    .then(() => { btn.closest('div[style]').remove(); });
+    .then(data => {
+      if (data.ok) {
+        // Remonter jusqu'à la ligne du document (le div avec les boutons)
+        const row = btn.closest('.wopi-doc-row');
+        if (row) row.remove();
+      }
+    })
+    .catch(err => console.error('Erreur suppression:', err));
 }
 
 // ── Mise à jour du titre d'un fichier existant via fetch ──
@@ -1401,6 +1408,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const dlUrl = `/uploads/section/${consId}/` + f.nom_stocke;
               const nom = f.titre || f.nom_original;
               const row = document.createElement('div');
+              row.className = 'wopi-doc-row';
               row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--accent-lt);border:1px solid var(--accent);border-radius:7px;';
               row.innerHTML = `
                 <span style="font-size:18px;flex-shrink:0;">📝</span>
