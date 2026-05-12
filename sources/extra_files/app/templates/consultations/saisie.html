@@ -627,7 +627,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
         <div class="field-grid field-grid-2" style="gap:10px;">
           <div class="field-group">
             <label class="field-label">Œil à occlure</label>
-            <select name="sec_${idx}_orto_oeil" onchange="updateDonnees(${idx})">
+            <select name="champ__${idx}__orto_oeil" onchange="updateDonnees(${idx})">
               <option value="">—</option>
               <option value="OD" ${d.orto_oeil==='OD'?'selected':''}>OD</option>
               <option value="OG" ${d.orto_oeil==='OG'?'selected':''}>OG</option>
@@ -635,17 +635,17 @@ function renderSection(type, label, idx, titre, obs, donnees) {
           </div>
           <div class="field-group">
             <label class="field-label">Heures par jour</label>
-            <input type="text" name="sec_${idx}_orto_heures" value="${d.orto_heures||''}"
+            <input type="text" name="champ__${idx}__orto_heures" value="${d.orto_heures||''}"
                    placeholder="ex: 2" onchange="updateDonnees(${idx})">
           </div>
           <div class="field-group">
             <label class="field-label">Durée du traitement</label>
-            <input type="text" name="sec_${idx}_orto_duree" value="${d.orto_duree||''}"
+            <input type="text" name="champ__${idx}__orto_duree" value="${d.orto_duree||''}"
                    placeholder="ex: 3 mois" onchange="updateDonnees(${idx})">
           </div>
           <div class="field-group">
             <label class="field-label">Notes</label>
-            <input type="text" name="sec_${idx}_orto_notes" value="${d.orto_notes||''}"
+            <input type="text" name="champ__${idx}__orto_notes" value="${d.orto_notes||''}"
                    onchange="updateDonnees(${idx})">
           </div>
         </div>
@@ -664,12 +664,12 @@ function renderSection(type, label, idx, titre, obs, donnees) {
         <div class="field-grid field-grid-2" style="gap:10px;">
           <div class="field-group">
             <label class="field-label">OD — dioptries</label>
-            <input type="text" name="sec_${idx}_prisme_od_diop" value="${d.prisme_od_diop||''}"
+            <input type="text" name="champ__${idx}__prisme_od_diop" value="${d.prisme_od_diop||''}"
                    placeholder="ex: 4" onchange="updateDonnees(${idx})">
           </div>
           <div class="field-group">
             <label class="field-label">OD — base</label>
-            <select name="sec_${idx}_prisme_od_base" onchange="updateDonnees(${idx})">
+            <select name="champ__${idx}__prisme_od_base" onchange="updateDonnees(${idx})">
               <option value="">—</option>
               ${['nasale','temporale','inférieure','supérieure'].map(b =>
                 `<option value="${b}" ${d.prisme_od_base===b?'selected':''}>${b}</option>`).join('')}
@@ -677,12 +677,12 @@ function renderSection(type, label, idx, titre, obs, donnees) {
           </div>
           <div class="field-group">
             <label class="field-label">OG — dioptries</label>
-            <input type="text" name="sec_${idx}_prisme_og_diop" value="${d.prisme_og_diop||''}"
+            <input type="text" name="champ__${idx}__prisme_og_diop" value="${d.prisme_og_diop||''}"
                    placeholder="ex: 4" onchange="updateDonnees(${idx})">
           </div>
           <div class="field-group">
             <label class="field-label">OG — base</label>
-            <select name="sec_${idx}_prisme_og_base" onchange="updateDonnees(${idx})">
+            <select name="champ__${idx}__prisme_og_base" onchange="updateDonnees(${idx})">
               <option value="">—</option>
               ${['nasale','temporale','inférieure','supérieure'].map(b =>
                 `<option value="${b}" ${d.prisme_og_base===b?'selected':''}>${b}</option>`).join('')}
@@ -704,22 +704,22 @@ function renderSection(type, label, idx, titre, obs, donnees) {
         <div class="field-grid field-grid-2" style="gap:10px;">
           <div class="field-group">
             <label class="field-label">OD — Ryser N°</label>
-            <input type="text" name="sec_${idx}_ryser_od_num" value="${d.ryser_od_num||''}"
+            <input type="text" name="champ__${idx}__ryser_od_num" value="${d.ryser_od_num||''}"
                    placeholder="ex: 6" onchange="updateDonnees(${idx})">
           </div>
           <div class="field-group">
             <label class="field-label">OD — AV laissée (/10)</label>
-            <input type="text" name="sec_${idx}_ryser_od_av" value="${d.ryser_od_av||''}"
+            <input type="text" name="champ__${idx}__ryser_od_av" value="${d.ryser_od_av||''}"
                    placeholder="ex: 5" onchange="updateDonnees(${idx})">
           </div>
           <div class="field-group">
             <label class="field-label">OG — Ryser N°</label>
-            <input type="text" name="sec_${idx}_ryser_og_num" value="${d.ryser_og_num||''}"
+            <input type="text" name="champ__${idx}__ryser_og_num" value="${d.ryser_og_num||''}"
                    placeholder="ex: 6" onchange="updateDonnees(${idx})">
           </div>
           <div class="field-group">
             <label class="field-label">OG — AV laissée (/10)</label>
-            <input type="text" name="sec_${idx}_ryser_og_av" value="${d.ryser_og_av||''}"
+            <input type="text" name="champ__${idx}__ryser_og_av" value="${d.ryser_og_av||''}"
                    placeholder="ex: 5" onchange="updateDonnees(${idx})">
           </div>
         </div>
