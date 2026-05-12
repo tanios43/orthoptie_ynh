@@ -168,6 +168,10 @@ window.addEventListener('DOMContentLoaded', () => {
     </button>
     {% if patient %}
       <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary">Annuler</a>
+      <button type="button" onclick="document.getElementById('modal-supprimer').style.display='flex'"
+              class="btn btn-secondary" style="margin-left:auto;color:#e53e3e;border-color:#e53e3e;">
+        🗑 Supprimer le patient
+      </button>
     {% else %}
       <a href="{{ url_for('index') }}" class="btn btn-secondary">Annuler</a>
     {% endif %}
@@ -230,6 +234,47 @@ function forcerCreation() {
   document.querySelector('form').submit();
 }
 </script>
+{% if patient %}
+<div id="modal-supprimer"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:12px;padding:28px 32px;
+              max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.2);">
+    <div style="font-size:32px;text-align:center;margin-bottom:12px;">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:8px;color:#e53e3e;">
+      Supprimer {{ patient.prenom }} {{ patient.nom }} ?
+    </h3>
+    <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px;">
+      Cette action est <strong>irréversible</strong>. Tous les bilans et documents
+      associés seront supprimés définitivement.
+    </p>
+    <form method="POST" action="{{ url_for('patient_supprimer', patient_id=patient.id) }}">
+      <div class="field-group" style="margin-bottom:16px;">
+        <label class="field-label" style="text-align:center;display:block;">
+          Tapez <strong>oui</strong> pour confirmer
+        </label>
+        <input type="text" name="confirmation" id="confirmation-input"
+               placeholder="oui"
+               autocomplete="off"
+               style="text-align:center;font-size:16px;">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button type="submit" id="btn-confirmer-suppr"
+                style="padding:8px 20px;background:#e53e3e;color:white;
+                       border:none;border-radius:6px;cursor:pointer;font-size:13px;">
+          Supprimer définitivement
+        </button>
+        <button type="button"
+                onclick="document.getElementById('modal-supprimer').style.display='none';
+                         document.getElementById('confirmation-input').value='';"
+                style="padding:8px 20px;background:var(--surface);border:1px solid var(--border);
+                       border-radius:6px;cursor:pointer;font-size:13px;">
+          Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endif %}
 
 {% endblock %}

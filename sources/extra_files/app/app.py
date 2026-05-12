@@ -599,7 +599,30 @@ def patient_modifier(patient_id):
     return render_template('patients/edition.html', patient=patient)
 
 
-@app.route('/recherche')
+@app.route('/patient/<int:patient_id>/supprimer', methods=['POST'])
+@login_required
+def patient_supprimer(patient_id):
+    """Supprime un patient et toutes ses données."""
+    patient = Patient.query.get_or_404(patient_id)
+    confirmation = request.form.get('confirmation', '').strip().lower()
+    if confirmation != 'oui':
+        flash('Suppression annulée — vous devez taper "oui" pour confirmer.', 'warning')
+        return redirect(url_for('patient_modifier', patient_id=patient_id))
+
+    nom = str(patient)
+    # Supprimer les fichiers liés
+    import shutil
+    for c in patient.consultations:
+        for f in FichierSection.query.filter_by(consultation_id=c.id).all():
+            chemin = os.path.join(app.config['UPLOAD_FOLDER'], 'sections',
+                                  str(c.id), f.nom_stocke)
+            if os.path.exists(chemin):
+                try: os.remove(chemin)
+                except: pass
+    db.session.delete(patient)
+    db.session.commit()
+    flash(f'Patient {nom} supprimé.', 'success')
+    return redirect(url_for('index'))
 @login_required
 def recherche():
     q = request.args.get('q', '').strip(); patients = []
