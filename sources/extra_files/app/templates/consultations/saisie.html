@@ -986,6 +986,28 @@ function ajouterSection(type, label) {
   const container = document.getElementById('sections-container');
   const idx = sectionIndex++;
 
+  // Si nouveau bilan et section courrier/ordonnance : sauvegarder d'abord
+  if (!CONSULTATION_ID && (type === 'courrier' || type === 'ordonnance')) {
+    // Ajouter quand même la section visuellement
+    const obsDefaut = (SECTIONS_DEF[type] && SECTIONS_DEF[type].obs_defaut) || '';
+    const html = renderSection(type, label, idx, '', obsDefaut, {});
+    if (!html) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    container.appendChild(tmp.firstElementChild);
+    renumeroter();
+    // Puis sauvegarder automatiquement
+    const form = document.getElementById('form-bilan');
+    if (form) {
+      const info = document.createElement('div');
+      info.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--accent);color:white;padding:10px 16px;border-radius:8px;z-index:9999;font-size:13px;';
+      info.textContent = '💾 Sauvegarde automatique pour activer les boutons…';
+      document.body.appendChild(info);
+      setTimeout(() => form.submit(), 800);
+    }
+    return;
+  }
+
   // Pré-remplir les observations avec la valeur par défaut de la section
   const obsDefaut = (SECTIONS_DEF[type] && SECTIONS_DEF[type].obs_defaut) || '';
   const html = renderSection(type, label, idx, '', obsDefaut, {});
