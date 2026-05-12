@@ -1372,6 +1372,26 @@ BUILTIN_SECTIONS = [
     ('facilites_accom',"Facilités d'accommodation",[('accom_cpm','Résultat (cpm)','select',['<3 cpm','3-5 cpm','5-8 cpm','8-10 cpm','>10 cpm','non réalisé']),('accom_lenteur','Lenteur en','select',['+','−','± égal','non précisé'])]),
     ('facilites_verg','Facilités de vergences',[('verg_cpm','Résultat (cpm) (norme 15±3)','select',['<6 cpm','6-9 cpm','9-12 cpm','12-15 cpm','15-18 cpm','>18 cpm','non réalisé'])]),
     ('conclusions','Conclusions',[('conclusions','Conclusions','textarea',[]),('recommandations','Recommandations','textarea',[])]),
+    ('ordonnance','Ordonnances',[
+        # Ortopad / Opticlude
+        ('orto_actif','Ortopad / Opticlude','select',['','Oui']),
+        ('orto_oeil','Œil à occlure','select',['','OD','OG']),
+        ('orto_heures','Heures par jour','text',[]),
+        ('orto_duree','Durée du traitement','text',[]),
+        ('orto_notes','Notes','text',[]),
+        # Prisme Press-On
+        ('prisme_actif','Prisme Press-On','select',['','Oui']),
+        ('prisme_od_diop','OD dioptries','text',[]),
+        ('prisme_od_base','OD base','select',['','nasale','temporale','inférieure','supérieure']),
+        ('prisme_og_diop','OG dioptries','text',[]),
+        ('prisme_og_base','OG base','select',['','nasale','temporale','inférieure','supérieure']),
+        # Filtre Ryser
+        ('ryser_actif','Filtre Ryser','select',['','Oui']),
+        ('ryser_od_num','OD Ryser N°','text',[]),
+        ('ryser_od_av','OD AV laissée (/10)','text',[]),
+        ('ryser_og_num','OG Ryser N°','text',[]),
+        ('ryser_og_av','OG AV laissée (/10)','text',[]),
+    ]),
 ]
 
 
@@ -1522,6 +1542,95 @@ def admin_document_blocs_reordonner():
 # GÉNÉRATION DE DOCUMENTS
 # ============================================================
 
+@app.route('/consultation/<int:consultation_id>/ordonnance/<type_ordo>/editer-collabora')
+@login_required
+def editer_ordonnance_collabora(consultation_id, type_ordo):
+    """Génère une ordonnance et l'ouvre dans Collabora."""
+    import os, shutil, uuid, urllib.parse
+    c = Consultation.query.get_or_404(consultation_id)
+    p = c.patient
+    praticien = current_user
+    cabinet = get_current_cabinet()
+    pc = PraticienCabinet.query.filter_by(
+        praticien_id=praticien.id,
+        cabinet_id=cabinet.id if cabinet else 0).first() if cabinet else None
+
+    # Récupérer les données de la section ordonnance
+    sec_ordo = next((s for s in c.sections if s.type == 'ordonnance'), None)
+    d = sec_ordo.get_donnees() if sec_ordo else {}
+
+    # Générer le contenu selon le type
+    date_str   = c.date_consult.strftime('%d/%m/%Y')
+    cab_commune = (cabinet.commune or 'Yssingeaux') if cabinet else 'Yssingeaux'
+    esc = lambda s: (s or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    if type_ordo == 'ortopad':
+        oeil   = d.get('orto_oeil', '')
+        heures = d.get('orto_heures', '')
+        duree  = d.get('orto_duree', '')
+        notes  = d.get('orto_notes', '')
+        titre_ordo = 'ORDONNANCE — OCCLUSION'
+        lignes_ordo = [
+            f'Occlusion de l\'{oeil} par Ortopad / Opticlude',
+            f'{heures} heures par jour' if heures else '',
+            f'Durée : {duree}' if duree else '',
+            notes if notes else '',
+        ]
+        nom_doc = f'{p.nom}_{p.prenom}_{c.date_consult.strftime("%Y%m%d")}_Ortopad.docx'
+
+    elif type_ordo == 'prisme':
+        od_d = d.get('prisme_od_diop', '')
+        od_b = d.get('prisme_od_base', '')
+        og_d = d.get('prisme_og_diop', '')
+        og_b = d.get('prisme_og_base', '')
+        titre_ordo = 'ORDONNANCE — PRISME PRESS-ON'
+        lignes_ordo = []
+        if od_d: lignes_ordo.append(f'OD : {od_d} dioptries, base {od_b}')
+        if og_d: lignes_ordo.append(f'OG : {og_d} dioptries, base {og_b}')
+        nom_doc = f'{p.nom}_{p.prenom}_{c.date_consult.strftime("%Y%m%d")}_Prisme.docx'
+
+    elif type_ordo == 'ryser':
+        od_n = d.get('ryser_od_num', '')
+        od_a = d.get('ryser_od_av', '')
+        og_n = d.get('ryser_og_num', '')
+        og_a = d.get('ryser_og_av', '')
+        titre_ordo = 'ORDONNANCE — FILTRE RYSER'
+        lignes_ordo = []
+        if od_n: lignes_ordo.append(f'OD : Ryser N°{od_n}, laissant une AV de {od_a}/10')
+        if og_n: lignes_ordo.append(f'OG : Ryser N°{og_n}, laissant une AV de {og_a}/10')
+        nom_doc = f'{p.nom}_{p.prenom}_{c.date_consult.strftime("%Y%m%d")}_Ryser.docx'
+    else:
+        return 'Type inconnu', 404
+
+    # Générer le docx depuis entete.docx
+    docx_path = _generer_ordonnance_docx(c, praticien, cabinet, pc,
+                                          titre_ordo, lignes_ordo)
+
+    # Copier dans le dossier WOPI
+    wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
+    os.makedirs(wopi_dir, exist_ok=True)
+    permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
+    shutil.copy2(docx_path, permanent_path)
+
+    # Session WOPI avec section_ordre de la section ordonnance
+    section_ordre = sec_ordo.ordre if sec_ordo else 0
+    token = _wopi_token_for(consultation_id, 'ordonnance', permanent_path,
+                            nom_doc, section_ordre=section_ordre)
+
+    wopi_src     = f"{WOPI_BASE_URL}/wopi/files/{token}"
+    collabora_action_url = _get_collabora_url(nom_doc)
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}"
+    editor_url = editor_url.replace('?&', '?').replace('&&', '&')
+
+    return render_template('consultations/collabora_editor.html',
+                           consultation=c,
+                           editor_url=editor_url,
+                           nom_fichier=nom_doc,
+                           token=token,
+                           section_type='ordonnance',
+                           collabora_url=COLLABORA_URL)
+
+
 @app.route('/consultation/<int:consultation_id>/document', methods=['GET', 'POST'])
 @login_required
 def generer_document(consultation_id):
@@ -1587,6 +1696,172 @@ def _resoudre_variables(texte, consultation, praticien, cabinet, pc):
     for k, v in replacements.items():
         texte = texte.replace(k, v or '')
     return texte
+
+
+def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, lignes_ordo):
+    """Génère un docx d'ordonnance simplifié depuis entete.docx."""
+    import zipfile, re, tempfile, os
+    p = consultation.patient
+    esc = lambda s: (s or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    entete_path = os.path.join(app.root_path, 'entete.docx')
+    tmpdir = tempfile.mkdtemp()
+    out_path = os.path.join(tmpdir, 'ordo_base.docx')
+
+    with zipfile.ZipFile(entete_path, 'r') as z:
+        z.extractall(tmpdir)
+        doc_xml = z.read('word/document.xml').decode('utf-8')
+
+    # Substitutions entête cabinet
+    pc_data = pc or type('PC', (), {'adeli': '', 'rpps': '', 'forme_juridique': '', 'commune': ''})()
+    cab_rue     = (cabinet.rue or '') if cabinet else ''
+    cab_cp_comm = f"{(cabinet.code_postal or '')} {(cabinet.commune or '')}".strip() if cabinet else ''
+    cab_commune = (cabinet.commune or 'Yssingeaux') if cabinet else 'Yssingeaux'
+    cab_tel     = (cabinet.telephone or '') if cabinet else ''
+    cab_email   = (cabinet.email or '') if cabinet else ''
+    adeli       = (pc.adeli if pc else '') or ''
+    forme       = (pc.forme_juridique if pc else '') or ''
+    prat_nom    = f"{praticien.prenom} {praticien.nom}"
+    prat_rpps   = praticien.rpps or ''
+    prat_titre  = praticien.titre or 'Orthoptiste'
+    date_str    = consultation.date_consult.strftime('%d/%m/%Y')
+
+    def sub(xml, old, new):
+        return xml.replace(old, esc(new)) if old in xml else xml
+
+    doc_xml = sub(doc_xml, '130, Boulevard de la Paix', cab_rue)
+    doc_xml = doc_xml.replace(
+        '<w:p><w:pPr><w:pStyle w:val="Header"/><w:rPr><w:color w:themeColor="text1" w:val="000000"/></w:rPr></w:pPr><w:r><w:rPr><w:color w:themeColor="text1" w:val="000000"/></w:rPr><w:t>Résidence les jardinières</w:t></w:r></w:p>',
+        '')
+    doc_xml = sub(doc_xml, '43200 Yssingeaux', cab_cp_comm)
+    doc_xml = sub(doc_xml, '04 71 59 01 38', cab_tel)
+    doc_xml = sub(doc_xml, 'orthoptistes-yssingeaux@outlook.fr', cab_email)
+    doc_xml = sub(doc_xml, 'ADELI\xa0: 439287145', f'ADELI : {adeli}' if adeli else '')
+    doc_xml = sub(doc_xml, 'RPPS\xa0: 10010253291', f'RPPS : {prat_rpps}' if prat_rpps else '')
+    doc_xml = sub(doc_xml, 'SELARL', forme)
+    doc_xml = sub(doc_xml, ' Cyprien Nesme', f' {prat_nom}')
+    doc_xml = sub(doc_xml, 'ORTHOPTISTE', prat_titre)
+    doc_xml = sub(doc_xml, 'Prise de rendez-vous sur Doctolib', '')
+
+    # Commune et date
+    doc_xml = doc_xml.replace(
+        f'A\xa0Yssingeaux, le </w:t></w:r><w:bookmarkEnd w:id="0"/>',
+        f'A\xa0{esc(cab_commune)}, le {date_str}</w:t></w:r><w:bookmarkEnd w:id="0"/>'
+    )
+
+    # Patient — seulement Nom Prénom + DDN (pas âge, pas classe, pas médecin)
+    pat_nom = f'{p.prenom} {p.nom}'
+    pat_ddn = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
+
+    # Supprimer les infos non nécessaires sur l'ordonnance
+    doc_xml = doc_xml.replace('Âge : </w:t><w:tab/><w:tab/>', '')
+    doc_xml = doc_xml.replace('Classe : </w:t>', '')
+    doc_xml = doc_xml.replace('Médecin prescripteur : Dr </w:t>', '')
+
+    # SDT Nom
+    doc_xml = re.sub(
+        r'(<w:sdt>.*?<w:alias w:val="Nom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
+        lambda m: m.group(1) + f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{esc(pat_nom)}</w:t></w:r>' + m.group(3),
+        doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(
+        r'(<w:sdt>.*?<w:alias w:val="Prénom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
+        lambda m: m.group(1) + '<w:r><w:t></w:t></w:r>' + m.group(3),
+        doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(
+        r'(<w:sdt>.*?<w:alias w:val="Commentaires.*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
+        lambda m: m.group(1) + f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>Né(e) le {esc(pat_ddn)}</w:t></w:r>' + m.group(3),
+        doc_xml, flags=re.DOTALL)
+
+    # Type document
+    doc_xml = doc_xml.replace('BILAN ORTHOPTIQU</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>E',
+                              titre_ordo + '</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>')
+
+    # Corps de l'ordonnance
+    body_paras = []
+    body_paras.append(
+        f'<w:p><w:pPr><w:spacing w:before="480"/></w:pPr>'
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+        f'<w:sz w:val="24"/><w:b/></w:rPr>'
+        f'<w:t>{esc(titre_ordo)}</w:t></w:r></w:p>'
+    )
+    for ligne in lignes_ordo:
+        if ligne:
+            body_paras.append(
+                f'<w:p><w:pPr><w:spacing w:after="120"/></w:pPr>'
+                f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                f'<w:sz w:val="22"/></w:rPr>'
+                f'<w:t>{esc(ligne)}</w:t></w:r></w:p>'
+            )
+
+    # Signature
+    body_paras.append(
+        f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="720"/></w:pPr>'
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+        f'<w:sz w:val="20"/></w:rPr>'
+        f'<w:t>{esc(prat_nom)}</w:t></w:r></w:p>'
+    )
+
+    doc_xml = doc_xml.replace('</w:body>', '\n'.join(body_paras) + '</w:body>')
+
+    # Signature image
+    sig_path = praticien.signature if praticien.signature else None
+    sig_img_data = None
+    sig_ext = None
+    sig_rel_id = None
+    if sig_path and os.path.exists(sig_path):
+        with open(sig_path, 'rb') as sf:
+            sig_img_data = sf.read()
+        sig_ext = sig_path.rsplit('.', 1)[-1].lower()
+        sig_rel_id = 'rIdSig1'
+        try:
+            from PIL import Image as PILImage
+            import io as _io
+            img = PILImage.open(_io.BytesIO(sig_img_data))
+            img_w, img_h = img.size
+            cx = 1800000
+            cy = int(cx * img_h / img_w)
+        except Exception:
+            cx, cy = 1800000, 900000
+        sig_para = (
+            f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="120"/></w:pPr>'
+            f'<w:r><w:rPr/><w:drawing>'
+            f'<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+            f'<wp:extent cx="{cx}" cy="{cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/>'
+            f'<wp:docPr id="1" name="signature"/>'
+            f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+            f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            f'<pic:nvPicPr><pic:cNvPr id="1" name="signature"/><pic:cNvPicPr/></pic:nvPicPr>'
+            f'<pic:blipFill>'
+            f'<a:blip r:embed="{sig_rel_id}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+            f'<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+            f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+            f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+            f'</pic:pic></a:graphicData></a:graphic>'
+            f'</wp:inline></w:drawing></w:r></w:p>'
+        )
+        doc_xml = doc_xml.replace('</w:body>', sig_para + '</w:body>')
+
+    # Écrire le docx final
+    new_out = os.path.join(tmpdir, 'final_ordo.docx')
+    with zipfile.ZipFile(entete_path, 'r') as zin:
+        with zipfile.ZipFile(new_out, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                if item.filename == 'word/document.xml':
+                    zout.writestr(item, doc_xml.encode('utf-8'))
+                elif item.filename == 'word/_rels/document.xml.rels' and sig_img_data:
+                    rels = zin.read(item.filename).decode('utf-8')
+                    rels = rels.replace('</Relationships>',
+                        f'<Relationship Id="{sig_rel_id}" '
+                        f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+                        f'Target="media/signature.{sig_ext}"/></Relationships>')
+                    zout.writestr(item, rels.encode('utf-8'))
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+            if sig_img_data:
+                zout.writestr(f'word/media/signature.{sig_ext}', sig_img_data)
+
+    return new_out
 
 
 def _generer_docx(consultation, modele, sections_incluses):
