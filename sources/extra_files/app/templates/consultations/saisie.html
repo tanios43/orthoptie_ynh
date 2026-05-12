@@ -2,9 +2,14 @@
 
 {%- macro age_a_la_date(naissance, date_bilan) -%}
   {%- if naissance and date_bilan -%}
-    {%- set a = date_bilan.year - naissance.year -%}
-    {%- if (date_bilan.month, date_bilan.day) < (naissance.month, naissance.day) -%}{%- set a = a - 1 -%}{%- endif -%}
-    {{ a }} ans
+    {%- set years = date_bilan.year - naissance.year -%}
+    {%- set months = date_bilan.month - naissance.month -%}
+    {%- if date_bilan.day < naissance.day -%}{%- set months = months - 1 -%}{%- endif -%}
+    {%- if months < 0 -%}{%- set years = years - 1 -%}{%- set months = months + 12 -%}{%- endif -%}
+    {%- if years == 0 -%}{{ months }} mois
+    {%- elif months == 0 -%}{{ years }} ans
+    {%- else -%}{{ years }} ans {{ months }} mois
+    {%- endif -%}
   {%- endif -%}
 {%- endmacro -%}
 
