@@ -1354,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let age = dcObj.getFullYear() - dn.getFullYear();
       if (dcObj.getMonth() < dn.getMonth() ||
          (dcObj.getMonth() === dn.getMonth() && dcObj.getDate() < dn.getDate())) age--;
-      return '— ' + age + ' ans au ' + dcObj.toLocaleDateString('fr-FR');
+      return '— ' + age + ' au ' + dcObj.toLocaleDateString('fr-FR');
     }
     d.addEventListener('change', () => { agePreview.textContent = calcAge(d.value); });
     agePreview.textContent = calcAge(d.value);

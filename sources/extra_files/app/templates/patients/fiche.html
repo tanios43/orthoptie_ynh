@@ -6,7 +6,7 @@
     {%- if (date_bilan.month, date_bilan.day) < (naissance.month, naissance.day) -%}
       {%- set age = age - 1 -%}
     {%- endif -%}
-    {{ age }} ans
+    {{ age }}
   {%- endif -%}
 {%- endmacro -%}
 
@@ -35,7 +35,7 @@
         <div>
           <div style="font-size:15px;font-weight:600;">{{ patient.prenom }} {{ patient.nom }}</div>
           {% if patient.age %}
-            <div class="text-sm text-muted">{{ patient.age }} ans</div>
+            <div class="text-sm text-muted">{{ patient.age }}</div>
           {% endif %}
         </div>
       </div>

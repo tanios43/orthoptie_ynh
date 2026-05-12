@@ -2156,6 +2156,10 @@ def _age_str(date_naissance, date_ref=None):
     return f'{years} ans {months} mois'
 
 
+# Exposer _age_str comme fonction Jinja
+app.jinja_env.globals['age_a_la_date'] = lambda ddn, ref: _age_str(ddn, ref)
+
+
 def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier, section_ordre=0):
     """Crée une session WOPI et retourne le token."""
     token = _secrets.token_urlsafe(32)
