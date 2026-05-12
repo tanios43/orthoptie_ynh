@@ -1863,10 +1863,18 @@ def _generer_docx(consultation, modele, sections_incluses):
             sig_img_data = sf.read()
         sig_ext = sig_path.rsplit('.', 1)[-1].lower()
         sig_rel_id = 'rIdSig1'
-        # Insérer un paragraphe avec l'image avant </w:body>
-        # EMU : 1cm = 360000, on limite la signature à 5cm de large
-        cx = 1800000  # 5cm en EMU
-        cy = 900000   # 2.5cm en EMU
+        # Calculer les dimensions en conservant le ratio - max 5cm de large
+        try:
+            from PIL import Image as PILImage
+            import io as _io
+            img = PILImage.open(_io.BytesIO(sig_img_data))
+            img_w, img_h = img.size
+            max_cx = 1800000  # 5cm en EMU
+            cx = max_cx
+            cy = int(max_cx * img_h / img_w)
+        except Exception:
+            cx = 1800000
+            cy = 900000
         sig_para = (
             f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="120"/></w:pPr>'
             f'<w:r><w:rPr/><w:drawing>'
