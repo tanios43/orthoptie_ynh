@@ -1784,22 +1784,22 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
         r'(<w:sdt>.*?<w:alias w:val="Prénom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
         lambda m: m.group(1) + '<w:r><w:t></w:t></w:r>' + m.group(3),
         doc_xml, flags=re.DOTALL)
-    # SDT Commentaires → DDN
-    doc_xml = re.sub(
-        r'(<w:sdt>.*?<w:alias w:val="Commentaires.*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
-        lambda m: m.group(1) + f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>Né(e) le {esc(pat_ddn)}</w:t></w:r>' + m.group(3),
-        doc_xml, flags=re.DOTALL)
-
-    # Remplacer le titre "BILAN ORTHOPTIQUE" — le titre est en 2 runs séparés
+    # DDN — texte fixe suivi du SDT Commentaires
     doc_xml = doc_xml.replace(
-        'BILAN ORTHOPTIQU</w:t></w:r>',
-        f'{esc(titre_ordo)}</w:t></w:r>'
+        'DDN : </w:t>',
+        f'DDN : {esc(pat_ddn)}</w:t>'
     )
-    # Vider le 2ème run qui contenait "E"
+    # Vider le SDT Commentaires qui suit (il contient le placeholder)
     doc_xml = re.sub(
-        r'(' + re.escape(esc(titre_ordo)) + r'</w:t></w:r>)(<w:r[^>]*><w:rPr>.*?</w:rPr><w:t>)E(</w:t></w:r>)',
-        lambda m: m.group(1) + m.group(2) + m.group(3),
+        r'(<w:sdt><w:sdtPr><w:alias w:val="Commentaires ".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
+        lambda m: m.group(1) + '<w:r><w:t></w:t></w:r>' + m.group(3),
         doc_xml, flags=re.DOTALL
+    )
+
+    # Remplacer le titre "BILAN ORTHOPTIQUE" — un seul run
+    doc_xml = doc_xml.replace(
+        '<w:t>BILAN ORTHOPTIQUE</w:t>',
+        f'<w:t>{esc(titre_ordo)}</w:t>'
     )
 
     body_paras = []
