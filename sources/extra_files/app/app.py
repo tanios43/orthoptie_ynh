@@ -1774,32 +1774,35 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
     doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Classe\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
     doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?[Mm]édecin(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
 
-    # SDT Nom
+    # SDT Nom → Nom Prénom du patient
     doc_xml = re.sub(
         r'(<w:sdt>.*?<w:alias w:val="Nom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
         lambda m: m.group(1) + f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{esc(pat_nom)}</w:t></w:r>' + m.group(3),
         doc_xml, flags=re.DOTALL)
+    # SDT Prénom → vide
     doc_xml = re.sub(
         r'(<w:sdt>.*?<w:alias w:val="Prénom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
         lambda m: m.group(1) + '<w:r><w:t></w:t></w:r>' + m.group(3),
         doc_xml, flags=re.DOTALL)
+    # SDT Commentaires → DDN
     doc_xml = re.sub(
         r'(<w:sdt>.*?<w:alias w:val="Commentaires.*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
         lambda m: m.group(1) + f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>Né(e) le {esc(pat_ddn)}</w:t></w:r>' + m.group(3),
         doc_xml, flags=re.DOTALL)
 
-    # Type document
-    doc_xml = doc_xml.replace('BILAN ORTHOPTIQU</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>E',
-                              titre_ordo + '</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>')
-
-    # Corps de l'ordonnance
-    body_paras = []
-    body_paras.append(
-        f'<w:p><w:pPr><w:spacing w:before="480"/></w:pPr>'
-        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-        f'<w:sz w:val="24"/><w:b/></w:rPr>'
-        f'<w:t>{esc(titre_ordo)}</w:t></w:r></w:p>'
+    # Remplacer le titre "BILAN ORTHOPTIQUE" — le titre est en 2 runs séparés
+    doc_xml = doc_xml.replace(
+        'BILAN ORTHOPTIQU</w:t></w:r>',
+        f'{esc(titre_ordo)}</w:t></w:r>'
     )
+    # Vider le 2ème run qui contenait "E"
+    doc_xml = re.sub(
+        r'(' + re.escape(esc(titre_ordo)) + r'</w:t></w:r>)(<w:r[^>]*><w:rPr>.*?</w:rPr><w:t>)E(</w:t></w:r>)',
+        lambda m: m.group(1) + m.group(2) + m.group(3),
+        doc_xml, flags=re.DOTALL
+    )
+
+    body_paras = []
     for ligne in lignes_ordo:
         if ligne:
             body_paras.append(
