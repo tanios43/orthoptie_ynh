@@ -530,9 +530,26 @@ def index():
 @login_required
 def patient_nouveau():
     if request.method == 'POST':
-        p = Patient(nom=request.form['nom'].strip().upper(),
-                    prenom=request.form['prenom'].strip().capitalize(),
-                    date_naissance=_parse_date(request.form.get('date_naissance')),
+        nom    = request.form['nom'].strip().upper()
+        prenom = request.form['prenom'].strip().capitalize()
+        ddn    = _parse_date(request.form.get('date_naissance'))
+
+        # Détecter les doublons (même nom, prénom, DDN)
+        # Sauf si l'utilisateur a confirmé vouloir créer quand même
+        forcer_creation = request.form.get('forcer_creation') == '1'
+        if not forcer_creation and ddn:
+            doublons = Patient.query.filter_by(nom=nom, prenom=prenom,
+                                               date_naissance=ddn).all()
+            if doublons:
+                # Repasser les données du formulaire pour pré-remplir si l'user revient
+                form_data = request.form.to_dict()
+                return render_template('patients/edition.html',
+                                       patient=None,
+                                       doublons=doublons,
+                                       form_data=form_data)
+
+        p = Patient(nom=nom, prenom=prenom,
+                    date_naissance=ddn,
                     sexe=request.form.get('sexe'),
                     rue=request.form.get('rue'),
                     code_postal=request.form.get('code_postal'),
@@ -541,7 +558,8 @@ def patient_nouveau():
                     email=request.form.get('email'),
                     medecin_referent=request.form.get('medecin_referent'),
                     num_secu=request.form.get('num_secu'),
-                    notes_admin=request.form.get('notes_admin'), praticien_id=current_user.id)
+                    notes_admin=request.form.get('notes_admin'),
+                    praticien_id=current_user.id)
         db.session.add(p); db.session.commit()
         log_action('creation_patient', patient_id=p.id)
         flash(f'Patient {p} créé.', 'success')
