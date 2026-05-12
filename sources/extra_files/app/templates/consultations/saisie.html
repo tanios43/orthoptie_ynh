@@ -408,14 +408,7 @@
             "label":   {{ sec.label | tojson }},
             "obs":     {{ (sec.observations or '') | tojson }},
             "donnees": {{ sec.get_donnees() | tojson }},
-            "fichiers_sec": [{% if consultation %}{% for f in consultation.fichiers_sec %}{% if f.section_ordre == sec.ordre %}{
-              "id": {{ f.id }},
-              "champ_name": {{ f.champ_name | tojson }},
-              "nom_original": {{ f.nom_original | tojson }},
-              "nom_stocke": {{ f.nom_stocke | tojson }},
-              "type_fichier": {{ f.type_fichier | tojson }},
-              "titre": {{ (f.titre or '') | tojson }}
-            }{% if not loop.last %},{% endif %}{% endif %}{% endfor %}{% endif %}]
+            "fichiers_sec": [{% if consultation %}{% set fics = consultation.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | list %}{% for f in fics %}{"id":{{ f.id }},"champ_name":{{ f.champ_name | tojson }},"nom_original":{{ f.nom_original | tojson }},"nom_stocke":{{ f.nom_stocke | tojson }},"type_fichier":{{ f.type_fichier | tojson }},"titre":{{ (f.titre or '') | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}]
           }{% if not loop.last %},{% endif %}
         {% endfor %}]
         </script>
@@ -1366,7 +1359,6 @@ function sauverAvantOrdo(event, url) {
   event.preventDefault();
   const form = document.getElementById('form-bilan');
   if (!form) { window.location.href = url; return; }
-  // Ajouter un champ hidden pour la redirection post-save
   let redir = document.getElementById('redirect_after');
   if (!redir) {
     redir = document.createElement('input');
@@ -1462,6 +1454,10 @@ function handleDrop(e) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Vider redirect_after au chargement pour éviter les redirections en boucle
+  const redir = document.getElementById('redirect_after');
+  if (redir) redir.value = '';
+
   // Scroll vers la section si ancre dans l'URL (ex: #section-courrier)
   const hash = window.location.hash;
   if (hash && hash.startsWith('#section-')) {
