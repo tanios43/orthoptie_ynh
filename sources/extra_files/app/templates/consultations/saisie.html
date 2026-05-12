@@ -345,7 +345,7 @@
           <button type="button"
                   class="sec-btn"
                   data-label="{{ sec.label | lower }}"
-                  onclick="ajouterSection('{{ key }}', '{{ sec.label }}')"
+                  onclick="ajouterSection('{{ key }}', '{{ sec.label | replace("'", "\\'") }}')"
                   style="display:block;width:100%;text-align:left;
                          padding:7px 12px;margin-bottom:3px;
                          background:var(--surface);border:0.5px solid var(--border);
