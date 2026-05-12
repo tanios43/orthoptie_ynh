@@ -201,8 +201,9 @@ class FichierSection(db.Model):
     __tablename__ = 'fichier_section'
     id              = db.Column(db.Integer, primary_key=True)
     consultation_id = db.Column(db.Integer, db.ForeignKey('consultation.id'), nullable=False)
-    section_ordre   = db.Column(db.Integer, nullable=False)   # ordre de la section dans le bilan
-    champ_name      = db.Column(db.String(50), nullable=False) # nom du champ fichier
+    section_ordre   = db.Column(db.Integer, nullable=False)
+    section_type    = db.Column(db.String(50), default='')  # type de section pour recalcul ordre
+    champ_name      = db.Column(db.String(50), nullable=False)
     nom_original    = db.Column(db.String(255), nullable=False)
     nom_stocke      = db.Column(db.String(255), nullable=False)
     type_fichier    = db.Column(db.String(10))
@@ -676,16 +677,11 @@ def consultation_modifier(consultation_id):
         _save_fichiers(c.id, request.files, request.form)
         db.session.commit()
 
-        # Mettre à jour section_ordre des FichierSection WOPI selon le nouveau type
+        # Mettre à jour section_ordre des FichierSection WOPI selon le type actuel
         for fic in FichierSection.query.filter_by(consultation_id=c.id, champ_name='wopi_doc').all():
-            # Retrouver la session WOPI correspondante pour connaître le section_type
-            sess_wopi = WopiSession.query.filter_by(
-                consultation_id=c.id, nom_fichier=fic.titre).order_by(
-                WopiSession.created_at.desc()).first()
-            if sess_wopi and sess_wopi.section_type:
-                section = next((s for s in c.sections
-                                if s.type == sess_wopi.section_type), None)
-                if section and section.ordre != fic.section_ordre:
+            if fic.section_type:
+                section = next((s for s in c.sections if s.type == fic.section_type), None)
+                if section:
                     fic.section_ordre = section.ordre
         db.session.commit()
         log_action('modification_consultation', patient_id=c.patient_id, consultation_id=c.id)
@@ -2626,17 +2622,20 @@ def wopi_file_contents(token):
                 old_path = os.path.join(folder, existing.nom_stocke)
                 if os.path.exists(old_path):
                     os.remove(old_path)
-                existing.nom_stocke = nom_stocke
-                existing.created_at = datetime.utcnow()
+                existing.nom_stocke    = nom_stocke
+                existing.section_ordre = section_ordre
+                existing.section_type  = sess.section_type or ''
+                existing.created_at    = datetime.utcnow()
             else:
                 db.session.add(FichierSection(
-                    consultation_id=sess.consultation_id,
-                    section_ordre=section_ordre,
-                    champ_name='wopi_doc',
-                    nom_original=sess.nom_fichier,
-                    nom_stocke=nom_stocke,
-                    type_fichier='word',
-                    titre=sess.nom_fichier,
+                    consultation_id = sess.consultation_id,
+                    section_ordre   = section_ordre,
+                    section_type    = sess.section_type or '',
+                    champ_name      = 'wopi_doc',
+                    nom_original    = sess.nom_fichier,
+                    nom_stocke      = nom_stocke,
+                    type_fichier    = 'word',
+                    titre           = sess.nom_fichier,
                 ))
             db.session.commit()
             app.logger.info(f"WOPI: fichier sauvegardé {nom_stocke}")

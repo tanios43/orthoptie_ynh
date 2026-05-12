@@ -139,6 +139,19 @@ with app.app_context():
         else:
             print(f"ERREUR  : signature — {e}")
 
+    # section_type sur fichier_section
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE fichier_section ADD COLUMN section_type VARCHAR(50) DEFAULT ''"))
+            conn.commit()
+        print("OK      : section_type sur fichier_section")
+    except Exception as e:
+        msg = str(e).lower()
+        if 'duplicate column' in msg or 'already exists' in msg:
+            print("Present : section_type sur fichier_section")
+        else:
+            print(f"ERREUR  : section_type — {e}")
+
     # Section ordonnance
     try:
         existing = SectionDef.query.filter_by(type_key='ordonnance').first()
