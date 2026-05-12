@@ -623,6 +623,9 @@ def patient_supprimer(patient_id):
     db.session.commit()
     flash(f'Patient {nom} supprimé.', 'success')
     return redirect(url_for('index'))
+
+
+@app.route('/recherche')
 @login_required
 def recherche():
     q = request.args.get('q', '').strip(); patients = []
