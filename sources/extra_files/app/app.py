@@ -23,6 +23,27 @@ def add_ngrok_header(response):
     """Désactive l'interstitiel ngrok pour toutes les réponses."""
     response.headers['ngrok-skip-browser-warning'] = 'true'
     return response
+
+
+@app.template_global()
+def age_a_la_date(date_naissance, date_ref=None):
+    """Retourne l'âge sous la forme 'X ans Y mois' pour les templates Jinja."""
+    if not date_naissance:
+        return ''
+    from datetime import date
+    ref = date_ref or date.today()
+    years = ref.year - date_naissance.year
+    months = ref.month - date_naissance.month
+    if ref.day < date_naissance.day:
+        months -= 1
+    if months < 0:
+        years -= 1
+        months += 12
+    if years == 0:
+        return f'{months} mois'
+    if months == 0:
+        return f'{years} ans'
+    return f'{years} ans {months} mois'
 app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
 
 # ── Configuration WOPI / Collabora ──────────────────────────────────────────
@@ -2154,10 +2175,6 @@ def _age_str(date_naissance, date_ref=None):
     if months == 0:
         return f'{years} ans'
     return f'{years} ans {months} mois'
-
-
-# Exposer _age_str comme fonction Jinja
-app.jinja_env.globals['age_a_la_date'] = lambda ddn, ref: _age_str(ddn, ref)
 
 
 def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier, section_ordre=0):
