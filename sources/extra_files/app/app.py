@@ -1769,32 +1769,22 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
     pat_nom = f'{p.prenom} {p.nom}'
     pat_ddn = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
 
-    # Supprimer les paragraphes entiers contenant âge, classe et médecin
-    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Âge\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
-    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Classe\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
-    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?[Mm]édecin(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
-
-    # SDT Nom → Nom Prénom du patient
-    doc_xml = re.sub(
-        r'(<w:sdt>.*?<w:alias w:val="Nom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
-        lambda m: m.group(1) + f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{esc(pat_nom)}</w:t></w:r>' + m.group(3),
-        doc_xml, flags=re.DOTALL)
-    # SDT Prénom → vide
-    doc_xml = re.sub(
-        r'(<w:sdt>.*?<w:alias w:val="Prénom".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
-        lambda m: m.group(1) + '<w:r><w:t></w:t></w:r>' + m.group(3),
-        doc_xml, flags=re.DOTALL)
-    # DDN — texte fixe suivi du SDT Commentaires
+    # DDN — remplacer AVANT de supprimer les paragraphes
     doc_xml = doc_xml.replace(
         'DDN : </w:t></w:r>',
         f'DDN : {esc(pat_ddn)}</w:t></w:r>'
     )
-    # Vider le SDT Commentaires qui suit (il contient le placeholder)
+    # Vider le SDT Commentaires placeholder qui suit DDN
     doc_xml = re.sub(
         r'(<w:sdt><w:sdtPr><w:alias w:val="Commentaires ".*?<w:sdtContent>)(.*?)(</w:sdtContent></w:sdt>)',
         lambda m: m.group(1) + '<w:r><w:t></w:t></w:r>' + m.group(3),
         doc_xml, flags=re.DOTALL
     )
+
+    # Supprimer les paragraphes contenant âge, classe et médecin (mais pas DDN)
+    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Âge\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Classe\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?[Mm]édecin(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
 
     # Remplacer le titre "BILAN ORTHOPTIQUE" — un seul run
     doc_xml = doc_xml.replace(
