@@ -1240,11 +1240,14 @@ function supprimerFichierSection(fichierId, elId) {
 
 function supprimerWopiDoc(fichierId, btn) {
   if (!confirm('Supprimer ce document ?')) return;
-  fetch('/fichier_section/' + fichierId + '/supprimer', {method:'POST'})
+  fetch('/fichier_section/' + fichierId + '/supprimer', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'X-Requested-With': 'XMLHttpRequest'}
+  })
     .then(r => r.json())
     .then(data => {
       if (data.ok) {
-        // Remonter jusqu'à la ligne du document (le div avec les boutons)
         const row = btn.closest('.wopi-doc-row');
         if (row) row.remove();
       }
