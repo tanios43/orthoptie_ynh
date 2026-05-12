@@ -1769,6 +1769,17 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
     pat_nom = f'{p.prenom} {p.nom}'
     pat_ddn = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
 
+    # SDT Nom → Nom Prénom complet
+    doc_xml = re.sub(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Nom"/>.*?<w:sdtContent>.*?</w:sdtContent></w:sdt>',
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{esc(pat_nom)}</w:t></w:r>',
+        doc_xml, flags=re.DOTALL)
+    # SDT Prénom → vide (déjà dans Nom)
+    doc_xml = re.sub(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Pr[eé]nom"/>.*?</w:sdt>',
+        '',
+        doc_xml, flags=re.DOTALL)
+
     # DDN — remplacer AVANT de supprimer les paragraphes
     doc_xml = doc_xml.replace(
         'DDN : </w:t></w:r>',
@@ -1781,9 +1792,14 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
         doc_xml, flags=re.DOTALL
     )
 
-    # Supprimer les paragraphes contenant âge, classe et médecin (mais pas DDN)
-    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Âge\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
-    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Classe\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
+    # Supprimer seulement les parties Âge et Classe dans le paragraphe (même para que DDN)
+    # Supprimer : <w:tab/><w:t xml:space="preserve">Âge : </w:t><w:tab/><w:tab/><w:t xml:space="preserve">Classe : </w:t>
+    doc_xml = re.sub(
+        r'<w:tab/><w:t xml:space="preserve">Âge\s*:\s*</w:t>.*?<w:t xml:space="preserve">Classe\s*:\s*</w:t>',
+        '',
+        doc_xml, flags=re.DOTALL
+    )
+    # Supprimer les paragraphes médecin séparés
     doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?[Mm]édecin(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
 
     # Remplacer le titre "BILAN ORTHOPTIQUE" — un seul run
