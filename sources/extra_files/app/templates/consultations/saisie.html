@@ -1418,8 +1418,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="flex:1;font-size:12px;font-weight:500;color:var(--accent-dk);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${nom}">${nom}</span>
                 <a href="${dlUrl}" target="_blank" style="font-size:10px;color:var(--accent);text-decoration:none;padding:2px 7px;border:1px solid var(--accent);border-radius:4px;background:white;flex-shrink:0;">📥 Télécharger</a>
                 <a href="${editUrl}" style="font-size:10px;color:white;text-decoration:none;padding:2px 7px;border-radius:4px;background:var(--accent);flex-shrink:0;">✎ Modifier</a>
-                <button onclick="supprimerWopiDoc(${f.id}, this)" style="font-size:10px;color:white;padding:2px 7px;border-radius:4px;background:#e53e3e;border:none;cursor:pointer;flex-shrink:0;">🗑 Supprimer</button>
+                <button type="button" class="btn-del-wopi" data-id="${f.id}" style="font-size:10px;color:white;padding:2px 7px;border-radius:4px;background:#e53e3e;border:none;cursor:pointer;flex-shrink:0;">🗑 Supprimer</button>
               `;
+              row.querySelector('.btn-del-wopi').addEventListener('click', function() {
+                if (!confirm('Supprimer ce document ?')) return;
+                const fid = this.dataset.id;
+                fetch('/fichier_section/' + fid + '/supprimer', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                .then(r => r.json())
+                .then(data => { if (data.ok) row.remove(); })
+                .catch(err => console.error('Erreur suppression:', err));
+              });
               wopiList.appendChild(row);
             });
             wopiZone.appendChild(wopiList);
