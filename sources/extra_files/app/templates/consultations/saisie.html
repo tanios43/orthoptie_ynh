@@ -1003,6 +1003,16 @@ function ajouterSection(type, label) {
       info.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--accent);color:white;padding:10px 16px;border-radius:8px;z-index:9999;font-size:13px;';
       info.textContent = '💾 Sauvegarde automatique pour activer les boutons…';
       document.body.appendChild(info);
+      // Ajouter redirect_after pour rester sur la page d'édition
+      let redir = document.getElementById('redirect_after');
+      if (!redir) {
+        redir = document.createElement('input');
+        redir.type = 'hidden';
+        redir.id = 'redirect_after';
+        redir.name = 'redirect_after';
+        form.appendChild(redir);
+      }
+      redir.value = 'modifier#section-' + type;
       setTimeout(() => form.submit(), 800);
     }
     return;

@@ -639,6 +639,13 @@ def consultation_nouvelle(patient_id):
         db.session.commit()
         log_action('creation_consultation', patient_id=patient_id, consultation_id=c.id)
         flash('Bilan enregistré.', 'success')
+        redirect_after = request.form.get('redirect_after', '').strip()
+        if redirect_after:
+            # redirect_after peut être relatif ex: 'modifier#section-courrier'
+            if redirect_after.startswith('modifier'):
+                return redirect(url_for('consultation_modifier', consultation_id=c.id) +
+                                redirect_after.replace('modifier', ''))
+            return redirect(redirect_after)
         return redirect(url_for('consultation_detail', consultation_id=c.id))
     autres = Consultation.query.filter(Consultation.patient_id == patient_id)\
                                .order_by(Consultation.date_consult.asc()).all()
