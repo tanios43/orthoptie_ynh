@@ -138,4 +138,37 @@ with app.app_context():
             print("Present : signature sur praticien")
         else:
             print(f"ERREUR  : signature — {e}")
+
+    # Section ordonnance
+    try:
+        existing = SectionDef.query.filter_by(type_key='ordonnance').first()
+        if not existing:
+            s = SectionDef(type_key='ordonnance', label='Ordonnances',
+                           ordre=20, builtin=True, actif=True, avec_observations=False)
+            db.session.add(s)
+            db.session.flush()
+            champs = [
+                ('orto_oeil',      'Œil à occlure',       'select', 0),
+                ('orto_heures',    'Heures par jour',      'text',   1),
+                ('orto_duree',     'Durée du traitement',  'text',   2),
+                ('orto_notes',     'Notes',                'text',   3),
+                ('prisme_od_diop', 'OD dioptries',         'text',   4),
+                ('prisme_od_base', 'OD base',              'select', 5),
+                ('prisme_og_diop', 'OG dioptries',         'text',   6),
+                ('prisme_og_base', 'OG base',              'select', 7),
+                ('ryser_od_num',   'OD Ryser N°',          'text',   8),
+                ('ryser_od_av',    'OD AV laissée',        'text',   9),
+                ('ryser_og_num',   'OG Ryser N°',          'text',   10),
+                ('ryser_og_av',    'OG AV laissée',        'text',   11),
+            ]
+            for name, label, type_, ordre in champs:
+                db.session.add(ChampDef(section_id=s.id, name=name,
+                                        label=label, type=type_, ordre=ordre))
+            db.session.commit()
+            print("OK      : section ordonnance créée")
+        else:
+            print("Present : section ordonnance")
+    except Exception as e:
+        print(f"ERREUR  : section ordonnance — {e}")
+
     print("\nMigration terminee.")
