@@ -62,7 +62,8 @@ class Praticien(UserMixin, db.Model):
     rpps          = db.Column(db.String(11))   # N° RPPS national fixe
     couleur       = db.Column(db.String(7), default='#2E7D6B')  # couleur hex
     actif         = db.Column(db.Boolean, default=True)
-    role          = db.Column(db.String(20), default='praticien')  # 'admin' ou 'praticien'
+    role          = db.Column(db.String(20), default='praticien')
+    signature     = db.Column(db.String(500))  # chemin vers l'image de signature
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -1000,6 +1001,17 @@ def admin_praticien_supprimer(praticien_id):
     return render_template('admin/praticien_form.html', praticien=p)
 
 
+@app.route('/praticien/<int:praticien_id>/signature')
+@login_required
+def signature_image(praticien_id):
+    """Sert l'image de signature d'un praticien."""
+    p = Praticien.query.get_or_404(praticien_id)
+    if not p.signature or not os.path.exists(p.signature):
+        return '', 404
+    from flask import send_file
+    return send_file(p.signature)
+
+
 @app.route('/profil', methods=['GET', 'POST'])
 @login_required
 def profil():
@@ -1018,6 +1030,32 @@ def profil():
                 flash('Les mots de passe ne correspondent pas.', 'danger')
                 return redirect(url_for('profil'))
             p.set_password(pwd)
+
+        # Upload signature
+        sig_file = request.files.get('signature')
+        if sig_file and sig_file.filename:
+            import uuid
+            ext = sig_file.filename.rsplit('.', 1)[-1].lower()
+            if ext in ('png', 'jpg', 'jpeg', 'gif', 'webp'):
+                sig_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'signatures')
+                os.makedirs(sig_dir, exist_ok=True)
+                nom_sig = f"sig_{p.id}_{uuid.uuid4().hex[:8]}.{ext}"
+                sig_path = os.path.join(sig_dir, nom_sig)
+                # Supprimer l'ancienne signature
+                if p.signature and os.path.exists(p.signature):
+                    os.remove(p.signature)
+                sig_file.save(sig_path)
+                p.signature = sig_path
+            else:
+                flash('Format image non supporté (png, jpg, gif, webp).', 'danger')
+                return redirect(url_for('profil'))
+
+        # Supprimer signature
+        if request.form.get('supprimer_signature') == '1':
+            if p.signature and os.path.exists(p.signature):
+                os.remove(p.signature)
+            p.signature = None
+
         db.session.commit()
         flash('Profil mis à jour.', 'success')
         return redirect(url_for('profil'))
@@ -1815,15 +1853,68 @@ def _generer_docx(consultation, modele, sections_incluses):
     body_xml = '\n'.join(body_paras)
     doc_xml = doc_xml.replace('</w:body>', body_xml + '</w:body>')
 
+    # ── Signature praticien ───────────────────────────────────────────
+    sig_path = praticien.signature if praticien.signature else None
+    sig_rel_id = None
+    sig_img_data = None
+    sig_ext = None
+    if sig_path and os.path.exists(sig_path):
+        with open(sig_path, 'rb') as sf:
+            sig_img_data = sf.read()
+        sig_ext = sig_path.rsplit('.', 1)[-1].lower()
+        sig_rel_id = 'rIdSig1'
+        # Insérer un paragraphe avec l'image avant </w:body>
+        # EMU : 1cm = 360000, on limite la signature à 5cm de large
+        cx = 1800000  # 5cm en EMU
+        cy = 900000   # 2.5cm en EMU
+        sig_para = (
+            f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="120"/></w:pPr>'
+            f'<w:r><w:rPr/><w:drawing>'
+            f'<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+            f'<wp:extent cx="{cx}" cy="{cy}"/>'
+            f'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+            f'<wp:docPr id="1" name="signature"/>'
+            f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+            f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            f'<pic:nvPicPr><pic:cNvPr id="1" name="signature"/><pic:cNvPicPr/></pic:nvPicPr>'
+            f'<pic:blipFill>'
+            f'<a:blip r:embed="{sig_rel_id}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+            f'<a:stretch><a:fillRect/></a:stretch>'
+            f'</pic:blipFill>'
+            f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+            f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+            f'</pic:pic></a:graphicData></a:graphic>'
+            f'</wp:inline></w:drawing></w:r></w:p>'
+        )
+        doc_xml = doc_xml.replace('</w:body>', sig_para + '</w:body>')
+
     # ── Réécrire le docx ──────────────────────────────────────────────
     new_out = os.path.join(tmpdir, 'final.docx')
+    mime_map = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+                'gif': 'image/gif', 'webp': 'image/webp'}
     with zipfile.ZipFile(out_path, 'r') as zin:
         with zipfile.ZipFile(new_out, 'w', zipfile.ZIP_DEFLATED) as zout:
+            rels_xml = None
             for item in zin.infolist():
                 if item.filename == 'word/document.xml':
                     zout.writestr(item, doc_xml.encode('utf-8'))
+                elif item.filename == 'word/_rels/document.xml.rels' and sig_img_data:
+                    rels_xml = zin.read(item.filename).decode('utf-8')
+                    # Ajouter la relation image
+                    rels_xml = rels_xml.replace(
+                        '</Relationships>',
+                        f'<Relationship Id="{sig_rel_id}" '
+                        f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+                        f'Target="media/signature.{sig_ext}"/>'
+                        '</Relationships>'
+                    )
+                    zout.writestr(item, rels_xml.encode('utf-8'))
                 else:
                     zout.writestr(item, zin.read(item.filename))
+            # Ajouter le fichier image
+            if sig_img_data:
+                zout.writestr(f'word/media/signature.{sig_ext}', sig_img_data)
 
     return new_out
 

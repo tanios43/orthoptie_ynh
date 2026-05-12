@@ -4,7 +4,7 @@
 
 {% block content %}
 <div style="max-width:520px;">
-  <form method="POST">
+  <form method="POST" enctype="multipart/form-data">
     <div class="card">
       <div class="card-header"><h2>Informations personnelles</h2></div>
       <div class="card-body">
@@ -66,6 +66,35 @@
           <div class="field-group">
             <label class="field-label">Confirmer</label>
             <input type="password" name="password2" autocomplete="new-password" placeholder="••••••••">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-2">
+      <div class="card-header"><h2>Signature</h2></div>
+      <div class="card-body">
+        {% if praticien.signature %}
+        <div style="margin-bottom:12px;">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Signature actuelle :</div>
+          <img src="{{ url_for('signature_image', praticien_id=praticien.id) }}"
+               style="max-height:80px;max-width:300px;border:1px solid var(--border);
+                      border-radius:6px;padding:6px;background:white;">
+          <div style="margin-top:8px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="checkbox" name="supprimer_signature" value="1">
+              Supprimer la signature
+            </label>
+          </div>
+        </div>
+        {% endif %}
+        <div class="field-group">
+          <label class="field-label">
+            {{ 'Remplacer la signature' if praticien.signature else 'Importer une signature' }}
+          </label>
+          <input type="file" name="signature" accept="image/png,image/jpeg,image/gif,image/webp">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+            Image PNG ou JPG, fond transparent recommandé. Taille affichée : 5×2,5 cm.
           </div>
         </div>
       </div>

@@ -125,4 +125,17 @@ with app.app_context():
             print("Present : section_ordre sur wopi_session")
         else:
             print(f"ERREUR  : section_ordre — {e}")
+
+    # signature sur praticien
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE praticien ADD COLUMN signature VARCHAR(500)"))
+            conn.commit()
+        print("OK      : signature sur praticien")
+    except Exception as e:
+        msg = str(e).lower()
+        if 'duplicate column' in msg or 'already exists' in msg:
+            print("Present : signature sur praticien")
+        else:
+            print(f"ERREUR  : signature — {e}")
     print("\nMigration terminee.")
