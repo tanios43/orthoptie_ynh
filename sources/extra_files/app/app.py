@@ -1786,8 +1786,8 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
         doc_xml, flags=re.DOTALL)
     # DDN — texte fixe suivi du SDT Commentaires
     doc_xml = doc_xml.replace(
-        'DDN : </w:t>',
-        f'DDN : {esc(pat_ddn)}</w:t>'
+        'DDN : </w:t></w:r>',
+        f'DDN : {esc(pat_ddn)}</w:t></w:r>'
     )
     # Vider le SDT Commentaires qui suit (il contient le placeholder)
     doc_xml = re.sub(
