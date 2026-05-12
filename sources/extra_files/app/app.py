@@ -1753,10 +1753,10 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
     pat_nom = f'{p.prenom} {p.nom}'
     pat_ddn = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
 
-    # Supprimer les infos non nécessaires sur l'ordonnance
-    doc_xml = doc_xml.replace('Âge : </w:t><w:tab/><w:tab/>', '')
-    doc_xml = doc_xml.replace('Classe : </w:t>', '')
-    doc_xml = doc_xml.replace('Médecin prescripteur : Dr </w:t>', '')
+    # Supprimer les paragraphes entiers contenant âge, classe et médecin
+    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Âge\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?Classe\s*:(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?[Mm]édecin(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
 
     # SDT Nom
     doc_xml = re.sub(
