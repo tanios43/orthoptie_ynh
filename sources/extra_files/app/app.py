@@ -107,8 +107,18 @@ class Patient(db.Model):
     def age(self):
         if self.date_naissance:
             today = date.today()
-            return today.year - self.date_naissance.year - (
-                (today.month, today.day) < (self.date_naissance.month, self.date_naissance.day))
+            years = today.year - self.date_naissance.year
+            months = today.month - self.date_naissance.month
+            if today.day < self.date_naissance.day:
+                months -= 1
+            if months < 0:
+                years -= 1
+                months += 12
+            if years == 0:
+                return f'{months} mois'
+            if months == 0:
+                return f'{years} ans'
+            return f'{years} ans {months} mois'
         return None
     def __repr__(self): return f'{self.nom} {self.prenom}'
 
@@ -1514,8 +1524,7 @@ def _resoudre_variables(texte, consultation, praticien, cabinet, pc):
     age = ''
     if p.date_naissance:
         d = consultation.date_consult
-        age = str(d.year - p.date_naissance.year -
-                  ((d.month, d.day) < (p.date_naissance.month, p.date_naissance.day)))
+        age = _age_str(p.date_naissance, d)
     replacements = {
         '{{patient.nom}}':      f'{p.nom} {p.prenom}',
         '{{patient.prenom}}':   p.prenom or '',
@@ -1658,8 +1667,7 @@ def _generer_docx(consultation, modele, sections_incluses):
     age_str = ''
     if p.date_naissance:
         d = consultation.date_consult
-        age_str = str(d.year - p.date_naissance.year -
-                      ((d.month, d.day) < (p.date_naissance.month, p.date_naissance.day)))
+        age_str = _age_str(p.date_naissance, d)
 
     # Médecin prescripteur — depuis le champ de la consultation ou du patient
     medecin_str = pat_medecin  # déjà défini = p.medecin_referent
@@ -1684,7 +1692,7 @@ def _generer_docx(consultation, modele, sections_incluses):
     # Âge — pattern adapté au template YunoHost
     doc_xml = doc_xml.replace(
         'Âge : </w:t><w:tab/><w:tab/>',
-        f'Âge : {esc(age_str)} ans</w:t><w:tab/><w:tab/>'
+        f'Âge : {esc(age_str)}</w:t><w:tab/><w:tab/>'
     )
 
     # Commune et date — pattern adapté
@@ -2127,6 +2135,26 @@ Packer.toBuffer(doc).then(buf => { fs.writeFileSync(D.outPath, buf); });
 
 import secrets as _secrets
 from datetime import timedelta
+
+def _age_str(date_naissance, date_ref=None):
+    """Retourne l'âge sous la forme 'X ans Y mois'."""
+    if not date_naissance:
+        return ''
+    from datetime import date
+    ref = date_ref or date.today()
+    years = ref.year - date_naissance.year
+    months = ref.month - date_naissance.month
+    if ref.day < date_naissance.day:
+        months -= 1
+    if months < 0:
+        years -= 1
+        months += 12
+    if years == 0:
+        return f'{months} mois'
+    if months == 0:
+        return f'{years} ans'
+    return f'{years} ans {months} mois'
+
 
 def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier, section_ordre=0):
     """Crée une session WOPI et retourne le token."""
