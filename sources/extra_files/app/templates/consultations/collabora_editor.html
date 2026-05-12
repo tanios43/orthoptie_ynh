@@ -3,7 +3,7 @@
 {% block page_title %}✎ Édition du document{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}"
+  <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}#section-{{ section_type }}"
      class="btn btn-secondary btn-sm">← Retour au bilan</a>
 {% endblock %}
 
@@ -39,7 +39,7 @@
     </div>
 
     <div style="margin-top:20px;">
-      <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}"
+      <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}#section-{{ section_type }}"
          class="btn btn-secondary btn-sm">← Retour au bilan</a>
     </div>
 

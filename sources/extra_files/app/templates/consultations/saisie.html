@@ -621,7 +621,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
 
   // Comptage pour le badge de doublon
   return `
-  <div class="bilan-section" id="sec-wrap-${idx}" data-idx="${idx}" data-type="${type}">
+  <div class="bilan-section" id="sec-wrap-${idx}" data-idx="${idx}" data-type="${type}" data-section-type="${type}">
     <div class="bilan-section-header" onclick="toggleSection('s${idx}')">
       <span class="bilan-section-num">${idx + 1}</span>
       <span class="bilan-section-title">${label}</span>
@@ -1321,6 +1321,25 @@ function handleDrop(e) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Scroll vers la section si ancre dans l'URL (ex: #section-courrier)
+  const hash = window.location.hash;
+  if (hash && hash.startsWith('#section-')) {
+    const sectionType = hash.replace('#section-', '');
+    setTimeout(() => {
+      const el = document.querySelector(`[data-section-type="${sectionType}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Ouvrir la section si elle est fermée
+        const idx = el.dataset.idx;
+        if (idx !== undefined) {
+          const body = document.getElementById(`sec-s${idx}`);
+          if (body && !body.classList.contains('open')) {
+            toggleSection(`s${idx}`);
+          }
+        }
+      }
+    }, 500);
+  }
   // Date par défaut
   const d = document.getElementById('date_consult');
   if (d && !d.value) d.value = new Date().toISOString().split('T')[0];

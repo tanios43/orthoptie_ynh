@@ -1841,12 +1841,12 @@ def _generer_docx(consultation, modele, sections_incluses):
                         f'<w:sz w:val="20"/></w:rPr><w:t>{esc(valeur)}</w:t></w:r></w:p>'
                     )
 
-    # Signature
+    # Signature — prénom nom uniquement (sans titre)
     body_paras.append(
         f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="720"/></w:pPr>'
         f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
         f'<w:sz w:val="20"/></w:rPr>'
-        f'<w:t>{esc((praticien.titre or "") + " " + prat_nom)}</w:t></w:r></w:p>'
+        f'<w:t>{esc(prat_nom)}</w:t></w:r></w:p>'
     )
 
     # ── Insérer le corps avant </w:body> ─────────────────────────────
