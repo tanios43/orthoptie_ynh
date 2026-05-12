@@ -1364,19 +1364,19 @@ function supprimerFichierSection(fichierId, elId) {
 
 function sauverAvantOrdo(event, url) {
   event.preventDefault();
-  // Soumettre le formulaire en AJAX puis rediriger
-  const form = document.getElementById('bilan-form');
+  const form = document.getElementById('form-bilan');
   if (!form) { window.location.href = url; return; }
-  const fd = new FormData(form);
-  fetch(form.action || window.location.href, {
-    method: 'POST',
-    body: fd,
-    credentials: 'include'
-  }).then(() => {
-    window.location.href = url;
-  }).catch(() => {
-    window.location.href = url;
-  });
+  // Ajouter un champ hidden pour la redirection post-save
+  let redir = document.getElementById('redirect_after');
+  if (!redir) {
+    redir = document.createElement('input');
+    redir.type = 'hidden';
+    redir.id = 'redirect_after';
+    redir.name = 'redirect_after';
+    form.appendChild(redir);
+  }
+  redir.value = url;
+  form.submit();
 }
 
 function supprimerWopiDoc(fichierId, btn) {
