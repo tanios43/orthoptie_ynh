@@ -675,6 +675,19 @@ def consultation_modifier(consultation_id):
         _save_sections(c.id, request.form, sections, request.files)
         _save_fichiers(c.id, request.files, request.form)
         db.session.commit()
+
+        # Mettre à jour section_ordre des FichierSection WOPI selon le nouveau type
+        for fic in FichierSection.query.filter_by(consultation_id=c.id, champ_name='wopi_doc').all():
+            # Retrouver la session WOPI correspondante pour connaître le section_type
+            sess_wopi = WopiSession.query.filter_by(
+                consultation_id=c.id, nom_fichier=fic.titre).order_by(
+                WopiSession.created_at.desc()).first()
+            if sess_wopi and sess_wopi.section_type:
+                section = next((s for s in c.sections
+                                if s.type == sess_wopi.section_type), None)
+                if section and section.ordre != fic.section_ordre:
+                    fic.section_ordre = section.ordre
+        db.session.commit()
         log_action('modification_consultation', patient_id=c.patient_id, consultation_id=c.id)
         flash('Bilan mis à jour.', 'success')
         redirect_after = request.form.get('redirect_after', '').strip()
@@ -2585,13 +2598,16 @@ def wopi_file_contents(token):
 
         c = Consultation.query.get(sess.consultation_id)
         if c:
-            # Utiliser section_ordre de la session (évite le bug avec champ_name='wopi_doc')
-            if sess.section_ordre:
+            # Toujours résoudre section_ordre depuis section_type au moment de la sauvegarde
+            # (l'ordre peut avoir changé depuis la création de la session)
+            section = next((s for s in c.sections
+                            if s.type == sess.section_type), None)
+            if section:
+                section_ordre = section.ordre
+            elif sess.section_ordre:
                 section_ordre = sess.section_ordre
             else:
-                section = next((s for s in c.sections
-                                if s.type == sess.section_type), None)
-                section_ordre = section.ordre if section else 0
+                section_ordre = 0
 
             folder = os.path.join(app.config['UPLOAD_FOLDER'],
                                   'sections', str(sess.consultation_id))
