@@ -2317,20 +2317,30 @@ def _generer_docx(consultation, modele, sections_incluses):
                     f'<w:t>{esc(sec["label"])}</w:t></w:r></w:p>'
                 )
                 if sec['observations']:
-                    body_paras.append(
-                        f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
-                        f'<w:r><w:rPr><w:i/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                        f'<w:sz w:val="20"/></w:rPr>'
-                        f'<w:t xml:space="preserve">{esc(sec["observations"])}</w:t></w:r></w:p>'
-                    )
+                    for obs_line in sec['observations'].split('\n'):
+                        body_paras.append(
+                            f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
+                            f'<w:r><w:rPr><w:i/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                            f'<w:sz w:val="20"/></w:rPr>'
+                            f'<w:t xml:space="preserve">{esc(obs_line)}</w:t></w:r></w:p>'
+                        )
                 for label, valeur in sec['lignes']:
-                    body_paras.append(
-                        f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
-                        f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                        f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(label) + " : " if label.strip() else ""}</w:t></w:r>'
-                        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                        f'<w:sz w:val="20"/></w:rPr><w:t>{esc(valeur)}</w:t></w:r></w:p>'
-                    )
+                    valeur_lines = valeur.split('\n') if valeur else ['']
+                    for i, vline in enumerate(valeur_lines):
+                        if i == 0:
+                            body_paras.append(
+                                f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
+                                f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                                f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(label) + " : " if label.strip() else ""}</w:t></w:r>'
+                                f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                                f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(vline)}</w:t></w:r></w:p>'
+                            )
+                        else:
+                            body_paras.append(
+                                f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
+                                f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                                f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(vline)}</w:t></w:r></w:p>'
+                            )
 
     # Signature — prénom nom uniquement (sans titre)
     body_paras.append(
