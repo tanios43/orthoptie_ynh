@@ -24,6 +24,10 @@ fi
 mkdir -p "/var/log/$app"
 chown "$app:$app" "/var/log/$app"
 
+# Installer le cron de sauvegarde automatique
+cp "$YNH_APP_BASEDIR/conf/backup-cron" "/etc/cron.daily/${app}-backup"
+chmod +x "/etc/cron.daily/${app}-backup"
+
 #=================================================
 # CREATE DATA DIRECTORY
 #=================================================

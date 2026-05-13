@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Sauvegardes{% endblock %}
+{% block page_title %}💾 Sauvegardes{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px;">
+
+  {# Export manuel #}
+  <div class="card">
+    <div class="card-header"><h2>Exporter une sauvegarde</h2></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Génère un fichier zip contenant la base de données et tous les fichiers
+        (documents, signatures, uploads). À télécharger et conserver en lieu sûr.
+      </p>
+      <a href="{{ url_for('admin_sauvegarde_exporter') }}"
+         class="btn btn-primary">
+        📥 Télécharger la sauvegarde
+      </a>
+    </div>
+  </div>
+
+  {# Import / restauration #}
+  <div class="card">
+    <div class="card-header"><h2>Restaurer une sauvegarde</h2></div>
+    <div class="card-body">
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;
+                  padding:12px 16px;margin-bottom:16px;font-size:13px;">
+        ⚠️ <strong>Attention</strong> — La restauration remplace définitivement
+        toutes les données actuelles. Cette action est irréversible.
+      </div>
+      <form method="POST" action="{{ url_for('admin_sauvegarde_importer') }}"
+            enctype="multipart/form-data">
+        <div class="field-group" style="margin-bottom:12px;">
+          <label class="field-label">Fichier de sauvegarde (.zip)</label>
+          <input type="file" name="backup_file" accept=".zip" required>
+        </div>
+        <div class="field-group" style="margin-bottom:16px;">
+          <label class="field-label">Tapez <strong>oui</strong> pour confirmer</label>
+          <input type="text" name="confirmation" placeholder="oui"
+                 autocomplete="off" style="max-width:120px;">
+        </div>
+        <button type="submit" class="btn btn-secondary"
+                style="color:#e53e3e;border-color:#e53e3e;">
+          🔄 Restaurer
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {# Sauvegardes automatiques #}
+  <div class="card">
+    <div class="card-header"><h2>Sauvegardes automatiques</h2></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+        Sauvegarde automatique quotidienne à 2h du matin — 7 dernières conservées.
+      </p>
+      {% if backups %}
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        {% for b in backups %}
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;
+                    background:var(--bg);border:1px solid var(--border);border-radius:7px;">
+          <span style="font-size:18px;">💾</span>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:500;">{{ b.nom }}</div>
+            <div style="font-size:11px;color:var(--muted);">{{ b.date }} · {{ b.taille }}</div>
+          </div>
+          <a href="{{ url_for('admin_sauvegarde_telecharger', nom=b.nom) }}"
+             class="btn btn-secondary btn-sm">📥</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="color:var(--muted);font-size:13px;">
+        Aucune sauvegarde automatique pour l'instant.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

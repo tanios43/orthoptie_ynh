@@ -386,6 +386,10 @@
        class="nav-item {% if request.endpoint and 'document' in request.endpoint %}active{% endif %}">
       <span class="icon">📄</span> Modèles de documents
     </a>
+    <a href="{{ url_for('admin_sauvegarde') }}"
+       class="nav-item {% if request.endpoint == 'admin_sauvegarde' %}active{% endif %}">
+      <span class="icon">💾</span> Sauvegardes
+    </a>
     {% endif %}
   </nav>
 

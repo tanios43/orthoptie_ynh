@@ -625,6 +625,117 @@ def patient_supprimer(patient_id):
     return redirect(url_for('index'))
 
 
+@app.route('/admin/sauvegarde', methods=['GET'])
+@login_required
+def admin_sauvegarde():
+    """Page de gestion des sauvegardes."""
+    if current_user.role != 'admin':
+        flash('Accès réservé aux administrateurs.', 'danger')
+        return redirect(url_for('index'))
+    import glob
+    backup_dir = os.path.join(app.config['UPLOAD_FOLDER'], '..', 'backups')
+    backup_dir = os.path.normpath(backup_dir)
+    os.makedirs(backup_dir, exist_ok=True)
+    backups = sorted(glob.glob(os.path.join(backup_dir, 'orthoptie_backup_*.zip')),
+                     reverse=True)
+    backups_info = []
+    for b in backups:
+        stat = os.stat(b)
+        backups_info.append({
+            'nom': os.path.basename(b),
+            'taille': f"{stat.st_size / 1024 / 1024:.1f} Mo",
+            'date': datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M'),
+        })
+    return render_template('admin/sauvegarde.html', backups=backups_info)
+
+
+@app.route('/admin/sauvegarde/exporter')
+@login_required
+def admin_sauvegarde_exporter():
+    """Génère et télécharge un zip de sauvegarde."""
+    if current_user.role != 'admin':
+        return 'Accès refusé', 403
+    import zipfile as zf, tempfile
+    tmpdir = tempfile.mkdtemp()
+    nom = f"orthoptie_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    zip_path = os.path.join(tmpdir, nom)
+
+    db_path = os.path.join(app.instance_path, 'orthoptie_v2.db')
+    uploads_dir = app.config['UPLOAD_FOLDER']
+
+    with zf.ZipFile(zip_path, 'w', zf.ZIP_DEFLATED) as z:
+        # Base de données
+        if os.path.exists(db_path):
+            z.write(db_path, 'orthoptie_v2.db')
+        # Uploads
+        for root, dirs, files in os.walk(uploads_dir):
+            for file in files:
+                full = os.path.join(root, file)
+                arcname = os.path.join('uploads', os.path.relpath(full, uploads_dir))
+                z.write(full, arcname)
+
+    from flask import send_file
+    return send_file(zip_path, as_attachment=True, download_name=nom,
+                     mimetype='application/zip')
+
+
+@app.route('/admin/sauvegarde/importer', methods=['POST'])
+@login_required
+def admin_sauvegarde_importer():
+    """Restaure depuis un zip de sauvegarde."""
+    if current_user.role != 'admin':
+        return 'Accès refusé', 403
+    import zipfile as zf, shutil
+    f = request.files.get('backup_file')
+    if not f or not f.filename.endswith('.zip'):
+        flash('Fichier invalide — zip requis.', 'danger')
+        return redirect(url_for('admin_sauvegarde'))
+
+    confirmation = request.form.get('confirmation', '').strip().lower()
+    if confirmation != 'oui':
+        flash('Vous devez taper "oui" pour confirmer la restauration.', 'warning')
+        return redirect(url_for('admin_sauvegarde'))
+
+    import tempfile
+    tmpdir = tempfile.mkdtemp()
+    zip_path = os.path.join(tmpdir, 'restore.zip')
+    f.save(zip_path)
+
+    db_path = os.path.join(app.instance_path, 'orthoptie_v2.db')
+    uploads_dir = app.config['UPLOAD_FOLDER']
+
+    with zf.ZipFile(zip_path, 'r') as z:
+        names = z.namelist()
+        if 'orthoptie_v2.db' in names:
+            z.extract('orthoptie_v2.db', tmpdir)
+            shutil.copy2(os.path.join(tmpdir, 'orthoptie_v2.db'), db_path)
+        for name in names:
+            if name.startswith('uploads/'):
+                z.extract(name, tmpdir)
+                dest = os.path.join(uploads_dir, os.path.relpath(name, 'uploads'))
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                src = os.path.join(tmpdir, name)
+                if os.path.isfile(src):
+                    shutil.copy2(src, dest)
+
+    flash('Restauration effectuée. Reconnectez-vous.', 'success')
+    return redirect(url_for('logout'))
+
+
+@app.route('/admin/sauvegarde/telecharger/<nom>')
+@login_required
+def admin_sauvegarde_telecharger(nom):
+    """Télécharge une sauvegarde automatique."""
+    if current_user.role != 'admin':
+        return 'Accès refusé', 403
+    backup_dir = os.path.normpath(os.path.join(app.config['UPLOAD_FOLDER'], '..', 'backups'))
+    path = os.path.join(backup_dir, nom)
+    if not os.path.exists(path) or not nom.startswith('orthoptie_backup_'):
+        return 'Fichier introuvable', 404
+    from flask import send_file
+    return send_file(path, as_attachment=True, download_name=nom)
+
+
 @app.route('/recherche')
 @login_required
 def recherche():
