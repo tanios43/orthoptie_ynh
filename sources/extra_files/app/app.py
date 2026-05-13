@@ -610,8 +610,7 @@ def patient_supprimer(patient_id):
         return redirect(url_for('patient_modifier', patient_id=patient_id))
 
     nom = str(patient)
-    # Supprimer les fichiers liés
-    import shutil
+    # Supprimer les fichiers liés puis les consultations
     for c in patient.consultations:
         for f in FichierSection.query.filter_by(consultation_id=c.id).all():
             chemin = os.path.join(app.config['UPLOAD_FOLDER'], 'sections',
@@ -619,6 +618,11 @@ def patient_supprimer(patient_id):
             if os.path.exists(chemin):
                 try: os.remove(chemin)
                 except: pass
+            db.session.delete(f)
+        for w in WopiSession.query.filter_by(consultation_id=c.id).all():
+            db.session.delete(w)
+        db.session.delete(c)
+    db.session.flush()
     db.session.delete(patient)
     db.session.commit()
     flash(f'Patient {nom} supprimé.', 'success')
