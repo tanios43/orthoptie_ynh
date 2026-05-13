@@ -2077,8 +2077,8 @@ def _generer_docx(consultation, modele, sections_incluses):
 
     type_label  = 'ORDONNANCE' if modele.type == 'ordonnance' else 'COURRIER'
     motif       = consultation.motif or ''
-    # Titre du document : "COURRIER — Motif du bilan" ou juste "COURRIER"
-    titre_doc = type_label + (f' — {motif.upper()}' if motif else '')
+    # Titre du document : motif du bilan ou type par défaut
+    titre_doc = motif.upper() if motif else type_label
     # Fonction d'échappement XML (définie tôt pour usage dans les remplacements)
     def esc_early(s):
         return (s or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
