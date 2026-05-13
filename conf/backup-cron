@@ -1,22 +1,16 @@
 #!/bin/bash
 # Script de sauvegarde automatique quotidienne — Orthoptie
-# Installé par le package YunoHost dans /etc/cron.daily/orthoptie-backup
 
 APP="orthoptie"
 DATA_DIR="/home/yunohost.app/${APP}"
-INSTALL_DIR="/var/www/${APP}"
 BACKUP_DIR="${DATA_DIR}/backups"
-DB_PATH="${DATA_DIR}/orthoptie_v2.db"
-UPLOADS_DIR="${DATA_DIR}/uploads"
 MAX_BACKUPS=7
 
 mkdir -p "${BACKUP_DIR}"
-
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="${BACKUP_DIR}/orthoptie_backup_${DATE}.zip"
+BACKUP_FILE="${BACKUP_DIR}/orthoptie_backup_${DATE}.tar.gz"
 
-# Créer le zip
-zip -r "${BACKUP_FILE}" "${DB_PATH}" "${UPLOADS_DIR}" > /dev/null 2>&1
+tar -czf "${BACKUP_FILE}" -C "${DATA_DIR}" "orthoptie_v2.db" "uploads" 2>/dev/null
 
 if [ $? -eq 0 ]; then
     echo "Sauvegarde créée : ${BACKUP_FILE}"
@@ -25,7 +19,5 @@ else
     exit 1
 fi
 
-# Rotation — garder seulement les MAX_BACKUPS dernières
-ls -t "${BACKUP_DIR}"/orthoptie_backup_*.zip 2>/dev/null | tail -n +$((MAX_BACKUPS + 1)) | xargs -r rm --
-
+ls -t "${BACKUP_DIR}"/orthoptie_backup_*.tar.gz 2>/dev/null | tail -n +$((MAX_BACKUPS + 1)) | xargs -r rm --
 echo "Rotation effectuée — ${MAX_BACKUPS} sauvegardes conservées"
