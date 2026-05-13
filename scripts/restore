@@ -1,0 +1,67 @@
+#!/bin/bash
+source /usr/share/yunohost/helpers
+
+#=================================================
+# RESTORE INSTALL DIR
+#=================================================
+ynh_script_progression --message="Restauration des fichiers de l'application..." --weight=3
+
+ynh_restore_file --origin_path="$install_dir"
+
+#=================================================
+# RESTORE DATA DIR
+#=================================================
+ynh_script_progression --message="Restauration des données..." --weight=3
+
+ynh_restore_file --origin_path="$data_dir"
+
+#=================================================
+# REINSTALL PYTHON DEPENDENCIES
+#=================================================
+ynh_script_progression --message="Réinstallation des dépendances Python..." --weight=5
+
+python3 -m venv "$install_dir/venv"
+"$install_dir/venv/bin/pip" install --upgrade pip --quiet
+"$install_dir/venv/bin/pip" install flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug --quiet
+
+#=================================================
+# RESTORE NGINX CONFIG
+#=================================================
+ynh_script_progression --message="Restauration de la configuration nginx..." --weight=1
+
+ynh_restore_file --origin_path="/etc/nginx/conf.d/$domain.d/$app.conf"
+ynh_systemd_action --service_name=nginx --action=reload
+
+#=================================================
+# RESTORE SYSTEMD CONFIG
+#=================================================
+ynh_script_progression --message="Restauration du service systemd..." --weight=1
+
+ynh_restore_file --origin_path="/etc/systemd/system/$app.service"
+systemctl enable "$app" --quiet
+systemctl daemon-reload
+
+yunohost service add "$app" --description="Dossiers Patients Orthoptie" --log="/var/log/$app/$app.log"
+
+#=================================================
+# CREATE LOG DIRECTORY
+#=================================================
+mkdir -p "/var/log/$app"
+chown "$app:$app" "/var/log/$app"
+
+#=================================================
+# RESTORE PERMISSIONS
+#=================================================
+chown -R "$app:www-data" "$install_dir"
+chown -R "$app:$app" "$data_dir"
+chmod -R o-rwx "$install_dir"
+chmod -R o-rwx "$data_dir"
+
+#=================================================
+# START SERVICE
+#=================================================
+ynh_script_progression --message="Démarrage du service..." --weight=1
+
+ynh_systemd_action --service_name="$app" --action="start" --log_path="/var/log/$app/$app.log"
+
+ynh_script_progression --message="Restauration terminée !" --last
