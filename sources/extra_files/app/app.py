@@ -636,8 +636,10 @@ def admin_sauvegarde():
     backup_dir = os.path.join(app.config['UPLOAD_FOLDER'], '..', 'backups')
     backup_dir = os.path.normpath(backup_dir)
     os.makedirs(backup_dir, exist_ok=True)
-    backups = sorted(glob.glob(os.path.join(backup_dir, 'orthoptie_backup_*.zip')),
-                     reverse=True)
+    backups = sorted(
+        glob.glob(os.path.join(backup_dir, 'orthoptie_backup_*.zip')) +
+        glob.glob(os.path.join(backup_dir, 'orthoptie_backup_*.tar.gz')),
+        reverse=True)
     backups_info = []
     for b in backups:
         stat = os.stat(b)
@@ -732,8 +734,9 @@ def admin_sauvegarde_telecharger(nom):
     path = os.path.join(backup_dir, nom)
     if not os.path.exists(path) or not nom.startswith('orthoptie_backup_'):
         return 'Fichier introuvable', 404
+    mimetype = 'application/gzip' if nom.endswith('.tar.gz') else 'application/zip'
     from flask import send_file
-    return send_file(path, as_attachment=True, download_name=nom)
+    return send_file(path, as_attachment=True, download_name=nom, mimetype=mimetype)
 
 
 @app.route('/recherche')
