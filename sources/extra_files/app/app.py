@@ -2079,6 +2079,9 @@ def _generer_docx(consultation, modele, sections_incluses):
     motif       = consultation.motif or ''
     # Titre du document : "COURRIER — Motif du bilan" ou juste "COURRIER"
     titre_doc = type_label + (f' — {motif.upper()}' if motif else '')
+    # Fonction d'échappement XML (définie tôt pour usage dans les remplacements)
+    def esc_early(s):
+        return (s or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
 
     # ── Charger le template docx ──────────────────────────────────────
     template_path = os.path.join(os.path.dirname(__file__), 'entete.docx')
@@ -2127,10 +2130,10 @@ def _generer_docx(consultation, modele, sections_incluses):
 
     # Titre du document dans le cadre bleu
     doc_xml = doc_xml.replace('<w:t>BILAN ORTHOPTIQUE</w:t>',
-                              f'<w:t>{esc(titre_doc)}</w:t>')
+                              f'<w:t>{esc_early(titre_doc)}</w:t>')
     # Fallback ancien format en 2 runs
     doc_xml = doc_xml.replace('BILAN ORTHOPTIQU</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>E',
-                              esc(titre_doc) + '</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>')
+                              esc_early(titre_doc) + '</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>')
 
     # Patient (SDT Nom)
     doc_xml = re.sub(
