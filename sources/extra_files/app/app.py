@@ -2077,6 +2077,8 @@ def _generer_docx(consultation, modele, sections_incluses):
 
     type_label  = 'ORDONNANCE' if modele.type == 'ordonnance' else 'COURRIER'
     motif       = consultation.motif or ''
+    # Titre du document : "COURRIER — Motif du bilan" ou juste "COURRIER"
+    titre_doc = type_label + (f' — {motif.upper()}' if motif else '')
 
     # ── Charger le template docx ──────────────────────────────────────
     template_path = os.path.join(os.path.dirname(__file__), 'entete.docx')
@@ -2123,9 +2125,12 @@ def _generer_docx(consultation, modele, sections_incluses):
     doc_xml = sub(doc_xml, ' Cyprien Nesme', f' {prat_nom}')
     doc_xml = sub(doc_xml, 'ORTHOPTISTE', prat_titre)
 
-    # Type de document (BILAN ORTHOPTIQUE → COURRIER ou ORDONNANCE)
-    doc_xml = doc_xml.replace('BILAN ORTHOPTIQU</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val=\"32\"/><w:szCs w:val=\"32\"/><w:lang w:val=\"it-IT\"/></w:rPr><w:t>E',
-                              type_label + '</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val=\"32\"/><w:szCs w:val=\"32\"/><w:lang w:val=\"it-IT\"/></w:rPr><w:t>')
+    # Titre du document dans le cadre bleu
+    doc_xml = doc_xml.replace('<w:t>BILAN ORTHOPTIQUE</w:t>',
+                              f'<w:t>{esc(titre_doc)}</w:t>')
+    # Fallback ancien format en 2 runs
+    doc_xml = doc_xml.replace('BILAN ORTHOPTIQU</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>E',
+                              esc(titre_doc) + '</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="it-IT"/></w:rPr><w:t>')
 
     # Patient (SDT Nom)
     doc_xml = re.sub(
