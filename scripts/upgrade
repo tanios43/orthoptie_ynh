@@ -30,6 +30,12 @@ ynh_script_progression --message="Mise à jour des dépendances..." --weight=3
 mkdir -p "/var/log/$app"
 chown "$app:$app" "/var/log/$app"
 
+# Mettre à jour le cron de sauvegarde
+if [ -f "$YNH_APP_BASEDIR/conf/backup-cron" ]; then
+    cp "$YNH_APP_BASEDIR/conf/backup-cron" "/etc/cron.daily/${app}-backup"
+    chmod +x "/etc/cron.daily/${app}-backup"
+fi
+
 #=================================================
 # MIGRATION BASE DE DONNÉES
 #=================================================
