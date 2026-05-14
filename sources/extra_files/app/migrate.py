@@ -184,6 +184,24 @@ with app.app_context():
     except Exception as e:
         print(f"ERREUR  : section ordonnance — {e}")
 
+    # Correction section ordonnance_lunettes : ajouter lun_dip si absent
+    try:
+        s_lun = SectionDef.query.filter_by(type_key='ordonnance_lunettes').first()
+        if s_lun:
+            existing_names = [c.name for c in ChampDef.query.filter_by(section_id=s_lun.id).all()]
+            if 'lun_dip' not in existing_names:
+                db.session.add(ChampDef(section_id=s_lun.id, name='lun_dip',
+                                        label='DIP (mm)', type='text', ordre=8))
+                db.session.commit()
+                print("OK      : lun_dip ajouté à ordonnance_lunettes")
+            if 'lun_renouvelable' not in existing_names:
+                db.session.add(ChampDef(section_id=s_lun.id, name='lun_renouvelable',
+                                        label='Renouvelable', type='select', ordre=9))
+                db.session.commit()
+                print("OK      : lun_renouvelable ajouté à ordonnance_lunettes")
+    except Exception as e:
+        print(f"ERREUR  : fix ordonnance_lunettes champs — {e}")
+
     # Section ordonnance_lunettes
     try:
         existing = SectionDef.query.filter_by(type_key='ordonnance_lunettes').first()

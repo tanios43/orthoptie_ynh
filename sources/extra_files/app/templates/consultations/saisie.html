@@ -691,7 +691,11 @@ function renderSection(type, label, idx, titre, obs, donnees) {
          onclick="sauverAvantOrdo(event, this.href)"
          style="display:inline-block;font-size:11px;color:white;padding:4px 10px;
                 border-radius:5px;background:var(--accent);text-decoration:none;">
-         📄 Générer l'ordonnance de lunettes</a>` : ''}
+         📄 Générer l'ordonnance de lunettes</a>
+      <button type="button" onclick="copierDepuisRefraction(${idx2})"
+         style="display:inline-block;font-size:11px;color:var(--accent);padding:4px 10px;
+                border-radius:5px;border:1px solid var(--accent);background:white;cursor:pointer;margin-left:6px;">
+         📋 Copier depuis réfraction subjective</button>` : ''}
     </div>`;
 
   } else if (type === 'ordonnance') {
@@ -1489,6 +1493,45 @@ function sauverAvantOrdo(event, url) {
   }
   redir.value = url;
   form.submit();
+}
+
+function copierDepuisRefraction(idxLunettes) {
+  // Chercher la section refraction_subj dans le DOM
+  const sections = document.querySelectorAll('[data-type="refraction_subj"]');
+  if (!sections.length) {
+    alert('Aucune section "Réfraction subjective" trouvée dans le bilan.');
+    return;
+  }
+  // Prendre la première
+  const sec = sections[0];
+  const secIdx = sec.dataset.idx;
+
+  // Mapper les champs refraction_subj → ordonnance_lunettes
+  const mapping = {
+    [`champ__${secIdx}__od_sph`]: `champ__${idxLunettes}__lun_vl_od_sph`,
+    [`champ__${secIdx}__od_cyl`]: `champ__${idxLunettes}__lun_vl_od_cyl`,
+    [`champ__${secIdx}__od_axe`]: `champ__${idxLunettes}__lun_vl_od_axe`,
+    [`champ__${secIdx}__og_sph`]: `champ__${idxLunettes}__lun_vl_og_sph`,
+    [`champ__${secIdx}__og_cyl`]: `champ__${idxLunettes}__lun_vl_og_cyl`,
+    [`champ__${secIdx}__og_axe`]: `champ__${idxLunettes}__lun_vl_og_axe`,
+    [`champ__${secIdx}__od_add`]: `champ__${idxLunettes}__lun_vp_od_add`,
+    [`champ__${secIdx}__og_add`]: `champ__${idxLunettes}__lun_vp_og_add`,
+  };
+
+  let copied = 0;
+  for (const [src, dst] of Object.entries(mapping)) {
+    const srcEl = document.querySelector(`[name="${src}"]`);
+    const dstEl = document.querySelector(`[name="${dst}"]`);
+    if (srcEl && dstEl && srcEl.value) {
+      dstEl.value = srcEl.value;
+      copied++;
+    }
+  }
+  if (copied > 0) {
+    updateDonnees(idxLunettes);
+  } else {
+    alert('Aucune donnée trouvée dans la section réfraction subjective.');
+  }
 }
 
 function supprimerWopiDoc(fichierId, btn) {
