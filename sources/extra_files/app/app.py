@@ -1848,6 +1848,9 @@ def _generer_ordonnance_lunettes_docx(consultation, praticien, cabinet, pc, d):
         f'<w:sz w:val="22"/><w:u w:val="single"/></w:rPr>'
         f'<w:t>VERRES CORRECTEURS + MONTURE</w:t></w:r></w:p>'
     )
+    # 2 sauts de ligne
+    body_paras.append(f'<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>')
+    body_paras.append(f'<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>')
 
     # Correction OD
     od_vl = format_correction(val('lun_vl_od_sph'), val('lun_vl_od_cyl'), val('lun_vl_od_axe'))
@@ -1883,15 +1886,6 @@ def _generer_ordonnance_lunettes_docx(consultation, praticien, cabinet, pc, d):
             f'<w:t>{dip} mm</w:t></w:r></w:p>'
         )
 
-    # Renouvelable
-    renouvelable = val('lun_renouvelable')
-    if renouvelable == 'oui':
-        body_paras.append(
-            f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
-            f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
-            f'<w:t>Renouvelable pendant 2 ans</w:t></w:r></w:p>'
-        )
-
     # Remarques
     remarques = d.get('lun_remarques', '') or ''
     if remarques:
@@ -1901,6 +1895,14 @@ def _generer_ordonnance_lunettes_docx(consultation, praticien, cabinet, pc, d):
                 f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
                 f'<w:t xml:space="preserve">{esc(ligne)}</w:t></w:r></w:p>'
             )
+
+    # Renouvelable — avant la mention légale
+    renouvelable = val('lun_renouvelable')
+    body_paras.append(
+        f'<w:p><w:pPr><w:spacing w:before="200" w:after="80"/></w:pPr>'
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
+        f'<w:t>{"Renouvelable pendant 2 ans" if renouvelable == "oui" else "Non renouvelable"}</w:t></w:r></w:p>'
+    )
 
     # Mention légale
     body_paras.append(f'<w:p><w:pPr><w:spacing w:before="320"/></w:pPr></w:p>')
