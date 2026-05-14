@@ -112,6 +112,7 @@
       </div>
       <div style="padding:8px 16px;">
         {% for sec in consultation.sections %}
+        {% if sec.type not in ['courrier', 'ordonnance'] %}
         <label style="display:flex;align-items:center;gap:10px;padding:8px 0;
                        border-bottom:1px solid var(--border);cursor:pointer;">
           <input type="checkbox" name="sections_incluses[]" value="{{ sec.type }}"
@@ -125,6 +126,7 @@
           </span>
           {% endif %}
         </label>
+        {% endif %}
         {% endfor %}
       </div>
     </div>
