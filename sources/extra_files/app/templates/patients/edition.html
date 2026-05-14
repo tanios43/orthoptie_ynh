@@ -118,7 +118,7 @@ function rechercherCommunes(cp) {
           list.style.display = 'none';
         } else {
           list.style.display = 'block';
-          communeInput.value = '';
+          // Ne pas effacer la commune déjà saisie
         }
       })
       .catch(() => { list.style.display = 'none'; });
@@ -133,11 +133,7 @@ document.addEventListener('click', e => {
   }
 });
 
-// Déclencher la recherche si code postal déjà rempli (mode édition)
-window.addEventListener('DOMContentLoaded', () => {
-  const cp = document.getElementById('input-cp');
-  if (cp && cp.value.length >= 2) rechercherCommunes(cp.value);
-});
+// Ne pas déclencher la recherche au chargement — seulement quand l'utilisateur tape
 </script>
     </div>
   </div>
