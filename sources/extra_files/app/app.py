@@ -940,19 +940,53 @@ def _save_sections(consultation_id, form, sections, files=None):
     import uuid
     types = form.getlist('sections_types[]')
     obs_list = form.getlist('sections_obs[]')
+
+    # Construire un index inverse : pour chaque idx dans le formulaire,
+    # quel type de section correspond ?
+    # Les champs sont nommés champ__{idx}__{name} — on cherche tous les idx présents
+    # et on les associe au type via sections_types[] (index = ordre dans la liste)
+    # MAIS si l'idx JS ne correspond pas à l'ordre dans sections_types[],
+    # on cherche l'idx par correspondance des noms de champs.
+
+    # Construire un mapping idx -> type depuis les clés du formulaire
+    idx_type_map = {}
+    for key in form.keys():
+        if key.startswith('champ__'):
+            parts = key.split('__')
+            if len(parts) >= 3:
+                try:
+                    idx = int(parts[1])
+                    champ_name = parts[2]
+                    # Trouver quel type possède ce champ
+                    for stype, sdef in sections.items():
+                        if any(c['name'] == champ_name for c in sdef['champs']):
+                            idx_type_map[idx] = stype
+                            break
+                except ValueError:
+                    pass
+
     for ordre, (stype, obs) in enumerate(zip(types, obs_list)):
         if stype not in sections: continue
         donnees = {}
+
+        # Chercher l'idx correspondant à ce type
+        matching_idx = None
+        for idx, t in idx_type_map.items():
+            if t == stype:
+                matching_idx = idx
+                break
+        # Fallback : utiliser l'ordre dans sections_types[]
+        if matching_idx is None:
+            matching_idx = ordre
+
         for champ in sections[stype]['champs']:
             if champ['type'] == 'fichier':
-                # Géré séparément via _save_fichiers_section
                 continue
-            val = form.get(f"champ__{ordre}__{champ['name']}", '').strip()
+            val = form.get(f"champ__{matching_idx}__{champ['name']}", '').strip()
             if val: donnees[champ['name']] = val
         db.session.add(SectionBilan(consultation_id=consultation_id, type=stype,
             ordre=ordre, titre='', observations=obs.strip() if obs else '',
             donnees=json.dumps(donnees, ensure_ascii=False)))
-    # Sauvegarder les fichiers de section
     if files:
         _save_fichiers_section(consultation_id, form, files, sections)
 
@@ -960,11 +994,29 @@ def _save_sections(consultation_id, form, sections, files=None):
 def _save_fichiers_section(consultation_id, form, files, sections):
     import uuid
     types = form.getlist('sections_types[]')
+
+    # Même logique de mapping idx -> type
+    idx_type_map = {}
+    for key in form.keys():
+        if key.startswith('champ__'):
+            parts = key.split('__')
+            if len(parts) >= 3:
+                try:
+                    idx = int(parts[1])
+                    champ_name = parts[2]
+                    for stype, sdef in sections.items():
+                        if any(c['name'] == champ_name for c in sdef['champs']):
+                            idx_type_map[idx] = stype
+                            break
+                except ValueError:
+                    pass
+
     for ordre, stype in enumerate(types):
         if stype not in sections: continue
+        matching_idx = next((i for i, t in idx_type_map.items() if t == stype), ordre)
         for champ in sections[stype]['champs']:
             if champ['type'] != 'fichier': continue
-            key = f"champ__{ordre}__{champ['name']}"
+            key = f"champ__{matching_idx}__{champ['name']}"
             uploaded = files.getlist(key)
             for f in uploaded:
                 if not f or not f.filename or not allowed_file(f.filename): continue
