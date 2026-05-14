@@ -646,6 +646,15 @@ function renderSection(type, label, idx, titre, obs, donnees) {
 
     champsHTML = `
     <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Bouton copier en haut -->
+      ${consId ? `<div>
+        <button type="button" onclick="copierDepuisRefraction(${idx2})"
+           style="font-size:11px;color:var(--accent);padding:4px 10px;
+                  border-radius:5px;border:1px solid var(--accent);background:white;cursor:pointer;">
+           📋 Copier depuis réfraction subjective</button>
+      </div>` : ''}
+
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:12px;">
           ${colgroup}${headerRow}${subHeader}
@@ -691,11 +700,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
          onclick="sauverAvantOrdo(event, this.href)"
          style="display:inline-block;font-size:11px;color:white;padding:4px 10px;
                 border-radius:5px;background:var(--accent);text-decoration:none;">
-         📄 Générer l'ordonnance de lunettes</a>
-      <button type="button" onclick="copierDepuisRefraction(${idx2})"
-         style="display:inline-block;font-size:11px;color:var(--accent);padding:4px 10px;
-                border-radius:5px;border:1px solid var(--accent);background:white;cursor:pointer;margin-left:6px;">
-         📋 Copier depuis réfraction subjective</button>` : ''}
+         📄 Générer l'ordonnance de lunettes</a>` : ''}
     </div>`;
 
   } else if (type === 'ordonnance') {
@@ -1502,35 +1507,50 @@ function copierDepuisRefraction(idxLunettes) {
     return;
   }
 
-  let secIdx;
   if (sections.length === 1) {
-    secIdx = sections[0].dataset.idx;
-    _appliquerRefraction(idxLunettes, secIdx);
-  } else {
-    // Plusieurs sections — afficher un choix
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
-    let btns = '';
-    sections.forEach((sec, i) => {
-      const label = sec.querySelector('.bilan-section-title')?.textContent || `Réfraction subjective ${i+1}`;
-      btns += `<button type="button" onclick="
-        _appliquerRefraction(${idxLunettes}, ${sec.dataset.idx});
-        this.closest('[style*=fixed]').remove();"
-        style="display:block;width:100%;padding:10px 16px;margin-bottom:8px;
-               background:var(--accent-lt);border:1px solid var(--accent);
-               border-radius:7px;cursor:pointer;font-size:13px;text-align:left;">
-        ${label}
-      </button>`;
-    });
-    modal.innerHTML = `<div style="background:white;border-radius:12px;padding:24px;max-width:380px;width:90%;">
-      <h3 style="margin-bottom:16px;font-size:15px;">Choisir la réfraction à copier</h3>
-      ${btns}
-      <button type="button" onclick="this.closest('[style*=fixed]').remove();"
-        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);
-               border-radius:6px;cursor:pointer;font-size:12px;margin-top:4px;">Annuler</button>
-    </div>`;
-    document.body.appendChild(modal);
+    _appliquerRefraction(idxLunettes, sections[0].dataset.idx);
+    return;
   }
+
+  // Plusieurs sections — afficher un choix avec les données
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  let btns = '';
+  sections.forEach((sec, i) => {
+    const si = sec.dataset.idx;
+    const getVal = name => {
+      const el = document.querySelector(`[name="champ__${si}__${name}"]`);
+      return el ? (el.value || '—') : '—';
+    };
+    const od_sph = getVal('od_sph'), od_cyl = getVal('od_cyl'), od_axe = getVal('od_axe');
+    const og_sph = getVal('og_sph'), og_cyl = getVal('og_cyl'), og_axe = getVal('og_axe');
+    const od_add = getVal('od_add'), og_add = getVal('og_add');
+    const od_str = `OD : ${od_sph}(${od_cyl})${od_axe}°`;
+    const og_str = `OG : ${og_sph}(${og_cyl})${og_axe}°`;
+    const add_str = (od_add !== '—' || og_add !== '—') ? ` Add. OD:${od_add} OG:${og_add}` : '';
+
+    btns += `<button type="button" onclick="
+        _appliquerRefraction(${idxLunettes}, ${si});
+        document.getElementById('modal-refraction-sel').remove();"
+        style="display:block;width:100%;padding:10px 14px;margin-bottom:8px;
+               background:var(--accent-lt);border:1px solid var(--accent);
+               border-radius:7px;cursor:pointer;font-size:12px;text-align:left;">
+        <div style="font-weight:600;margin-bottom:4px;">Réfraction subjective ${i+1}</div>
+        <div style="font-family:monospace;color:var(--text);">${od_str}</div>
+        <div style="font-family:monospace;color:var(--text);">${og_str}${add_str}</div>
+      </button>`;
+  });
+
+  modal.id = 'modal-refraction-sel';
+  modal.innerHTML = `<div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto;">
+    <h3 style="margin-bottom:16px;font-size:15px;">Choisir la réfraction à copier</h3>
+    ${btns}
+    <button type="button" onclick="document.getElementById('modal-refraction-sel').remove();"
+      style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);
+             border-radius:6px;cursor:pointer;font-size:12px;margin-top:4px;">Annuler</button>
+  </div>`;
+  document.body.appendChild(modal);
 }
 
 function _appliquerRefraction(idxLunettes, secIdx) {
