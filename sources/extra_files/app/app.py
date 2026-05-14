@@ -2882,18 +2882,34 @@ def editer_collabora(consultation_id):
     modele = DocumentModele.query.get_or_404(modele_id)
 
     # Générer le .docx dans un dossier permanent (pas tmpdir)
-    import os, tempfile, urllib.parse
+    import os, tempfile, urllib.parse, shutil, uuid
     wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
     os.makedirs(wopi_dir, exist_ok=True)
 
-    docx_path = _generer_docx(c, modele, sections_sel)
-
-    # Copier dans le dossier WOPI permanent
-    import shutil, uuid
     nom_custom = request.args.get('nom_document', '').strip()
     nom_base   = nom_custom if nom_custom else modele.nom
     nom_fichier = (f"{c.patient.nom}_{c.patient.prenom}_"
                    f"{c.date_consult.strftime('%Y%m%d')}_{nom_base}.docx")
+
+    # Vérifier si un document avec le même nom existe déjà
+    doublon = FichierSection.query.filter_by(
+        consultation_id=consultation_id,
+        champ_name='wopi_doc',
+        titre=nom_fichier
+    ).first()
+    if doublon and not request.args.get('forcer', ''):
+        # Rediriger vers generer_document avec avertissement
+        flash(f'Un document nommé "{nom_fichier}" existe déjà dans cette section. '
+              f'Modifiez le nom du document ou confirmez pour écraser.', 'warning')
+        return redirect(url_for('generer_document',
+                                consultation_id=consultation_id,
+                                section=section_type,
+                                doublon=nom_fichier,
+                                modele_id=modele_id,
+                                **{k: v for k, v in request.args.items()
+                                   if k not in ['forcer']}))
+
+    docx_path = _generer_docx(c, modele, sections_sel)
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
     shutil.copy2(docx_path, permanent_path)
 

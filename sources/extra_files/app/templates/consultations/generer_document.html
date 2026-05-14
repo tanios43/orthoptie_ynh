@@ -138,9 +138,26 @@
     <div class="card" style="margin-bottom:14px;">
       <div class="card-header"><h2>Nom du document</h2></div>
       <div class="card-body">
+        {% if request.args.get('doublon') %}
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:7px;
+                    padding:10px 14px;margin-bottom:10px;font-size:13px;">
+          ⚠️ Un document nommé <strong>{{ request.args.get('doublon') }}</strong>
+          existe déjà dans cette section.<br>
+          Modifiez le nom ci-dessous pour créer un nouveau document,
+          ou laissez vide et cochez "Écraser" pour remplacer l'existant.
+          <div style="margin-top:8px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="checkbox" name="forcer" value="1">
+              Écraser le document existant
+            </label>
+          </div>
+        </div>
+        {% endif %}
         <input type="text" name="nom_document"
+               value="{{ request.args.get('nom_document', '') }}"
                placeholder="Ex: Courrier Dr Martin, Compte-rendu séance 1…"
-               style="width:100%;font-size:13px;">
+               style="width:100%;font-size:13px;"
+               {% if request.args.get('doublon') %}autofocus{% endif %}>
         <div style="font-size:11px;color:var(--muted);margin-top:4px;">
           Laissez vide pour utiliser le nom par défaut
         </div>
