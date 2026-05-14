@@ -609,54 +609,82 @@ function renderSection(type, label, idx, titre, obs, donnees) {
   if (type === 'ordonnance_lunettes') {
     const consId = {{ consultation.id if consultation else 0 }};
     const d = donnees;
+    const idx2 = idx;
+
+    const th = txt =>
+      `<th style="padding:5px 8px;font-size:11px;font-weight:600;color:var(--muted);
+        text-transform:uppercase;letter-spacing:.4px;background:var(--bg);
+        border-bottom:1px solid var(--border);text-align:center;">${txt}</th>`;
+
+    const sphInput = (name, val) =>
+      `<input type="text" name="${name}" value="${val||''}" placeholder="+0.00"
+        style="text-align:center;font-family:monospace;width:100%;" onblur="formatSignedFloat(this)">`;
+    const cylInput = (name, val) =>
+      `<input type="text" name="${name}" value="${val||''}" placeholder="-0.00"
+        style="text-align:center;font-family:monospace;width:100%;" onblur="formatSignedFloat(this)">`;
+    const p = (name, val, type='sph') => {
+      const full = `champ__${idx2}__${name}`;
+      if (type === 'sph') return sphInput(full, val);
+      if (type === 'cyl') return cylInput(full, val);
+      return `<input type="text" name="${full}" value="${val||''}" placeholder="0" style="text-align:center;width:100%;">`;
+    };
+
+    const headerRow = `<tr>
+      <th style="width:18%;background:var(--bg);border-bottom:1px solid var(--border);"></th>
+      <th colspan="3" style="text-align:center;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);">
+        <span class="eye-label eye-od" style="display:inline-block;width:80%;text-align:center;">OD</span></th>
+      <th colspan="3" style="text-align:center;padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--border);">
+        <span class="eye-label eye-og" style="display:inline-block;width:80%;text-align:center;">OG</span></th>
+    </tr>`;
+    const subHeader = `<tr>${th('')}${th('Sphère')}${th('Cyl.')}${th('Axe')}${th('Sphère')}${th('Cyl.')}${th('Axe')}</tr>`;
+    const colgroup = `<colgroup>
+      <col style="width:18%"><col style="width:12%"><col style="width:12%"><col style="width:9%">
+      <col style="width:12%"><col style="width:12%"><col style="width:9%">
+    </colgroup>`;
+    const cell = (content) => `<td style="padding:3px 5px;border-bottom:1px solid var(--border);">${content}</td>`;
+    const labelCell = (txt) => `<td style="padding:5px 8px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);">${txt}</td>`;
+
     champsHTML = `
     <div style="display:flex;flex-direction:column;gap:12px;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead>
-          <tr style="background:var(--accent-lt);">
-            <th style="padding:6px 10px;border:1px solid var(--accent);text-align:left;"></th>
-            <th style="padding:6px 10px;border:1px solid var(--accent);text-align:center;">OD</th>
-            <th style="padding:6px 10px;border:1px solid var(--accent);text-align:center;">OG</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          ${colgroup}${headerRow}${subHeader}
           <tr>
-            <td style="padding:5px 10px;border:1px solid var(--border);font-weight:500;">VL — Sphère</td>
-            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_od_sph" value="${d.lun_vl_od_sph||''}" style="width:100%;font-size:12px;" placeholder="ex: +1.25" onchange="updateDonnees(${idx})"></td>
-            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_og_sph" value="${d.lun_vl_og_sph||''}" style="width:100%;font-size:12px;" placeholder="ex: +1.25" onchange="updateDonnees(${idx})"></td>
+            ${labelCell('VL')}
+            ${cell(p('lun_vl_od_sph', d.lun_vl_od_sph, 'sph'))}
+            ${cell(p('lun_vl_od_cyl', d.lun_vl_od_cyl, 'cyl'))}
+            ${cell(p('lun_vl_od_axe', d.lun_vl_od_axe, 'axe'))}
+            ${cell(p('lun_vl_og_sph', d.lun_vl_og_sph, 'sph'))}
+            ${cell(p('lun_vl_og_cyl', d.lun_vl_og_cyl, 'cyl'))}
+            ${cell(p('lun_vl_og_axe', d.lun_vl_og_axe, 'axe'))}
           </tr>
           <tr>
-            <td style="padding:5px 10px;border:1px solid var(--border);font-weight:500;">VL — Cylindre</td>
-            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_od_cyl" value="${d.lun_vl_od_cyl||''}" style="width:100%;font-size:12px;" placeholder="ex: -0.50" onchange="updateDonnees(${idx})"></td>
-            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_og_cyl" value="${d.lun_vl_og_cyl||''}" style="width:100%;font-size:12px;" placeholder="ex: -0.50" onchange="updateDonnees(${idx})"></td>
+            ${labelCell('VP Add.')}
+            ${cell(p('lun_vp_od_add', d.lun_vp_od_add, 'sph'))}
+            <td colspan="2" style="padding:3px 5px;border-bottom:1px solid var(--border);"></td>
+            ${cell(p('lun_vp_og_add', d.lun_vp_og_add, 'sph'))}
+            <td colspan="2" style="padding:3px 5px;border-bottom:1px solid var(--border);"></td>
           </tr>
-          <tr>
-            <td style="padding:5px 10px;border:1px solid var(--border);font-weight:500;">VL — Axe</td>
-            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_od_axe" value="${d.lun_vl_od_axe||''}" style="width:100%;font-size:12px;" placeholder="ex: 90°" onchange="updateDonnees(${idx})"></td>
-            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_og_axe" value="${d.lun_vl_og_axe||''}" style="width:100%;font-size:12px;" placeholder="ex: 90°" onchange="updateDonnees(${idx})"></td>
-          </tr>
-          <tr style="background:var(--bg);">
-            <td style="padding:5px 10px;border:1px solid var(--border);font-weight:500;">VP — Addition</td>
-            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vp_od_add" value="${d.lun_vp_od_add||''}" style="width:100%;font-size:12px;" placeholder="ex: +2.00" onchange="updateDonnees(${idx})"></td>
-            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vp_og_add" value="${d.lun_vp_og_add||''}" style="width:100%;font-size:12px;" placeholder="ex: +2.00" onchange="updateDonnees(${idx})"></td>
-          </tr>
-        </tbody>
-      </table>
+        </table>
+      </div>
 
       <div class="field-grid field-grid-2" style="gap:10px;">
         <div class="field-group">
-          <label class="field-label">Écart pupillaire VL (mm)</label>
-          <input type="text" name="champ__${idx}__lun_ep_vl" value="${d.lun_ep_vl||''}" placeholder="ex: 64" onchange="updateDonnees(${idx})">
+          <label class="field-label">DIP (mm)</label>
+          <input type="text" name="champ__${idx2}__lun_dip" value="${d.lun_dip||''}" placeholder="ex: 64" onchange="updateDonnees(${idx2})">
         </div>
         <div class="field-group">
-          <label class="field-label">Écart pupillaire VP (mm)</label>
-          <input type="text" name="champ__${idx}__lun_ep_vp" value="${d.lun_ep_vp||''}" placeholder="ex: 61" onchange="updateDonnees(${idx})">
+          <label class="field-label">Renouvelable</label>
+          <select name="champ__${idx2}__lun_renouvelable" onchange="updateDonnees(${idx2})">
+            <option value="" ${!d.lun_renouvelable?'selected':''}>Non renouvelable</option>
+            <option value="oui" ${d.lun_renouvelable==='oui'?'selected':''}>Renouvelable 2 ans</option>
+          </select>
         </div>
       </div>
 
       <div class="field-group">
         <label class="field-label">Remarques</label>
-        <textarea name="champ__${idx}__lun_remarques" rows="2" style="font-size:12px;" onchange="updateDonnees(${idx})">${d.lun_remarques||''}</textarea>
+        <textarea name="champ__${idx2}__lun_remarques" rows="2" style="font-size:12px;" onchange="updateDonnees(${idx2})">${d.lun_remarques||''}</textarea>
       </div>
 
       ${consId ? `<a href="/consultation/${consId}/ordonnance/lunettes/editer-collabora"

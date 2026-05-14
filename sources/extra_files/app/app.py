@@ -1828,80 +1828,91 @@ def _generer_ordonnance_lunettes_docx(consultation, praticien, cabinet, pc, d):
     doc_xml = doc_xml.replace('<w:t>BILAN ORTHOPTIQUE</w:t>',
                               '<w:t>ORDONNANCE DE LUNETTES</w:t>')
 
-    # Corps — tableau VL/VP
+    # Corps de l'ordonnance
     def val(k): return esc(d.get(k, '') or '')
+
+    def format_correction(sph, cyl, axe):
+        """Formate la correction sous forme sphère(cylindre)axe°"""
+        if not sph: return ''
+        result = sph
+        if cyl: result += f'({cyl})'
+        if axe: result += f'{axe}°'
+        return result
 
     body_paras = []
 
-    # Tableau OD/OG
-    def row(label, od, og):
-        return (
-            f'<w:tr>'
-            f'<w:tc><w:tcPr><w:tcW w:w="2000"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>{esc(label)}</w:t></w:r></w:p></w:tc>'
-            f'<w:tc><w:tcPr><w:tcW w:w="2800"/></w:tcPr><w:p><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>{od}</w:t></w:r></w:p></w:tc>'
-            f'<w:tc><w:tcPr><w:tcW w:w="2800"/></w:tcPr><w:p><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>{og}</w:t></w:r></w:p></w:tc>'
-            f'</w:tr>'
+    # Mention VERRES CORRECTEURS + MONTURE
+    body_paras.append(
+        f'<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="240" w:after="120"/></w:pPr>'
+        f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+        f'<w:sz w:val="22"/><w:u w:val="single"/></w:rPr>'
+        f'<w:t>VERRES CORRECTEURS + MONTURE</w:t></w:r></w:p>'
+    )
+
+    # Correction OD
+    od_vl = format_correction(val('lun_vl_od_sph'), val('lun_vl_od_cyl'), val('lun_vl_od_axe'))
+    og_vl = format_correction(val('lun_vl_og_sph'), val('lun_vl_og_cyl'), val('lun_vl_og_axe'))
+    od_add = val('lun_vp_od_add')
+    og_add = val('lun_vp_og_add')
+
+    if od_vl:
+        body_paras.append(
+            f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
+            f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="22"/></w:rPr>'
+            f'<w:t xml:space="preserve">OD : </w:t></w:r>'
+            f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="22"/></w:rPr>'
+            f'<w:t>{od_vl}{(" Add. " + od_add) if od_add else ""}</w:t></w:r></w:p>'
+        )
+    if og_vl:
+        body_paras.append(
+            f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
+            f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="22"/></w:rPr>'
+            f'<w:t xml:space="preserve">OG : </w:t></w:r>'
+            f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="22"/></w:rPr>'
+            f'<w:t>{og_vl}{(" Add. " + og_add) if og_add else ""}</w:t></w:r></w:p>'
         )
 
-    header_row = (
-        f'<w:tr>'
-        f'<w:tc><w:tcPr><w:tcW w:w="2000"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t></w:t></w:r></w:p></w:tc>'
-        f'<w:tc><w:tcPr><w:tcW w:w="2800"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>OD</w:t></w:r></w:p></w:tc>'
-        f'<w:tc><w:tcPr><w:tcW w:w="2800"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>OG</w:t></w:r></w:p></w:tc>'
-        f'</w:tr>'
-    )
-
-    table = (
-        f'<w:tbl>'
-        f'<w:tblPr><w:tblStyle w:val="TableauGrille4"/><w:tblW w:w="7600" w:type="dxa"/>'
-        f'<w:tblBorders>'
-        f'<w:top w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
-        f'<w:left w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
-        f'<w:bottom w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
-        f'<w:right w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
-        f'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
-        f'<w:insideV w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
-        f'</w:tblBorders></w:tblPr>'
-        + header_row
-        + row('VL — Sphère',   val('lun_vl_od_sph'), val('lun_vl_og_sph'))
-        + row('VL — Cylindre', val('lun_vl_od_cyl'), val('lun_vl_og_cyl'))
-        + row('VL — Axe',      val('lun_vl_od_axe'), val('lun_vl_og_axe'))
-        + row('VP — Addition', val('lun_vp_od_add'), val('lun_vp_og_add'))
-        + f'</w:tbl>'
-    )
-
-    body_paras.append(f'<w:p><w:pPr><w:spacing w:before="240"/></w:pPr></w:p>')
-    body_paras.append(table)
-
-    # Écart pupillaire
-    ep_vl = val('lun_ep_vl')
-    ep_vp = val('lun_ep_vp')
-    if ep_vl or ep_vp:
-        ep_text = []
-        if ep_vl: ep_text.append(f'VL : {ep_vl} mm')
-        if ep_vp: ep_text.append(f'VP : {ep_vp} mm')
+    # DIP
+    dip = val('lun_dip')
+    if dip:
         body_paras.append(
-            f'<w:p><w:pPr><w:spacing w:before="160"/></w:pPr>'
-            f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
-            f'<w:t xml:space="preserve">Écart pupillaire — </w:t></w:r>'
+            f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
+            f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="22"/></w:rPr>'
+            f'<w:t xml:space="preserve">DIP : </w:t></w:r>'
+            f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="22"/></w:rPr>'
+            f'<w:t>{dip} mm</w:t></w:r></w:p>'
+        )
+
+    # Renouvelable
+    renouvelable = val('lun_renouvelable')
+    if renouvelable == 'oui':
+        body_paras.append(
+            f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
             f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
-            f'<w:t>{esc(" / ".join(ep_text))}</w:t></w:r></w:p>'
+            f'<w:t>Renouvelable pendant 2 ans</w:t></w:r></w:p>'
         )
 
     # Remarques
     remarques = d.get('lun_remarques', '') or ''
     if remarques:
-        body_paras.append(
-            f'<w:p><w:pPr><w:spacing w:before="160"/></w:pPr>'
-            f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
-            f'<w:t>Remarques :</w:t></w:r></w:p>'
-        )
         for ligne in remarques.split('\n'):
             body_paras.append(
                 f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
                 f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
                 f'<w:t xml:space="preserve">{esc(ligne)}</w:t></w:r></w:p>'
             )
+
+    # Mention légale
+    body_paras.append(f'<w:p><w:pPr><w:spacing w:before="320"/></w:pPr></w:p>')
+    for ligne_legale in [
+        "L'examen ne revêt pas un caractère médical.",
+        "La prochaine prescription de lunettes devra impérativement être réalisée par un ophtalmologiste."
+    ]:
+        body_paras.append(
+            f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
+            f'<w:r><w:rPr><w:i/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr>'
+            f'<w:t xml:space="preserve">{esc(ligne_legale)}</w:t></w:r></w:p>'
+        )
 
     # Signature
     body_paras.append(

@@ -193,17 +193,17 @@ with app.app_context():
             db.session.add(s)
             db.session.flush()
             champs = [
-                ('lun_vl_od_sph', 'VL OD — Sphère',    'text', 0),
-                ('lun_vl_od_cyl', 'VL OD — Cylindre',  'text', 1),
-                ('lun_vl_od_axe', 'VL OD — Axe',       'text', 2),
-                ('lun_vl_og_sph', 'VL OG — Sphère',    'text', 3),
-                ('lun_vl_og_cyl', 'VL OG — Cylindre',  'text', 4),
-                ('lun_vl_og_axe', 'VL OG — Axe',       'text', 5),
-                ('lun_vp_od_add', 'VP OD — Addition',  'text', 6),
-                ('lun_vp_og_add', 'VP OG — Addition',  'text', 7),
-                ('lun_ep_vl',     'Écart pupillaire VL','text', 8),
-                ('lun_ep_vp',     'Écart pupillaire VP','text', 9),
-                ('lun_remarques', 'Remarques',          'textarea', 10),
+                ('lun_vl_od_sph',    'VL OD — Sphère',    'text',     0),
+                ('lun_vl_od_cyl',    'VL OD — Cylindre',  'text',     1),
+                ('lun_vl_od_axe',    'VL OD — Axe',       'text',     2),
+                ('lun_vl_og_sph',    'VL OG — Sphère',    'text',     3),
+                ('lun_vl_og_cyl',    'VL OG — Cylindre',  'text',     4),
+                ('lun_vl_og_axe',    'VL OG — Axe',       'text',     5),
+                ('lun_vp_od_add',    'VP OD — Addition',  'text',     6),
+                ('lun_vp_og_add',    'VP OG — Addition',  'text',     7),
+                ('lun_dip',          'DIP (mm)',           'text',     8),
+                ('lun_renouvelable', 'Renouvelable',       'select',   9),
+                ('lun_remarques',    'Remarques',          'textarea', 10),
             ]
             for name, label, type_, ordre in champs:
                 db.session.add(ChampDef(section_id=s.id, name=name,
