@@ -1725,11 +1725,12 @@ def editer_ordonnance_lunettes_collabora(consultation_id):
     """Génère une ordonnance de lunettes et l'ouvre dans Collabora."""
     import os, shutil, uuid, urllib.parse
     c = Consultation.query.get_or_404(consultation_id)
-    praticien = current_user
-    cabinet = get_current_cabinet()
-    pc = PraticienCabinet.query.filter_by(
-        praticien_id=praticien.id,
-        cabinet_id=cabinet.id if cabinet else 0).first() if cabinet else None
+    praticien = c.praticien
+    cabinet   = c.cabinet
+    pc = None
+    if cabinet:
+        pc = PraticienCabinet.query.filter_by(
+            praticien_id=praticien.id, cabinet_id=cabinet.id).first()
 
     sec = next((s for s in c.sections if s.type == 'ordonnance_lunettes'), None)
     d = sec.get_donnees() if sec else {}
@@ -1992,11 +1993,12 @@ def editer_ordonnance_collabora(consultation_id, type_ordo):
     import os, shutil, uuid, urllib.parse
     c = Consultation.query.get_or_404(consultation_id)
     p = c.patient
-    praticien = current_user
-    cabinet = get_current_cabinet()
-    pc = PraticienCabinet.query.filter_by(
-        praticien_id=praticien.id,
-        cabinet_id=cabinet.id if cabinet else 0).first() if cabinet else None
+    praticien = c.praticien
+    cabinet   = c.cabinet
+    pc = None
+    if cabinet:
+        pc = PraticienCabinet.query.filter_by(
+            praticien_id=praticien.id, cabinet_id=cabinet.id).first()
 
     # Récupérer les données de la section ordonnance
     sec_ordo = next((s for s in c.sections if s.type == 'ordonnance'), None)
