@@ -76,6 +76,7 @@
                  onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border)'">
             <input type="radio" name="modele_id" value="{{ m.id }}"
                    style="accent-color:var(--accent);"
+                   {% if request.args.get('modele_id')|int == m.id %}checked{% endif %}
                    onchange="this.closest('form').querySelectorAll('label').forEach(l=>l.style.borderColor='var(--border)');
                              this.parentElement.style.borderColor='var(--accent)';
                              this.parentElement.style.background='var(--accent-lt)';">
@@ -147,7 +148,8 @@
           ou laissez vide et cochez "Écraser" pour remplacer l'existant.
           <div style="margin-top:8px;">
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-              <input type="checkbox" name="forcer" value="1">
+              <input type="checkbox" id="cb-forcer"
+                     onchange="document.getElementById('input-forcer').value = this.checked ? '1' : ''">
               Écraser le document existant
             </label>
           </div>
@@ -163,6 +165,11 @@
         </div>
       </div>
     </div>
+    {% if request.args.get('doublon') %}
+    <input type="hidden" name="doublon" value="{{ request.args.get('doublon') }}">
+    <input type="hidden" name="forcer" value="" id="input-forcer">
+    {% endif %}
+
     <button type="submit" class="btn btn-primary" {{ 'disabled' if not modeles }}>
       {{ '✉️' if type_doc == 'courrier' else '📋' }}
       {{ 'Rédiger le courrier' if type_doc == 'courrier' else "Rédiger l'ordonnance" }}
