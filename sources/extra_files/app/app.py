@@ -2897,17 +2897,15 @@ def editer_collabora(consultation_id):
         champ_name='wopi_doc',
         titre=nom_fichier
     ).first()
-    if doublon and not request.args.get('forcer', ''):
+    forcer = request.args.get('forcer', '')
+    if doublon and not forcer:
         # Rediriger vers generer_document avec avertissement
-        flash(f'Un document nommé "{nom_fichier}" existe déjà dans cette section. '
-              f'Modifiez le nom du document ou confirmez pour écraser.', 'warning')
         return redirect(url_for('generer_document',
                                 consultation_id=consultation_id,
                                 section=section_type,
                                 doublon=nom_fichier,
                                 modele_id=modele_id,
-                                **{k: v for k, v in request.args.items()
-                                   if k not in ['forcer']}))
+                                nom_document=nom_custom))
 
     docx_path = _generer_docx(c, modele, sections_sel)
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
