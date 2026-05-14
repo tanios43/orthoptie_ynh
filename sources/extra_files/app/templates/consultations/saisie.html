@@ -1165,6 +1165,52 @@ function ajouterSection(type, label) {
 // ── Supprimer une section ──
 function supprimerSection(idx) {
   const el = document.getElementById(`sec-wrap-${idx}`);
+  if (!el) return;
+
+  // Vérifier si la section a des pièces jointes
+  const wopiDocs = el.querySelectorAll('.wopi-doc-row');
+  const pjItems  = el.querySelectorAll('[id^="ficsec-"]');
+  const nbDocs   = wopiDocs.length + pjItems.length;
+
+  if (nbDocs > 0) {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:white;border-radius:12px;padding:28px 32px;
+                  max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.2);">
+        <div style="font-size:32px;text-align:center;margin-bottom:12px;">⚠️</div>
+        <h3 style="text-align:center;margin-bottom:10px;color:#e53e3e;">
+          Supprimer cette section ?
+        </h3>
+        <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px;">
+          Cette section contient <strong>${nbDocs} document${nbDocs > 1 ? 's' : ''}</strong>
+          qui ser${nbDocs > 1 ? 'ont' : 'a'} définitivement supprimé${nbDocs > 1 ? 's' : ''}
+          lors de la prochaine sauvegarde.
+        </p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button onclick="
+              this.closest('[style*=fixed]').remove();
+              _confirmerSupprimerSection(${idx});"
+              style="padding:8px 20px;background:#e53e3e;color:white;border:none;
+                     border-radius:6px;cursor:pointer;font-size:13px;">
+            Supprimer quand même
+          </button>
+          <button onclick="this.closest('[style*=fixed]').remove();"
+              style="padding:8px 20px;background:var(--surface);border:1px solid var(--border);
+                     border-radius:6px;cursor:pointer;font-size:13px;">
+            Annuler
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    return;
+  }
+
+  _confirmerSupprimerSection(idx);
+}
+
+function _confirmerSupprimerSection(idx) {
+  const el = document.getElementById(`sec-wrap-${idx}`);
   if (el) el.remove();
   renumeroter();
   if (!document.querySelector('#sections-container .bilan-section')) {

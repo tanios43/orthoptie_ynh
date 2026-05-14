@@ -829,8 +829,17 @@ def consultation_modifier(consultation_id):
         db.session.commit()
 
         # Mettre à jour section_ordre des FichierSection WOPI selon le type actuel
+        # et supprimer les fichiers orphelins (section supprimée du bilan)
+        types_actuels = {s.type for s in c.sections}
         for fic in FichierSection.query.filter_by(consultation_id=c.id, champ_name='wopi_doc').all():
-            if fic.section_type:
+            if fic.section_type and fic.section_type not in types_actuels:
+                # La section a été supprimée — supprimer le fichier
+                chemin = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', fic.nom_stocke)
+                if os.path.exists(chemin):
+                    try: os.remove(chemin)
+                    except: pass
+                db.session.delete(fic)
+            elif fic.section_type:
                 section = next((s for s in c.sections if s.type == fic.section_type), None)
                 if section:
                     fic.section_ordre = section.ordre
