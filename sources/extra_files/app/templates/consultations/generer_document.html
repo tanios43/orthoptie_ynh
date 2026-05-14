@@ -118,7 +118,10 @@
                        border-bottom:1px solid var(--border);cursor:pointer;">
           <input type="checkbox" name="sections_incluses[]" value="{{ sec.type }}"
                  style="width:15px;height:15px;accent-color:var(--accent);"
-                 {% if section_origine and sec.type == section_origine %}checked
+                 {% set selected = request.args.getlist('sections_incluses[]') %}
+                 {% if selected %}
+                   {% if sec.type in selected %}checked{% endif %}
+                 {% elif section_origine and sec.type == section_origine %}checked
                  {% elif not section_origine %}checked{% endif %}>
           <span style="font-size:13px;">{{ sec.label }}</span>
           {% if sec.observations %}

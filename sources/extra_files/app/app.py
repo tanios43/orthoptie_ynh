@@ -2899,13 +2899,15 @@ def editer_collabora(consultation_id):
     ).first()
     forcer = request.args.get('forcer', '')
     if doublon and not forcer:
-        # Rediriger vers generer_document avec avertissement
-        return redirect(url_for('generer_document',
-                                consultation_id=consultation_id,
-                                section=section_type,
-                                doublon=nom_fichier,
-                                modele_id=modele_id,
-                                nom_document=nom_custom))
+        # Récupérer les sections sélectionnées pour les repasser
+        sections_args = '&'.join(f'sections_incluses[]={s}' for s in sections_sel)
+        base_url = url_for('generer_document',
+                           consultation_id=consultation_id,
+                           section=section_type,
+                           doublon=nom_fichier,
+                           modele_id=modele_id,
+                           nom_document=nom_custom)
+        return redirect(f"{base_url}&{sections_args}")
 
     docx_path = _generer_docx(c, modele, sections_sel)
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
