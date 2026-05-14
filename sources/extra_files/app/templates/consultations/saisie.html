@@ -606,7 +606,67 @@ function renderSection(type, label, idx, titre, obs, donnees) {
 
   // Rendu spécial pour la section ordonnance
   let champsHTML = '';
-  if (type === 'ordonnance') {
+  if (type === 'ordonnance_lunettes') {
+    const consId = {{ consultation.id if consultation else 0 }};
+    const d = donnees;
+    champsHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:var(--accent-lt);">
+            <th style="padding:6px 10px;border:1px solid var(--accent);text-align:left;"></th>
+            <th style="padding:6px 10px;border:1px solid var(--accent);text-align:center;">OD</th>
+            <th style="padding:6px 10px;border:1px solid var(--accent);text-align:center;">OG</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:5px 10px;border:1px solid var(--border);font-weight:500;">VL — Sphère</td>
+            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_od_sph" value="${d.lun_vl_od_sph||''}" style="width:100%;font-size:12px;" placeholder="ex: +1.25" onchange="updateDonnees(${idx})"></td>
+            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_og_sph" value="${d.lun_vl_og_sph||''}" style="width:100%;font-size:12px;" placeholder="ex: +1.25" onchange="updateDonnees(${idx})"></td>
+          </tr>
+          <tr>
+            <td style="padding:5px 10px;border:1px solid var(--border);font-weight:500;">VL — Cylindre</td>
+            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_od_cyl" value="${d.lun_vl_od_cyl||''}" style="width:100%;font-size:12px;" placeholder="ex: -0.50" onchange="updateDonnees(${idx})"></td>
+            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_og_cyl" value="${d.lun_vl_og_cyl||''}" style="width:100%;font-size:12px;" placeholder="ex: -0.50" onchange="updateDonnees(${idx})"></td>
+          </tr>
+          <tr>
+            <td style="padding:5px 10px;border:1px solid var(--border);font-weight:500;">VL — Axe</td>
+            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_od_axe" value="${d.lun_vl_od_axe||''}" style="width:100%;font-size:12px;" placeholder="ex: 90°" onchange="updateDonnees(${idx})"></td>
+            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vl_og_axe" value="${d.lun_vl_og_axe||''}" style="width:100%;font-size:12px;" placeholder="ex: 90°" onchange="updateDonnees(${idx})"></td>
+          </tr>
+          <tr style="background:var(--bg);">
+            <td style="padding:5px 10px;border:1px solid var(--border);font-weight:500;">VP — Addition</td>
+            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vp_od_add" value="${d.lun_vp_od_add||''}" style="width:100%;font-size:12px;" placeholder="ex: +2.00" onchange="updateDonnees(${idx})"></td>
+            <td style="padding:3px 6px;border:1px solid var(--border);"><input type="text" name="champ__${idx}__lun_vp_og_add" value="${d.lun_vp_og_add||''}" style="width:100%;font-size:12px;" placeholder="ex: +2.00" onchange="updateDonnees(${idx})"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="field-grid field-grid-2" style="gap:10px;">
+        <div class="field-group">
+          <label class="field-label">Écart pupillaire VL (mm)</label>
+          <input type="text" name="champ__${idx}__lun_ep_vl" value="${d.lun_ep_vl||''}" placeholder="ex: 64" onchange="updateDonnees(${idx})">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Écart pupillaire VP (mm)</label>
+          <input type="text" name="champ__${idx}__lun_ep_vp" value="${d.lun_ep_vp||''}" placeholder="ex: 61" onchange="updateDonnees(${idx})">
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Remarques</label>
+        <textarea name="champ__${idx}__lun_remarques" rows="2" style="font-size:12px;" onchange="updateDonnees(${idx})">${d.lun_remarques||''}</textarea>
+      </div>
+
+      ${consId ? `<a href="/consultation/${consId}/ordonnance/lunettes/editer-collabora"
+         onclick="sauverAvantOrdo(event, this.href)"
+         style="display:inline-block;font-size:11px;color:white;padding:4px 10px;
+                border-radius:5px;background:var(--accent);text-decoration:none;">
+         📄 Générer l'ordonnance de lunettes</a>` : ''}
+    </div>`;
+
+  } else if (type === 'ordonnance') {
     const consId = {{ consultation.id if consultation else 0 }};
     const d = donnees;
     champsHTML = `
@@ -987,7 +1047,7 @@ function ajouterSection(type, label) {
   const idx = sectionIndex++;
 
   // Si nouveau bilan et section courrier/ordonnance : sauvegarder d'abord
-  if (!CONSULTATION_ID && (type === 'courrier' || type === 'ordonnance')) {
+  if (!CONSULTATION_ID && (type === 'courrier' || type === 'ordonnance' || type === 'ordonnance_lunettes')) {
     // Ajouter quand même la section visuellement
     const obsDefaut = (SECTIONS_DEF[type] && SECTIONS_DEF[type].obs_defaut) || '';
     const html = renderSection(type, label, idx, '', obsDefaut, {});

@@ -1531,6 +1531,23 @@ BUILTIN_SECTIONS = [
     ('prismes','Prismes — amplitudes de fusion',[('conv_loin','Convergence de loin (norme 30Δ)','select',['<10Δ','10-20Δ','20-30Δ','30-40Δ','>40Δ']),('conv_pres','Convergence de près (norme 40Δ)','select',['<10Δ','10-20Δ','20-40Δ','40-50Δ','>50Δ']),('div_loin','Divergence de loin (norme 8Δ)','select',['<4Δ','4-8Δ','8-12Δ','>12Δ']),('div_pres','Divergence de près (norme 12Δ)','select',['<6Δ','6-12Δ','12-16Δ','>16Δ'])]),
     ('facilites_accom',"Facilités d'accommodation",[('accom_cpm','Résultat (cpm)','select',['<3 cpm','3-5 cpm','5-8 cpm','8-10 cpm','>10 cpm','non réalisé']),('accom_lenteur','Lenteur en','select',['+','−','± égal','non précisé'])]),
     ('facilites_verg','Facilités de vergences',[('verg_cpm','Résultat (cpm) (norme 15±3)','select',['<6 cpm','6-9 cpm','9-12 cpm','12-15 cpm','15-18 cpm','>18 cpm','non réalisé'])]),
+    ('ordonnance_lunettes','Ordonnance de lunettes',[
+        # VL
+        ('lun_vl_od_sph',  'VL OD — Sphère',    'text', []),
+        ('lun_vl_od_cyl',  'VL OD — Cylindre',  'text', []),
+        ('lun_vl_od_axe',  'VL OD — Axe',       'text', []),
+        ('lun_vl_og_sph',  'VL OG — Sphère',    'text', []),
+        ('lun_vl_og_cyl',  'VL OG — Cylindre',  'text', []),
+        ('lun_vl_og_axe',  'VL OG — Axe',       'text', []),
+        # VP
+        ('lun_vp_od_add',  'VP OD — Addition',  'text', []),
+        ('lun_vp_og_add',  'VP OG — Addition',  'text', []),
+        # EP
+        ('lun_ep_vl',      'Écart pupillaire VL (mm)', 'text', []),
+        ('lun_ep_vp',      'Écart pupillaire VP (mm)', 'text', []),
+        # Remarques
+        ('lun_remarques',  'Remarques',          'textarea', []),
+    ]),
     ('conclusions','Conclusions',[('conclusions','Conclusions','textarea',[]),('recommandations','Recommandations','textarea',[])]),
     ('ordonnance','Ordonnances',[
         # Ortopad / Opticlude
@@ -1701,6 +1718,259 @@ def admin_document_blocs_reordonner():
 # ============================================================
 # GÉNÉRATION DE DOCUMENTS
 # ============================================================
+
+@app.route('/consultation/<int:consultation_id>/ordonnance/lunettes/editer-collabora')
+@login_required
+def editer_ordonnance_lunettes_collabora(consultation_id):
+    """Génère une ordonnance de lunettes et l'ouvre dans Collabora."""
+    import os, shutil, uuid, urllib.parse
+    c = Consultation.query.get_or_404(consultation_id)
+    praticien = current_user
+    cabinet = get_current_cabinet()
+    pc = PraticienCabinet.query.filter_by(
+        praticien_id=praticien.id,
+        cabinet_id=cabinet.id if cabinet else 0).first() if cabinet else None
+
+    sec = next((s for s in c.sections if s.type == 'ordonnance_lunettes'), None)
+    d = sec.get_donnees() if sec else {}
+
+    nom_doc = f"{c.patient.nom}_{c.patient.prenom}_{c.date_consult.strftime('%Y%m%d')}_Lunettes.docx"
+    docx_path = _generer_ordonnance_lunettes_docx(c, praticien, cabinet, pc, d)
+
+    wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
+    os.makedirs(wopi_dir, exist_ok=True)
+    permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
+    shutil.copy2(docx_path, permanent_path)
+
+    section_ordre = sec.ordre if sec else 0
+    token = _wopi_token_for(consultation_id, 'ordonnance_lunettes',
+                            permanent_path, nom_doc, section_ordre=section_ordre)
+
+    wopi_src = f"{WOPI_BASE_URL}/wopi/files/{token}"
+    collabora_action_url = _get_collabora_url(nom_doc)
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}"
+    editor_url = editor_url.replace('?&', '?').replace('&&', '&')
+
+    return render_template('consultations/collabora_editor.html',
+                           consultation=c,
+                           editor_url=editor_url,
+                           nom_fichier=nom_doc,
+                           token=token,
+                           section_type='ordonnance_lunettes',
+                           collabora_url=COLLABORA_URL)
+
+
+def _generer_ordonnance_lunettes_docx(consultation, praticien, cabinet, pc, d):
+    """Génère un docx d'ordonnance de lunettes."""
+    import zipfile, re, tempfile, os
+    p = consultation.patient
+    esc = lambda s: (s or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    entete_path = os.path.join(app.root_path, 'entete.docx')
+    tmpdir = tempfile.mkdtemp()
+
+    with zipfile.ZipFile(entete_path, 'r') as z:
+        doc_xml = z.read('word/document.xml').decode('utf-8')
+
+    # Substitutions cabinet/praticien
+    cab_rue     = (cabinet.rue or '') if cabinet else ''
+    cab_cp_comm = f"{(cabinet.code_postal or '')} {(cabinet.commune or '')}".strip() if cabinet else ''
+    cab_commune = (cabinet.commune or 'Yssingeaux') if cabinet else 'Yssingeaux'
+    cab_tel     = (cabinet.telephone or '') if cabinet else ''
+    cab_email   = (cabinet.email or '') if cabinet else ''
+    adeli       = (pc.adeli if pc else '') or ''
+    forme       = (pc.forme_juridique if pc else '') or ''
+    prat_nom    = f"{praticien.prenom} {praticien.nom}"
+    prat_rpps   = praticien.rpps or ''
+    prat_titre  = praticien.titre or 'Orthoptiste'
+    date_str    = consultation.date_consult.strftime('%d/%m/%Y')
+    pat_nom     = f'{p.prenom} {p.nom}'
+    pat_ddn     = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
+
+    def sub(xml, old, new):
+        return xml.replace(old, esc(new)) if old in xml else xml
+
+    doc_xml = sub(doc_xml, '130, Boulevard de la Paix', cab_rue)
+    doc_xml = doc_xml.replace(
+        '<w:p><w:pPr><w:pStyle w:val="Header"/><w:rPr><w:color w:themeColor="text1" w:val="000000"/></w:rPr></w:pPr><w:r><w:rPr><w:color w:themeColor="text1" w:val="000000"/></w:rPr><w:t>Résidence les jardinières</w:t></w:r></w:p>', '')
+    doc_xml = sub(doc_xml, '43200 Yssingeaux', cab_cp_comm)
+    doc_xml = sub(doc_xml, '04 71 59 01 38', cab_tel)
+    doc_xml = sub(doc_xml, 'orthoptistes-yssingeaux@outlook.fr', cab_email)
+    doc_xml = sub(doc_xml, 'ADELI\xa0: 439287145', f'ADELI : {adeli}' if adeli else '')
+    doc_xml = sub(doc_xml, 'RPPS\xa0: 10010253291', f'RPPS : {prat_rpps}' if prat_rpps else '')
+    doc_xml = sub(doc_xml, 'SELARL', forme)
+    doc_xml = sub(doc_xml, ' Cyprien Nesme', f' {prat_nom}')
+    doc_xml = sub(doc_xml, 'ORTHOPTISTE', prat_titre)
+    doc_xml = sub(doc_xml, 'Prise de rendez-vous sur Doctolib', '')
+    doc_xml = doc_xml.replace(
+        f'A\xa0Yssingeaux, le </w:t></w:r><w:bookmarkEnd w:id="0"/>',
+        f'A\xa0{esc(cab_commune)}, le {date_str}</w:t></w:r><w:bookmarkEnd w:id="0"/>'
+    )
+
+    # SDT Nom + DDN
+    doc_xml = re.sub(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Nom"/>.*?<w:sdtContent>.*?</w:sdtContent></w:sdt>',
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{esc(pat_nom)}</w:t></w:r>',
+        doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Pr[eé]nom"/>.*?</w:sdt>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = doc_xml.replace('DDN : </w:t></w:r>',
+                              f'DDN : {esc(pat_ddn)}</w:t></w:r>')
+    doc_xml = re.sub(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Commentaires ".*?<w:sdtContent>.*?</w:sdtContent></w:sdt>',
+        '<w:r><w:t></w:t></w:r>', doc_xml, flags=re.DOTALL)
+
+    # Supprimer âge, classe, médecin
+    doc_xml = re.sub(r'<w:tab/><w:t xml:space="preserve">Âge\s*:\s*</w:t>.*?<w:t xml:space="preserve">Classe\s*:\s*</w:t>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?[Mm]édecin(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
+
+    # Titre
+    doc_xml = doc_xml.replace('<w:t>BILAN ORTHOPTIQUE</w:t>',
+                              '<w:t>ORDONNANCE DE LUNETTES</w:t>')
+
+    # Corps — tableau VL/VP
+    def val(k): return esc(d.get(k, '') or '')
+
+    body_paras = []
+
+    # Tableau OD/OG
+    def row(label, od, og):
+        return (
+            f'<w:tr>'
+            f'<w:tc><w:tcPr><w:tcW w:w="2000"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>{esc(label)}</w:t></w:r></w:p></w:tc>'
+            f'<w:tc><w:tcPr><w:tcW w:w="2800"/></w:tcPr><w:p><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>{od}</w:t></w:r></w:p></w:tc>'
+            f'<w:tc><w:tcPr><w:tcW w:w="2800"/></w:tcPr><w:p><w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>{og}</w:t></w:r></w:p></w:tc>'
+            f'</w:tr>'
+        )
+
+    header_row = (
+        f'<w:tr>'
+        f'<w:tc><w:tcPr><w:tcW w:w="2000"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t></w:t></w:r></w:p></w:tc>'
+        f'<w:tc><w:tcPr><w:tcW w:w="2800"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>OD</w:t></w:r></w:p></w:tc>'
+        f'<w:tc><w:tcPr><w:tcW w:w="2800"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="18"/></w:rPr><w:t>OG</w:t></w:r></w:p></w:tc>'
+        f'</w:tr>'
+    )
+
+    table = (
+        f'<w:tbl>'
+        f'<w:tblPr><w:tblStyle w:val="TableauGrille4"/><w:tblW w:w="7600" w:type="dxa"/>'
+        f'<w:tblBorders>'
+        f'<w:top w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
+        f'<w:left w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
+        f'<w:bottom w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
+        f'<w:right w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
+        f'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
+        f'<w:insideV w:val="single" w:sz="4" w:space="0" w:color="4472C4"/>'
+        f'</w:tblBorders></w:tblPr>'
+        + header_row
+        + row('VL — Sphère',   val('lun_vl_od_sph'), val('lun_vl_og_sph'))
+        + row('VL — Cylindre', val('lun_vl_od_cyl'), val('lun_vl_og_cyl'))
+        + row('VL — Axe',      val('lun_vl_od_axe'), val('lun_vl_og_axe'))
+        + row('VP — Addition', val('lun_vp_od_add'), val('lun_vp_og_add'))
+        + f'</w:tbl>'
+    )
+
+    body_paras.append(f'<w:p><w:pPr><w:spacing w:before="240"/></w:pPr></w:p>')
+    body_paras.append(table)
+
+    # Écart pupillaire
+    ep_vl = val('lun_ep_vl')
+    ep_vp = val('lun_ep_vp')
+    if ep_vl or ep_vp:
+        ep_text = []
+        if ep_vl: ep_text.append(f'VL : {ep_vl} mm')
+        if ep_vp: ep_text.append(f'VP : {ep_vp} mm')
+        body_paras.append(
+            f'<w:p><w:pPr><w:spacing w:before="160"/></w:pPr>'
+            f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
+            f'<w:t xml:space="preserve">Écart pupillaire — </w:t></w:r>'
+            f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
+            f'<w:t>{esc(" / ".join(ep_text))}</w:t></w:r></w:p>'
+        )
+
+    # Remarques
+    remarques = d.get('lun_remarques', '') or ''
+    if remarques:
+        body_paras.append(
+            f'<w:p><w:pPr><w:spacing w:before="160"/></w:pPr>'
+            f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
+            f'<w:t>Remarques :</w:t></w:r></w:p>'
+        )
+        for ligne in remarques.split('\n'):
+            body_paras.append(
+                f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
+                f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
+                f'<w:t xml:space="preserve">{esc(ligne)}</w:t></w:r></w:p>'
+            )
+
+    # Signature
+    body_paras.append(
+        f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="480"/></w:pPr>'
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr>'
+        f'<w:t>{esc(prat_nom)}</w:t></w:r></w:p>'
+    )
+
+    doc_xml = doc_xml.replace('</w:body>', '\n'.join(body_paras) + '</w:body>')
+
+    # Signature image
+    sig_path = praticien.signature if praticien.signature else None
+    sig_img_data = None
+    sig_ext = None
+    sig_rel_id = None
+    if sig_path and os.path.exists(sig_path):
+        with open(sig_path, 'rb') as sf:
+            sig_img_data = sf.read()
+        sig_ext = sig_path.rsplit('.', 1)[-1].lower()
+        sig_rel_id = 'rIdSig1'
+        try:
+            from PIL import Image as PILImage
+            import io as _io
+            img = PILImage.open(_io.BytesIO(sig_img_data))
+            img_w, img_h = img.size
+            cx = 1800000
+            cy = int(cx * img_h / img_w)
+        except Exception:
+            cx, cy = 1800000, 900000
+        sig_para = (
+            f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="120"/></w:pPr>'
+            f'<w:r><w:rPr/><w:drawing>'
+            f'<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+            f'<wp:extent cx="{cx}" cy="{cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/>'
+            f'<wp:docPr id="1" name="signature"/>'
+            f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+            f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            f'<pic:nvPicPr><pic:cNvPr id="1" name="signature"/><pic:cNvPicPr/></pic:nvPicPr>'
+            f'<pic:blipFill>'
+            f'<a:blip r:embed="{sig_rel_id}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+            f'<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+            f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+            f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+            f'</pic:pic></a:graphicData></a:graphic>'
+            f'</wp:inline></w:drawing></w:r></w:p>'
+        )
+        doc_xml = doc_xml.replace('</w:body>', sig_para + '</w:body>')
+
+    new_out = os.path.join(tmpdir, 'final_lunettes.docx')
+    with zipfile.ZipFile(entete_path, 'r') as zin:
+        with zipfile.ZipFile(new_out, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                if item.filename == 'word/document.xml':
+                    zout.writestr(item, doc_xml.encode('utf-8'))
+                elif item.filename == 'word/_rels/document.xml.rels' and sig_img_data:
+                    rels = zin.read(item.filename).decode('utf-8')
+                    rels = rels.replace('</Relationships>',
+                        f'<Relationship Id="{sig_rel_id}" '
+                        f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+                        f'Target="media/signature.{sig_ext}"/></Relationships>')
+                    zout.writestr(item, rels.encode('utf-8'))
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+            if sig_img_data:
+                zout.writestr(f'word/media/signature.{sig_ext}', sig_img_data)
+
+    return new_out
+
 
 @app.route('/consultation/<int:consultation_id>/ordonnance/<type_ordo>/editer-collabora')
 @login_required

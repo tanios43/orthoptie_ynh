@@ -184,4 +184,35 @@ with app.app_context():
     except Exception as e:
         print(f"ERREUR  : section ordonnance — {e}")
 
+    # Section ordonnance_lunettes
+    try:
+        existing = SectionDef.query.filter_by(type_key='ordonnance_lunettes').first()
+        if not existing:
+            s = SectionDef(type_key='ordonnance_lunettes', label='Ordonnance de lunettes',
+                           ordre=21, builtin=True, actif=True, avec_observations=False)
+            db.session.add(s)
+            db.session.flush()
+            champs = [
+                ('lun_vl_od_sph', 'VL OD — Sphère',    'text', 0),
+                ('lun_vl_od_cyl', 'VL OD — Cylindre',  'text', 1),
+                ('lun_vl_od_axe', 'VL OD — Axe',       'text', 2),
+                ('lun_vl_og_sph', 'VL OG — Sphère',    'text', 3),
+                ('lun_vl_og_cyl', 'VL OG — Cylindre',  'text', 4),
+                ('lun_vl_og_axe', 'VL OG — Axe',       'text', 5),
+                ('lun_vp_od_add', 'VP OD — Addition',  'text', 6),
+                ('lun_vp_og_add', 'VP OG — Addition',  'text', 7),
+                ('lun_ep_vl',     'Écart pupillaire VL','text', 8),
+                ('lun_ep_vp',     'Écart pupillaire VP','text', 9),
+                ('lun_remarques', 'Remarques',          'textarea', 10),
+            ]
+            for name, label, type_, ordre in champs:
+                db.session.add(ChampDef(section_id=s.id, name=name,
+                                        label=label, type=type_, ordre=ordre))
+            db.session.commit()
+            print("OK      : section ordonnance_lunettes créée")
+        else:
+            print("Present : section ordonnance_lunettes")
+    except Exception as e:
+        print(f"ERREUR  : section ordonnance_lunettes — {e}")
+
     print("\nMigration terminee.")
