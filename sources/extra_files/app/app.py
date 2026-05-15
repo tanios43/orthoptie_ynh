@@ -2621,6 +2621,31 @@ def _generer_docx(consultation, modele, sections_incluses):
             if og_p: og_str += f'  près : {og_p}'
             if og_str: lignes.append(('OG', og_str.strip()))
 
+        elif sec.type == 'ordonnance_lunettes':
+            def fmt_lun(sph, cyl, axe):
+                if not sph: return ''
+                r = fmt_sph(sph)
+                if cyl: r += f'({fmt_sph(cyl)})'
+                if axe: r += f'{axe}°'
+                return r
+            od_vl = fmt_lun(d.get('lun_vl_od_sph',''), d.get('lun_vl_od_cyl',''), d.get('lun_vl_od_axe',''))
+            og_vl = fmt_lun(d.get('lun_vl_og_sph',''), d.get('lun_vl_og_cyl',''), d.get('lun_vl_og_axe',''))
+            od_add = fmt_sph(d.get('lun_vp_od_add',''))
+            og_add = fmt_sph(d.get('lun_vp_og_add',''))
+            dip = d.get('lun_dip','')
+            renouv = d.get('lun_renouvelable','')
+            if od_vl:
+                od_line = f'OD : {od_vl}'
+                if od_add: od_line += f'   Add {od_add}'
+                lignes.append(('', od_line))
+            if og_vl:
+                og_line = f'OG : {og_vl}'
+                if og_add: og_line += f'   Add {og_add}'
+                lignes.append(('', og_line))
+            if dip: lignes.append(('DIP', f'{dip} mm'))
+            if renouv == 'oui': lignes.append(('', 'Renouvelable 2 ans'))
+            elif renouv: lignes.append(('', 'Non renouvelable'))
+
         else:
             # Cas général
             champs = sections_db.get(sec.type, {}).get('champs', [])
