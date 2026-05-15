@@ -20,6 +20,7 @@
 {% block topbar_actions %}
   <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
   <a href="{{ url_for('patient_modifier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">✎ Modifier</a>
+  <a href="{{ url_for('patient_dossier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm" target="_blank">🖨 Imprimer le dossier</a>
   <a href="{{ url_for('consultation_nouvelle', patient_id=patient.id) }}" class="btn btn-primary btn-sm">+ Nouveau bilan</a>
 {% endblock %}
 
@@ -69,6 +70,13 @@
           <div class="text-sm">{{ patient.notes_admin }}</div>
         </div>
         {% endif %}
+
+        <div style="margin-top:14px;">
+          <a href="{{ url_for('patient_modifier', patient_id=patient.id) }}"
+             class="btn btn-secondary btn-sm" style="width:100%;text-align:center;">
+            ✎ Modifier les données administratives
+          </a>
+        </div>
       </div>
     </div>
   </div>

@@ -568,9 +568,31 @@ def patient_nouveau():
     return render_template('patients/edition.html', patient=None)
 
 
-@app.route('/patient/<int:patient_id>')
+@app.route('/patient/<int:patient_id>/dossier')
 @login_required
-def patient_detail(patient_id):
+def patient_dossier(patient_id):
+    """Page d'impression du dossier patient complet."""
+    patient = Patient.query.get_or_404(patient_id)
+    sections, _ = get_sections()
+    cabinet = get_current_cabinet()
+    pc = None
+    if cabinet:
+        pc = PraticienCabinet.query.filter_by(
+            praticien_id=current_user.id, cabinet_id=cabinet.id).first()
+    consultations = Consultation.query.filter_by(patient_id=patient_id)\
+        .order_by(Consultation.date_consult.desc()).all()
+    from datetime import datetime
+    return render_template('patients/dossier_print.html',
+                           patient=patient,
+                           consultations=consultations,
+                           sections=sections,
+                           cabinet=cabinet,
+                           pc=pc,
+                           praticien=current_user,
+                           now=datetime.today())
+
+
+
     patient = Patient.query.get_or_404(patient_id)
     sections, _ = get_sections()
     log_action('lecture_patient', patient_id=patient_id)

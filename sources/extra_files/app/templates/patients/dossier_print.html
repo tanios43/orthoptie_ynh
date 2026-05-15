@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Dossier — {{ patient.prenom }} {{ patient.nom }}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Verdana, sans-serif; font-size: 11px; color: #111; background: white; }
+
+    /* En-tête cabinet */
+    .entete {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      border-bottom: 2px solid #4472C4; padding-bottom: 10px; margin-bottom: 16px;
+    }
+    .entete-cabinet { font-size: 10px; color: #555; line-height: 1.6; }
+    .entete-praticien { text-align: right; font-size: 10px; color: #555; line-height: 1.6; }
+    .entete-praticien strong { font-size: 13px; color: #111; }
+
+    /* Titre patient */
+    .patient-header {
+      background: #DAE9F7; padding: 10px 14px; border-radius: 6px;
+      margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .patient-header h1 { font-size: 16px; font-weight: 700; }
+    .patient-header .meta { font-size: 10px; color: #555; text-align: right; }
+
+    /* Données administratives */
+    .section-admin { margin-bottom: 16px; }
+    .section-admin h2 { font-size: 12px; font-weight: 700; color: #4472C4;
+      border-bottom: 1px solid #DAE9F7; padding-bottom: 4px; margin-bottom: 8px; }
+    .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; }
+    .admin-row { display: flex; gap: 6px; font-size: 10px; padding: 3px 0;
+      border-bottom: 1px solid #f0f0f0; }
+    .admin-label { color: #888; min-width: 90px; flex-shrink: 0; }
+    .admin-value { font-weight: 500; }
+
+    /* Bilan */
+    .bilan { margin-bottom: 20px; page-break-inside: avoid; }
+    .bilan-header {
+      background: #4472C4; color: white; padding: 7px 12px; border-radius: 5px 5px 0 0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .bilan-header .motif { font-size: 12px; font-weight: 700; }
+    .bilan-header .date { font-size: 10px; opacity: .85; }
+    .bilan-body { border: 1px solid #DAE9F7; border-top: none; border-radius: 0 0 5px 5px;
+      padding: 10px 12px; }
+
+    /* Section dans le bilan */
+    .sec { margin-bottom: 10px; }
+    .sec-title { font-size: 10px; font-weight: 700; color: #4472C4;
+      text-transform: uppercase; letter-spacing: .4px;
+      border-bottom: 1px solid #eef3fb; padding-bottom: 3px; margin-bottom: 6px; }
+    .sec-obs { font-style: italic; color: #666; margin-bottom: 4px; font-size: 10px; }
+    .sec-ligne { display: flex; gap: 6px; font-size: 10px; padding: 2px 0; }
+    .sec-label { color: #888; min-width: 100px; flex-shrink: 0; }
+    .sec-val { font-weight: 500; }
+    .sec-valonly { font-size: 10px; padding: 2px 0; }
+
+    /* Séparateur de page */
+    .page-break { page-break-before: always; }
+
+    /* Boutons - cachés à l'impression */
+    .no-print { margin-bottom: 16px; display: flex; gap: 10px; }
+    @media print {
+      .no-print { display: none !important; }
+      body { font-size: 10px; }
+      .bilan { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div style="max-width:900px;margin:0 auto;padding:20px;">
+
+  <!-- Boutons (cachés à l'impression) -->
+  <div class="no-print">
+    <button onclick="window.print()"
+            style="padding:8px 20px;background:#4472C4;color:white;border:none;
+                   border-radius:6px;cursor:pointer;font-size:13px;">
+      🖨 Imprimer
+    </button>
+    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}"
+       style="padding:8px 20px;background:#f0f0f0;color:#333;border:1px solid #ccc;
+              border-radius:6px;cursor:pointer;font-size:13px;text-decoration:none;">
+      ← Retour
+    </a>
+  </div>
+
+  <!-- En-tête cabinet -->
+  {% if cabinet %}
+  <div class="entete">
+    <div class="entete-cabinet">
+      {% if cabinet.forme_juridique %}<strong>{{ cabinet.forme_juridique }}</strong><br>{% endif %}
+      {% if cabinet.rue %}{{ cabinet.rue }}<br>{% endif %}
+      {% if cabinet.code_postal or cabinet.commune %}{{ cabinet.code_postal }} {{ cabinet.commune }}<br>{% endif %}
+      {% if cabinet.telephone %}Tél : {{ cabinet.telephone }}<br>{% endif %}
+      {% if cabinet.email %}{{ cabinet.email }}{% endif %}
+    </div>
+    <div class="entete-praticien">
+      <strong>{{ praticien.titre or 'Orthoptiste' }} {{ praticien.prenom }} {{ praticien.nom }}</strong><br>
+      {% if pc and pc.adeli %}ADELI : {{ pc.adeli }}<br>{% endif %}
+      {% if praticien.rpps %}RPPS : {{ praticien.rpps }}{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- En-tête patient -->
+  <div class="patient-header">
+    <div>
+      <h1>{{ patient.prenom }} {{ patient.nom }}</h1>
+      <div style="font-size:10px;color:#555;margin-top:2px;">
+        Dossier imprimé le {{ now.strftime('%d/%m/%Y') if now else '' }}
+      </div>
+    </div>
+    <div class="meta">
+      {% if patient.date_naissance %}
+        Né(e) le {{ patient.date_naissance.strftime('%d/%m/%Y') }}<br>
+        {{ patient.age }}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Données administratives -->
+  <div class="section-admin">
+    <h2>📋 Données administratives</h2>
+    <div class="admin-grid">
+      {% macro arow(label, value) %}
+        {% if value %}
+        <div class="admin-row">
+          <span class="admin-label">{{ label }}</span>
+          <span class="admin-value">{{ value }}</span>
+        </div>
+        {% endif %}
+      {% endmacro %}
+      {{ arow('Sexe', patient.sexe) }}
+      {{ arow('Téléphone', patient.telephone) }}
+      {{ arow('Email', patient.email) }}
+      {{ arow('Adresse', patient.rue) }}
+      {% if patient.code_postal or patient.commune %}
+      <div class="admin-row">
+        <span class="admin-label">Ville</span>
+        <span class="admin-value">{{ patient.code_postal }} {{ patient.commune }}</span>
+      </div>
+      {% endif %}
+      {{ arow('Médecin', patient.medecin_referent) }}
+      {% if patient.num_secu %}
+      <div class="admin-row">
+        <span class="admin-label">N° Sécu</span>
+        <span class="admin-value">••••••••••• {{ patient.num_secu[-2:] }}</span>
+      </div>
+      {% endif %}
+    </div>
+    {% if patient.notes_admin %}
+    <div style="margin-top:8px;padding:8px;background:#f8f8f8;border-radius:4px;font-size:10px;">
+      <span style="color:#888;font-weight:600;">Notes : </span>{{ patient.notes_admin }}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Bilans -->
+  {% for c in consultations %}
+  <div class="bilan">
+    <div class="bilan-header">
+      <span class="motif">{{ c.motif or 'Bilan orthoptique' }}</span>
+      <span class="date">
+        {{ age_a_la_date(patient.date_naissance, c.date_consult) }} —
+        {{ c.date_consult.strftime('%d/%m/%Y') }}
+        {% if c.praticien %} — {{ c.praticien.prenom }} {{ c.praticien.nom }}{% endif %}
+      </span>
+    </div>
+    <div class="bilan-body">
+      {% if c.sections %}
+        {% for sec in c.sections | sort(attribute='ordre') %}
+          {% if sec.type not in ['courrier', 'ordonnance', 'ordonnance_lunettes'] %}
+          {% set d = sec.get_donnees() %}
+          {% set sdef = sections.get(sec.type) %}
+          <div class="sec">
+            <div class="sec-title">{{ sec.label or (sdef.label if sdef else sec.type) }}</div>
+            {% if sec.observations %}
+            <div class="sec-obs">{{ sec.observations }}</div>
+            {% endif %}
+            {% if sdef %}
+              {% for champ in sdef.champs %}
+                {% if champ.type != 'fichier' and d.get(champ.name) %}
+                  <div class="sec-ligne">
+                    {% if champ.label %}<span class="sec-label">{{ champ.label }}</span>{% endif %}
+                    <span class="sec-val">{{ d[champ.name] }}</span>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              {% for k, v in d.items() %}
+                {% if v %}
+                <div class="sec-valonly">{{ v }}</div>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div style="color:#aaa;font-size:10px;font-style:italic;">Bilan sans sections</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+</body>
+</html>
