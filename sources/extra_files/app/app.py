@@ -568,6 +568,13 @@ def patient_nouveau():
     return render_template('patients/edition.html', patient=None)
 
 
+@app.route('/patient/<int:patient_id>')
+@login_required
+def patient_detail(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    return render_template('patients/fiche.html', patient=patient)
+
+
 @app.route('/patient/<int:patient_id>/dossier')
 @login_required
 def patient_dossier(patient_id):
