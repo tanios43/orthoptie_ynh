@@ -572,7 +572,8 @@ def patient_nouveau():
 @login_required
 def patient_detail(patient_id):
     patient = Patient.query.get_or_404(patient_id)
-    return render_template('patients/fiche.html', patient=patient)
+    sections, _ = get_sections()
+    return render_template('patients/fiche.html', patient=patient, sections_def=sections)
 
 
 @app.route('/patient/<int:patient_id>/dossier')
