@@ -2,6 +2,10 @@
 Script de migration — exécutez après chaque mise à jour de app.py.
 Lance avec : python migrate.py
 """
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning, module='flask_sqlalchemy')
+warnings.filterwarnings('ignore', message='.*already contains a class.*')
+
 from app import db, app, SectionDef, ChampDef
 
 with app.app_context():
