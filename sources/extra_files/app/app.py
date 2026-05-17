@@ -42,7 +42,7 @@ def log_acces(action, patient_id=None, consultation_id=None, detail=''):
         ))
         db.session.commit()
     except Exception:
-        pass
+        db.session.rollback()
 
 
 @app.template_global()

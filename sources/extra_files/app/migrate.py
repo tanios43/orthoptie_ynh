@@ -146,6 +146,22 @@ with app.app_context():
     except Exception as e:
         print(f"Present/ERREUR journal_acces : {e}")
 
+    # Colonnes manquantes sur journal_acces
+    for col, typedef in [('detail', "VARCHAR(500) DEFAULT ''"),
+                         ('ip_address', "VARCHAR(50) DEFAULT ''"),
+                         ('consultation_id', 'INTEGER')]:
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text(f"ALTER TABLE journal_acces ADD COLUMN {col} {typedef}"))
+                conn.commit()
+            print(f"OK      : journal_acces.{col} ajouté")
+        except Exception as e:
+            msg = str(e).lower()
+            if 'duplicate column' in msg or 'already exists' in msg:
+                print(f"Present : journal_acces.{col}")
+            else:
+                print(f"ERREUR  : journal_acces.{col} — {e}")
+
     # signature sur praticien
     try:
         with db.engine.connect() as conn:
