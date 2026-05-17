@@ -624,6 +624,7 @@ function getSectionColor(type) {
 }
 
 
+function renderSection(type, label, idx, titre, obs, donnees) {
   const def = SECTIONS_DEF[type];
   if (!def) return null;
   donnees = donnees || {};
