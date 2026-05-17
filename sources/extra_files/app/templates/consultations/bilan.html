@@ -107,15 +107,38 @@
     </div>
   </div>
 
+{%- set SECTION_COLORS = {
+  'anam':              {'bg':'#F1EFE8','color':'#444441','icon':'📋'},
+  'correction_portee': {'bg':'#EEEDFE','color':'#3C3489','icon':'👁'},
+  'refraction_obj':    {'bg':'#EEEDFE','color':'#3C3489','icon':'👁'},
+  'refraction_subj':   {'bg':'#EEEDFE','color':'#3C3489','icon':'👁'},
+  'acuite':            {'bg':'#EAF3DE','color':'#27500A','icon':'🎯'},
+  'swaine':            {'bg':'#EAF3DE','color':'#27500A','icon':'🎯'},
+  'stereoscopie':      {'bg':'#FAEEDA','color':'#633806','icon':'🔮'},
+  'cover':             {'bg':'#FAECE7','color':'#712B13','icon':'↔'},
+  'motilite':          {'bg':'#FAECE7','color':'#712B13','icon':'↔'},
+  'ppc':               {'bg':'#FAECE7','color':'#712B13','icon':'↔'},
+  'facilites_accom':   {'bg':'#FAECE7','color':'#712B13','icon':'↔'},
+  'facilites_verg':    {'bg':'#FAECE7','color':'#712B13','icon':'↔'},
+  'conclusions':       {'bg':'#E1F5EE','color':'#085041','icon':'📝'},
+  'ordonnance':        {'bg':'#FBEAF0','color':'#72243E','icon':'💊'},
+  'ordonnance_lunettes':{'bg':'#FBEAF0','color':'#72243E','icon':'👓'},
+  'courrier':          {'bg':'#E6F1FB','color':'#0C447C','icon':'✉'},
+} -%}
+
   {# Sections du bilan #}
   {% for sec in c.sections %}
     {% set d = sec.get_donnees() %}
     {% set def = sections_def.get(sec.type, {}) %}
+    {% set col = SECTION_COLORS.get(sec.type, {'bg':'#F1EFE8','color':'#444441','icon':'📄'}) %}
 
-    <div class="card" style="margin-bottom:12px;">
-      <div class="card-header">
-        <span class="bilan-section-num" style="margin-right:8px;">{{ loop.index }}</span>
-        <h2>{{ sec.label }}{% if sec.titre %} — <span style="font-weight:400;color:var(--muted);">{{ sec.titre }}</span>{% endif %}</h2>
+    <div class="card" style="margin-bottom:12px;overflow:hidden;">
+      <div class="card-header" style="background:{{ col.bg }};color:{{ col.color }};border-bottom:1px solid rgba(0,0,0,.08);">
+        <span style="background:rgba(0,0,0,.1);color:{{ col.color }};border-radius:50%;
+                     width:20px;height:20px;display:inline-flex;align-items:center;
+                     justify-content:center;font-size:11px;font-weight:600;margin-right:8px;">{{ loop.index }}</span>
+        <span style="margin-right:6px;">{{ col.icon }}</span>
+        <h2 style="color:{{ col.color }};">{{ sec.label }}{% if sec.titre %} — <span style="font-weight:400;opacity:.7;">{{ sec.titre }}</span>{% endif %}</h2>
       </div>
       <div class="card-body">
 
