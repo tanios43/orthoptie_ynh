@@ -1584,7 +1584,7 @@ function copierDepuisRefraction(idxLunettes) {
 
     btns += `<button type="button" onclick="
         _appliquerRefraction(${idxLunettes}, ${si});
-        document.getElementById('modal-refraction-sel').remove();"
+        this.closest('#modal-refraction-sel').remove();"
         style="display:block;width:100%;padding:10px 14px;margin-bottom:8px;
                background:var(--accent-lt);border:1px solid var(--accent);
                border-radius:7px;cursor:pointer;font-size:12px;text-align:left;
