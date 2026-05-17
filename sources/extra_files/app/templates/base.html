@@ -390,6 +390,10 @@
        class="nav-item {% if request.endpoint == 'admin_sauvegarde' %}active{% endif %}">
       <span class="icon">💾</span> Sauvegardes
     </a>
+    <a href="{{ url_for('admin_journal') }}"
+       class="nav-item {% if request.endpoint == 'admin_journal' %}active{% endif %}">
+      <span class="icon">🔒</span> Journal RGPD
+    </a>
     {% endif %}
   </nav>
 
@@ -458,4 +462,44 @@ function toggleSection(id) {
 </script>
 {% block scripts %}{% endblock %}
 </body>
+{% if current_user.is_authenticated %}
+<script>
+// Ping toutes les 4 minutes pour maintenir la session active
+const SESSION_PING_INTERVAL = 4 * 60 * 1000;
+const SESSION_TIMEOUT = 30 * 60 * 1000;
+let lastActivity = Date.now();
+let pingTimer = setInterval(sendPing, SESSION_PING_INTERVAL);
+
+function sendPing() {
+  if (Date.now() - lastActivity > SESSION_TIMEOUT) {
+    // Inactif depuis 30 min — déconnecter
+    clearInterval(pingTimer);
+    window.location.href = "{{ url_for('logout') }}";
+    return;
+  }
+  fetch("{{ url_for('session_ping') }}", {method:'POST', credentials:'include',
+    headers:{'X-CSRFToken': ''}}).catch(() => {});
+}
+
+// Réinitialiser le timer d'activité sur interactions
+['click','keydown','mousemove','touchstart','scroll'].forEach(evt =>
+  document.addEventListener(evt, () => { lastActivity = Date.now(); }, {passive: true})
+);
+
+// Déconnexion si toutes les fenêtres sont fermées (via beacon)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    // Page masquée (minimisée ou onglet changé) — on ne déconnecte pas
+    // mais on note le moment
+    sessionStorage.setItem('lastHidden', Date.now());
+  } else {
+    // Page redevient visible
+    const lastHidden = parseInt(sessionStorage.getItem('lastHidden') || '0');
+    if (lastHidden && Date.now() - lastHidden > SESSION_TIMEOUT) {
+      window.location.href = "{{ url_for('logout') }}";
+    }
+  }
+});
+</script>
+{% endif %}
 </html>

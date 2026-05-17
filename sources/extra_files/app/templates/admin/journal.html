@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Journal d'accès{% endblock %}
+{% block page_title %}🔒 Journal d'accès RGPD{% endblock %}
+
+{% block content %}
+<div style="max-width:960px;margin:0 auto;">
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <form method="GET" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select name="praticien_id" onchange="this.form.submit()"
+                style="font-size:13px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);">
+          <option value="">Tous les praticiens</option>
+          {% for p in praticiens %}
+          <option value="{{ p.id }}" {{ 'selected' if praticien_filter == p.id }}>
+            {{ p.prenom }} {{ p.nom }}
+          </option>
+          {% endfor %}
+        </select>
+        <span style="font-size:12px;color:var(--muted);">{{ entrees|length }} entrées affichées</span>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body" style="padding:0;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:var(--bg);border-bottom:1px solid var(--border);">
+            <th style="padding:8px 12px;text-align:left;font-weight:600;">Date / Heure</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:600;">Praticien</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:600;">Action</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:600;">Détail</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:600;">IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in entrees %}
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:7px 12px;color:var(--muted);white-space:nowrap;">
+              {{ e.created_at.strftime('%d/%m/%Y %H:%M') }}
+            </td>
+            <td style="padding:7px 12px;white-space:nowrap;">
+              {{ e.praticien.prenom }} {{ e.praticien.nom }}
+            </td>
+            <td style="padding:7px 12px;">
+              {% set labels = {
+                'patient_detail': '👁 Dossier patient',
+                'consultation_detail': '👁 Visualisation bilan',
+                'impression_dossier': '🖨 Impression dossier',
+                'creation_patient': '➕ Création patient',
+                'creation_consultation': '➕ Nouveau bilan',
+                'modification_consultation': '✏️ Modification bilan',
+              } %}
+              {{ labels.get(e.action, e.action) }}
+            </td>
+            <td style="padding:7px 12px;color:var(--muted);">{{ e.detail }}</td>
+            <td style="padding:7px 12px;color:var(--muted);font-family:monospace;font-size:10px;">
+              {{ e.ip_address }}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" style="padding:24px;text-align:center;color:var(--muted);">
+              Aucune entrée dans le journal.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

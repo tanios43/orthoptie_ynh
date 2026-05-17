@@ -20,9 +20,29 @@ app = Flask(__name__)
 
 @app.after_request
 def add_ngrok_header(response):
-    """Désactive l'interstitiel ngrok pour toutes les réponses."""
+    """Désactive l'interstitiel ngrok et gère la session permanente."""
     response.headers['ngrok-skip-browser-warning'] = 'true'
+    if current_user.is_authenticated:
+        session.permanent = True
+        session.modified = True
     return response
+
+
+def log_acces(action, patient_id=None, consultation_id=None, detail=''):
+    """Enregistre un accès dans le journal RGPD."""
+    try:
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr or '')
+        db.session.add(JournalAcces(
+            praticien_id=current_user.id,
+            patient_id=patient_id,
+            consultation_id=consultation_id,
+            action=action,
+            detail=str(detail)[:500],
+            ip_address=str(ip)[:50],
+        ))
+        db.session.commit()
+    except Exception:
+        pass
 
 
 @app.template_global()
@@ -45,6 +65,8 @@ def age_a_la_date(date_naissance, date_ref=None):
         return f'{years} ans'
     return f'{years} ans {months} mois'
 app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
+app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(minutes=30)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 # ── Configuration WOPI / Collabora ──────────────────────────────────────────
 # URL publique de CE serveur Flask (accessible par Collabora)
@@ -282,6 +304,22 @@ class DocumentBloc(db.Model):
     contenu    = db.Column(db.Text, default='')
     ordre      = db.Column(db.Integer, default=99)
 
+
+
+class JournalAcces(db.Model):
+    """Journal RGPD des accès aux dossiers patients."""
+    __tablename__ = 'journal_acces'
+    id             = db.Column(db.Integer, primary_key=True)
+    praticien_id   = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    patient_id     = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=True)
+    consultation_id= db.Column(db.Integer, db.ForeignKey('consultation.id'), nullable=True)
+    action         = db.Column(db.String(100), nullable=False)  # 'consultation_detail', 'patient_detail', etc.
+    detail         = db.Column(db.String(500), default='')
+    ip_address     = db.Column(db.String(50), default='')
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+    patient   = db.relationship('Patient',   foreign_keys=[patient_id])
 
 
 class WopiSession(db.Model):
@@ -576,6 +614,8 @@ def patient_nouveau():
 def patient_detail(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     sections, _ = get_sections()
+    log_acces('patient_detail', patient_id=patient_id,
+              detail=f'{patient.prenom} {patient.nom}')
     return render_template('patients/fiche.html', patient=patient, sections_def=sections)
 
 
@@ -585,6 +625,8 @@ def patient_dossier(patient_id):
     """Page d'impression du dossier patient complet."""
     patient = Patient.query.get_or_404(patient_id)
     sections, _ = get_sections()
+    log_acces('impression_dossier', patient_id=patient_id,
+              detail=f'{patient.prenom} {patient.nom}')
     cabinet = get_current_cabinet()
     pc = None
     if cabinet:
@@ -776,9 +818,33 @@ def admin_sauvegarde_telecharger(nom):
     return send_file(path, as_attachment=True, download_name=nom, mimetype=mimetype)
 
 
-@app.route('/recherche')
+@app.route('/session/ping', methods=['POST'])
 @login_required
-def recherche():
+def session_ping():
+    """Maintient la session active (appelé périodiquement par le JS)."""
+    session.modified = True
+    return jsonify({'ok': True})
+
+
+@app.route('/admin/journal')
+@login_required
+def admin_journal():
+    """Journal RGPD des accès."""
+    if current_user.role != 'admin':
+        flash('Accès réservé aux administrateurs.', 'danger')
+        return redirect(url_for('index'))
+    page = request.args.get('page', 1, type=int)
+    praticien_filter = request.args.get('praticien_id', type=int)
+    q = JournalAcces.query.order_by(JournalAcces.created_at.desc())
+    if praticien_filter:
+        q = q.filter_by(praticien_id=praticien_filter)
+    entrees = q.limit(200).all()
+    praticiens = Praticien.query.order_by(Praticien.nom).all()
+    return render_template('admin/journal.html', entrees=entrees,
+                           praticiens=praticiens, praticien_filter=praticien_filter)
+
+
+
     q = request.args.get('q', '').strip(); patients = []
     if q:
         dn = None
@@ -842,6 +908,8 @@ def consultation_detail(consultation_id):
     c = Consultation.query.get_or_404(consultation_id)
     sections, _ = get_sections()
     log_action('lecture_consultation', patient_id=c.patient_id, consultation_id=consultation_id)
+    log_acces('consultation_detail', patient_id=c.patient_id, consultation_id=consultation_id,
+              detail=f'{c.patient.prenom} {c.patient.nom} — {c.date_consult.strftime("%d/%m/%Y")}')
     return render_template('consultations/bilan.html', consultation=c, sections_def=sections)
 
 

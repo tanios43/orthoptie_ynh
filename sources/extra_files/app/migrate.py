@@ -126,6 +126,26 @@ with app.app_context():
         else:
             print(f"ERREUR  : section_ordre — {e}")
 
+    # Table journal_acces
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS journal_acces (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    praticien_id INTEGER NOT NULL REFERENCES praticien(id),
+                    patient_id INTEGER REFERENCES patient(id),
+                    consultation_id INTEGER REFERENCES consultation(id),
+                    action VARCHAR(100) NOT NULL,
+                    detail VARCHAR(500) DEFAULT '',
+                    ip_address VARCHAR(50) DEFAULT '',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+        print("OK      : table journal_acces")
+    except Exception as e:
+        print(f"Present/ERREUR journal_acces : {e}")
+
     # signature sur praticien
     try:
         with db.engine.connect() as conn:
