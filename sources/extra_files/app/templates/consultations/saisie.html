@@ -1626,7 +1626,87 @@ function _appliquerRefraction(idxLunettes, secIdx) {
   }
 }
 
-function supprimerWopiDoc(fichierId, btn) {
+// ── Raccourcis clavier ──────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  const alt = e.altKey && !e.ctrlKey && !e.metaKey;
+
+  // Alt + S → Sauvegarder
+  if (alt && e.key === 's') {
+    e.preventDefault();
+    document.getElementById('form-bilan')?.submit();
+    return;
+  }
+
+  // Alt + ↓ / Alt + ↑ → Section suivante / précédente
+  if (alt && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+    e.preventDefault();
+    const sections = Array.from(document.querySelectorAll('.bilan-section'));
+    if (!sections.length) return;
+
+    // Trouver la section active (celle qui contient le focus ou la plus proche du viewport)
+    const focused = document.activeElement;
+    let currentIdx = -1;
+    if (focused) {
+      currentIdx = sections.findIndex(s => s.contains(focused));
+    }
+    if (currentIdx === -1) {
+      // Trouver la section la plus visible
+      const scrollY = window.scrollY + window.innerHeight / 2;
+      currentIdx = sections.reduce((best, sec, i) => {
+        const rect = sec.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2 + window.scrollY;
+        return Math.abs(mid - scrollY) < Math.abs(
+          sections[best].getBoundingClientRect().top +
+          sections[best].getBoundingClientRect().height / 2 + window.scrollY - scrollY
+        ) ? i : best;
+      }, 0);
+    }
+
+    const targetIdx = e.key === 'ArrowDown'
+      ? Math.min(currentIdx + 1, sections.length - 1)
+      : Math.max(currentIdx - 1, 0);
+
+    const target = sections[targetIdx];
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Focus sur le premier champ de la section cible
+    setTimeout(() => {
+      const firstInput = target.querySelector('input:not([type=hidden]), select, textarea');
+      if (firstInput) firstInput.focus();
+    }, 300);
+    return;
+  }
+
+  // Escape → replier/déplier la section active
+  if (e.key === 'Escape' && !e.altKey) {
+    const focused = document.activeElement;
+    if (!focused) return;
+    const section = focused.closest('.bilan-section');
+    if (!section) return;
+    const idx = section.dataset.idx;
+    if (idx !== undefined) {
+      toggleSection('s' + idx);
+      const header = section.querySelector('.bilan-section-header');
+      if (header) header.focus();
+    }
+    return;
+  }
+});
+
+// Indicateur visuel des raccourcis (affiché au chargement puis masqué)
+(function() {
+  const hint = document.createElement('div');
+  hint.style.cssText = `position:fixed;bottom:16px;right:16px;background:rgba(0,0,0,0.7);
+    color:white;padding:10px 14px;border-radius:8px;font-size:11px;z-index:999;
+    line-height:1.8;pointer-events:none;transition:opacity .5s;`;
+  hint.innerHTML = `<b>Raccourcis :</b><br>
+    Alt+↓/↑ : section suivante/précédente<br>
+    Alt+S : sauvegarder<br>
+    Échap : replier/déplier la section`;
+  document.body.appendChild(hint);
+  setTimeout(() => { hint.style.opacity = '0'; }, 4000);
+  setTimeout(() => { hint.remove(); }, 4600);
+})();
   if (!confirm('Supprimer ce document ?')) return;
   fetch('/fichier_section/' + fichierId + '/supprimer', {
     method: 'POST',
