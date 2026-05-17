@@ -769,8 +769,8 @@ def admin_sauvegarde_importer():
         return 'Accès refusé', 403
     import zipfile as zf, shutil
     f = request.files.get('backup_file')
-    if not f or not f.filename.endswith('.zip'):
-        flash('Fichier invalide — zip requis.', 'danger')
+    if not f or not (f.filename.endswith('.zip') or f.filename.endswith('.tar.gz')):
+        flash('Fichier invalide — zip ou tar.gz requis.', 'danger')
         return redirect(url_for('admin_sauvegarde'))
 
     confirmation = request.form.get('confirmation', '').strip().lower()
@@ -778,27 +778,46 @@ def admin_sauvegarde_importer():
         flash('Vous devez taper "oui" pour confirmer la restauration.', 'warning')
         return redirect(url_for('admin_sauvegarde'))
 
-    import tempfile
+    import tempfile, shutil
     tmpdir = tempfile.mkdtemp()
-    zip_path = os.path.join(tmpdir, 'restore.zip')
-    f.save(zip_path)
+    backup_path = os.path.join(tmpdir, 'restore_file')
+    f.save(backup_path)
 
-    db_path = os.path.join(app.instance_path, 'orthoptie_v2.db')
+    db_path     = os.path.join(app.instance_path, 'orthoptie_v2.db')
     uploads_dir = app.config['UPLOAD_FOLDER']
 
-    with zf.ZipFile(zip_path, 'r') as z:
-        names = z.namelist()
-        if 'orthoptie_v2.db' in names:
-            z.extract('orthoptie_v2.db', tmpdir)
-            shutil.copy2(os.path.join(tmpdir, 'orthoptie_v2.db'), db_path)
-        for name in names:
-            if name.startswith('uploads/'):
-                z.extract(name, tmpdir)
-                dest = os.path.join(uploads_dir, os.path.relpath(name, 'uploads'))
-                os.makedirs(os.path.dirname(dest), exist_ok=True)
-                src = os.path.join(tmpdir, name)
-                if os.path.isfile(src):
-                    shutil.copy2(src, dest)
+    if f.filename.endswith('.tar.gz'):
+        import tarfile
+        with tarfile.open(backup_path, 'r:gz') as tar:
+            members = tar.getnames()
+            # DB
+            db_member = next((m for m in members if m.endswith('orthoptie_v2.db')), None)
+            if db_member:
+                tar.extract(db_member, tmpdir)
+                shutil.copy2(os.path.join(tmpdir, db_member), db_path)
+            # Uploads
+            for member in tar.getmembers():
+                if 'uploads/' in member.name and member.isfile():
+                    tar.extract(member, tmpdir)
+                    rel = member.name.split('uploads/', 1)[1]
+                    dest = os.path.join(uploads_dir, rel)
+                    os.makedirs(os.path.dirname(dest), exist_ok=True)
+                    shutil.copy2(os.path.join(tmpdir, member.name), dest)
+    else:
+        import zipfile as zf
+        with zf.ZipFile(backup_path, 'r') as z:
+            names = z.namelist()
+            if 'orthoptie_v2.db' in names:
+                z.extract('orthoptie_v2.db', tmpdir)
+                shutil.copy2(os.path.join(tmpdir, 'orthoptie_v2.db'), db_path)
+            for name in names:
+                if name.startswith('uploads/'):
+                    z.extract(name, tmpdir)
+                    dest = os.path.join(uploads_dir, os.path.relpath(name, 'uploads'))
+                    os.makedirs(os.path.dirname(dest), exist_ok=True)
+                    src = os.path.join(tmpdir, name)
+                    if os.path.isfile(src):
+                        shutil.copy2(src, dest)
 
     flash('Restauration effectuée. Reconnectez-vous.', 'success')
     return redirect(url_for('logout'))
