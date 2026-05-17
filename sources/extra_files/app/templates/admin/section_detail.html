@@ -30,6 +30,17 @@
             </select>
           </div>
           <div class="field-group">
+            <label class="field-label">Catégorie</label>
+            <select name="categorie">
+              {% for cat_key, cat_info in CATEGORIES.items() %}
+              <option value="{{ cat_key }}"
+                {{ 'selected' if section.categorie == cat_key or (not section.categorie and cat_key == '') }}>
+                {{ cat_info.label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-group">
             <label class="field-label">Observations libres</label>
             <select name="avec_observations">
               <option value="1" {{ 'selected' if section.avec_observations != False }}>Afficher le champ</option>

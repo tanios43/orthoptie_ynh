@@ -153,66 +153,40 @@
               </div>
               {# Aperçu condensé sections avec couleurs #}
               {% if c.sections %}
-              {%- set SC = {
-                'correction_portee': '#EEEDFE', 'refraction_obj': '#EEEDFE', 'refraction_subj': '#EEEDFE',
-                'acuite': '#EAF3DE', 'swaine': '#EAF3DE',
-                'stereoscopie': '#FAEEDA',
-                'cover': '#FAECE7', 'motilite': '#FAECE7', 'ppc': '#FAECE7',
-                'facilites_accom': '#FAECE7', 'facilites_verg': '#FAECE7',
-                'conclusions': '#E1F5EE',
-                'ordonnance': '#FBEAF0', 'ordonnance_lunettes': '#FBEAF0',
-                'courrier': '#E6F1FB',
-              } -%}
-              {%- set SC_TEXT = {
-                'correction_portee': '#3C3489', 'refraction_obj': '#3C3489', 'refraction_subj': '#3C3489',
-                'acuite': '#27500A', 'swaine': '#27500A',
-                'stereoscopie': '#633806',
-                'cover': '#712B13', 'motilite': '#712B13', 'ppc': '#712B13',
-                'facilites_accom': '#712B13', 'facilites_verg': '#712B13',
-                'conclusions': '#085041',
-                'ordonnance': '#72243E', 'ordonnance_lunettes': '#72243E',
-                'courrier': '#0C447C',
-              } -%}
               <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">
                 {% for sec in c.sections %}
                   {% set d = sec.get_donnees() %}
-                  {% set bg = SC.get(sec.type, '#F1EFE8') %}
-                  {% set tc = SC_TEXT.get(sec.type, '#444441') %}
+                  {% set col = section_style(sec.type, sec.categorie if sec.categorie is defined else '') %}
                   {# Générer un résumé condensé selon le type #}
                   {% if sec.type in ['refraction_obj','refraction_subj','correction_portee'] %}
                     {% set od = (d.get('od_sph','') ~ ('(' ~ d.get('od_cyl','') ~ ')' if d.get('od_cyl')) ~ (d.get('od_axe','') ~ '°' if d.get('od_axe'))) %}
                     {% set og = (d.get('og_sph','') ~ ('(' ~ d.get('og_cyl','') ~ ')' if d.get('og_cyl')) ~ (d.get('og_axe','') ~ '°' if d.get('og_axe'))) %}
                     {% if od or og %}
-                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ bg }};color:{{ tc }};font-family:monospace;white-space:nowrap;">
-                      👁 OD {{ od or '—' }} / OG {{ og or '—' }}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};font-family:monospace;white-space:nowrap;">
+                      OD {{ od or '—' }} / OG {{ og or '—' }}
                     </span>
                     {% endif %}
                   {% elif sec.type == 'acuite' %}
                     {% if d.get('od_av_loin') or d.get('og_av_loin') %}
-                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ bg }};color:{{ tc }};white-space:nowrap;">
-                      🎯 AV {{ d.get('od_av_loin','') }}/{{ d.get('og_av_loin','') }}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};white-space:nowrap;">
+                      AV {{ d.get('od_av_loin','') }}/{{ d.get('og_av_loin','') }}
                     </span>
                     {% endif %}
                   {% elif sec.type == 'cover' %}
                     {% if d.get('cover_loin') %}
-                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ bg }};color:{{ tc }};white-space:nowrap;">
-                      ↔ {{ d.get('cover_loin','') }}{% if d.get('cover_pres') and d.get('cover_pres') != d.get('cover_loin') %}/{{ d.get('cover_pres','') }}{% endif %}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};white-space:nowrap;">
+                      {{ d.get('cover_loin','') }}{% if d.get('cover_pres') and d.get('cover_pres') != d.get('cover_loin') %}/{{ d.get('cover_pres','') }}{% endif %}
                     </span>
                     {% endif %}
                   {% elif sec.type == 'conclusions' %}
                     {% if d.get('conclusions') %}
-                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ bg }};color:{{ tc }};max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">
-                      📝 {{ d.get('conclusions','')[:60] }}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">
+                      {{ d.get('conclusions','')[:60] }}
                     </span>
                     {% endif %}
-                  {% elif sec.type in ['ordonnance','ordonnance_lunettes','courrier'] %}
-                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ bg }};color:{{ tc }};white-space:nowrap;">
-                      {% if sec.type == 'ordonnance' %}💊{% elif sec.type == 'ordonnance_lunettes' %}👓{% else %}✉{% endif %}
-                      {{ sec.label }}
-                    </span>
                   {% else %}
                     {% if d %}
-                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ bg }};color:{{ tc }};white-space:nowrap;">
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};white-space:nowrap;">
                       {{ sec.label }}
                     </span>
                     {% endif %}

@@ -166,6 +166,31 @@ with app.app_context():
             else:
                 print(f"ERREUR  : journal_acces.{col} — {e}")
 
+    # Colonne categorie sur section_def
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''"))
+            conn.commit()
+        print("OK      : section_def.categorie")
+    except Exception as e:
+        msg = str(e).lower()
+        if 'duplicate column' in msg or 'already exists' in msg:
+            print("Present : section_def.categorie")
+        else:
+            print(f"ERREUR  : section_def.categorie — {e}")
+
+    # Initialiser les catégories des sections builtin
+    try:
+        from app import BUILTIN_CATEGORIES
+        for type_key, cat in BUILTIN_CATEGORIES.items():
+            s = SectionDef.query.filter_by(type_key=type_key).first()
+            if s and not s.categorie:
+                s.categorie = cat
+        db.session.commit()
+        print("OK      : catégories builtin initialisées")
+    except Exception as e:
+        print(f"ERREUR  : catégories builtin — {e}")
+
     # signature sur praticien
     try:
         with db.engine.connect() as conn:

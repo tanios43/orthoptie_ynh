@@ -64,6 +64,41 @@ def age_a_la_date(date_naissance, date_ref=None):
     if months == 0:
         return f'{years} ans'
     return f'{years} ans {months} mois'
+
+
+CATEGORIES = {
+    'refraction':  {'label': 'Réfraction',          'bg': '#EEEDFE', 'color': '#3C3489', 'icon': 'ti-eye'},
+    'acuite':      {'label': 'Acuité visuelle',      'bg': '#EAF3DE', 'color': '#27500A', 'icon': 'ti-focus-2'},
+    'motilite':    {'label': 'Motilité / Vergences', 'bg': '#FAECE7', 'color': '#712B13', 'icon': 'ti-arrows-move'},
+    'stereoscopie':{'label': 'Stéréoscopie',         'bg': '#FAEEDA', 'color': '#633806', 'icon': 'ti-3d-cube-sphere'},
+    'anamnese':    {'label': 'Anamnèse',             'bg': '#F1EFE8', 'color': '#444441', 'icon': 'ti-notes'},
+    'conclusions': {'label': 'Conclusions',          'bg': '#E1F5EE', 'color': '#085041', 'icon': 'ti-clipboard-text'},
+    'ordonnance':  {'label': 'Ordonnance',           'bg': '#FBEAF0', 'color': '#72243E', 'icon': 'ti-prescription'},
+    'courrier':    {'label': 'Courrier',             'bg': '#E6F1FB', 'color': '#0C447C', 'icon': 'ti-mail'},
+    '':            {'label': 'Sans catégorie',       'bg': '#F1EFE8', 'color': '#444441', 'icon': 'ti-layout-grid'},
+}
+
+# Catégories par défaut pour les sections builtin
+BUILTIN_CATEGORIES = {
+    'anam': 'anamnese', 'correction_portee': 'refraction',
+    'refraction_obj': 'refraction', 'refraction_subj': 'refraction',
+    'acuite': 'acuite', 'swaine': 'acuite',
+    'stereoscopie': 'stereoscopie',
+    'cover': 'motilite', 'motilite': 'motilite', 'ppc': 'motilite',
+    'facilites_accom': 'motilite', 'facilites_verg': 'motilite',
+    'conclusions': 'conclusions',
+    'ordonnance': 'ordonnance', 'ordonnance_lunettes': 'ordonnance',
+    'courrier': 'courrier',
+}
+
+app.jinja_env.globals['CATEGORIES'] = CATEGORIES
+
+
+@app.template_global()
+def section_style(section_type, categorie=''):
+    """Retourne bg/color/icon pour une section selon sa catégorie."""
+    cat = categorie or BUILTIN_CATEGORIES.get(section_type, '')
+    return CATEGORIES.get(cat, CATEGORIES[''])
 app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
 app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(minutes=30)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
@@ -345,14 +380,16 @@ class SectionDef(db.Model):
     ordre    = db.Column(db.Integer, default=99)
     builtin  = db.Column(db.Boolean, default=False)
     actif            = db.Column(db.Boolean, default=True)
-    obs_defaut       = db.Column(db.Text, default='')    # pré-rempli dans le champ observations
-    avec_observations = db.Column(db.Boolean, default=True)  # afficher le champ observations
+    obs_defaut       = db.Column(db.Text, default='')
+    avec_observations = db.Column(db.Boolean, default=True)
+    categorie        = db.Column(db.String(50), default='')  # catégorie visuelle
     champs     = db.relationship('ChampDef', backref='section',
                                order_by='ChampDef.ordre', cascade='all, delete-orphan')
     def to_dict(self):
         return {'label': self.label,
                 'obs_defaut': self.obs_defaut or '',
                 'avec_observations': self.avec_observations if self.avec_observations is not None else True,
+                'categorie': self.categorie or '',
                 'champs': [c.to_dict() for c in self.champs if c.actif]}
 
 
@@ -1508,6 +1545,7 @@ def admin_section_modifier(section_id):
     s.actif             = request.form.get('actif') == '1'
     s.obs_defaut        = request.form.get('obs_defaut', '').strip()
     s.avec_observations = request.form.get('avec_observations') == '1'
+    s.categorie         = request.form.get('categorie', '').strip()
     db.session.commit(); flash('Section mise à jour.', 'success')
     return redirect(url_for('admin_section_detail', section_id=section_id))
 
