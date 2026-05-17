@@ -1073,14 +1073,8 @@ def _save_sections(consultation_id, form, sections, files=None):
     types = form.getlist('sections_types[]')
     obs_list = form.getlist('sections_obs[]')
 
-    # Construire un index inverse : pour chaque idx dans le formulaire,
-    # quel type de section correspond ?
-    # Les champs sont nommés champ__{idx}__{name} — on cherche tous les idx présents
-    # et on les associe au type via sections_types[] (index = ordre dans la liste)
-    # MAIS si l'idx JS ne correspond pas à l'ordre dans sections_types[],
-    # on cherche l'idx par correspondance des noms de champs.
-
     # Construire un mapping idx -> type depuis les clés du formulaire
+    # Un idx peut correspondre à un type donné
     idx_type_map = {}
     for key in form.keys():
         if key.startswith('champ__'):
@@ -1089,7 +1083,6 @@ def _save_sections(consultation_id, form, sections, files=None):
                 try:
                     idx = int(parts[1])
                     champ_name = parts[2]
-                    # Trouver quel type possède ce champ
                     for stype, sdef in sections.items():
                         if any(c['name'] == champ_name for c in sdef['champs']):
                             idx_type_map[idx] = stype
@@ -1097,19 +1090,28 @@ def _save_sections(consultation_id, form, sections, files=None):
                 except ValueError:
                     pass
 
+    # Pour chaque type, construire la liste ordonnée des idx disponibles
+    # (pour gérer plusieurs sections du même type)
+    from collections import defaultdict
+    type_idx_list = defaultdict(list)
+    for idx in sorted(idx_type_map.keys()):
+        type_idx_list[idx_type_map[idx]].append(idx)
+
+    # Compteur d'occurrence par type pour prendre le bon idx
+    type_occurrence = defaultdict(int)
+
     for ordre, (stype, obs) in enumerate(zip(types, obs_list)):
         if stype not in sections: continue
         donnees = {}
 
-        # Chercher l'idx correspondant à ce type
-        matching_idx = None
-        for idx, t in idx_type_map.items():
-            if t == stype:
-                matching_idx = idx
-                break
-        # Fallback : utiliser l'ordre dans sections_types[]
-        if matching_idx is None:
+        # Prendre le idx correspondant à cette occurrence du type
+        occurrence = type_occurrence[stype]
+        idx_list = type_idx_list.get(stype, [])
+        if occurrence < len(idx_list):
+            matching_idx = idx_list[occurrence]
+        else:
             matching_idx = ordre
+        type_occurrence[stype] += 1
 
         for champ in sections[stype]['champs']:
             if champ['type'] == 'fichier':
@@ -1125,9 +1127,9 @@ def _save_sections(consultation_id, form, sections, files=None):
 
 def _save_fichiers_section(consultation_id, form, files, sections):
     import uuid
+    from collections import defaultdict
     types = form.getlist('sections_types[]')
 
-    # Même logique de mapping idx -> type
     idx_type_map = {}
     for key in form.keys():
         if key.startswith('champ__'):
@@ -1143,9 +1145,19 @@ def _save_fichiers_section(consultation_id, form, files, sections):
                 except ValueError:
                     pass
 
+    type_idx_list = defaultdict(list)
+    for idx in sorted(idx_type_map.keys()):
+        type_idx_list[idx_type_map[idx]].append(idx)
+
+    type_occurrence = defaultdict(int)
+
     for ordre, stype in enumerate(types):
         if stype not in sections: continue
-        matching_idx = next((i for i, t in idx_type_map.items() if t == stype), ordre)
+        occurrence = type_occurrence[stype]
+        idx_list = type_idx_list.get(stype, [])
+        matching_idx = idx_list[occurrence] if occurrence < len(idx_list) else ordre
+        type_occurrence[stype] += 1
+
         for champ in sections[stype]['champs']:
             if champ['type'] != 'fichier': continue
             key = f"champ__{matching_idx}__{champ['name']}"
