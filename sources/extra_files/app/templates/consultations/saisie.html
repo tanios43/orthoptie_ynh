@@ -1707,6 +1707,8 @@ document.addEventListener('keydown', function(e) {
   setTimeout(() => { hint.style.opacity = '0'; }, 4000);
   setTimeout(() => { hint.remove(); }, 4600);
 })();
+
+function supprimerWopiDoc(fichierId, btn) {
   if (!confirm('Supprimer ce document ?')) return;
   fetch('/fichier_section/' + fichierId + '/supprimer', {
     method: 'POST',
