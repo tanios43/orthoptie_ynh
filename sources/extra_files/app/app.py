@@ -309,6 +309,7 @@ class DocumentBloc(db.Model):
 class JournalAcces(db.Model):
     """Journal RGPD des accès aux dossiers patients."""
     __tablename__ = 'journal_acces'
+    __table_args__ = {'extend_existing': True}
     id             = db.Column(db.Integer, primary_key=True)
     praticien_id   = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
     patient_id     = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=True)
