@@ -6,6 +6,7 @@
   <title>{% block title %}Cabinet d'Orthoptie{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -456,8 +457,30 @@
 function toggleSection(id) {
   const body = document.getElementById('sec-' + id);
   const icon = document.getElementById('ico-' + id);
+  const preview = document.getElementById('preview-' + id);
+  const isOpen = body.classList.contains('open');
   body.classList.toggle('open');
   icon.classList.toggle('open');
+  if (icon) icon.textContent = isOpen ? '▶' : '▼';
+
+  // Afficher/masquer l'aperçu condensé
+  if (preview) {
+    if (isOpen) {
+      // On replie — générer l'aperçu
+      const inputs = body.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea');
+      const vals = [];
+      inputs.forEach(inp => {
+        if (inp.value && inp.value.trim() && !inp.name.startsWith('sections_obs')) {
+          vals.push(inp.value.trim());
+        }
+      });
+      const text = vals.slice(0, 6).join('  ·  ');
+      preview.textContent = text || '';
+      preview.style.display = text ? '' : 'none';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
 }
 </script>
 {% block scripts %}{% endblock %}

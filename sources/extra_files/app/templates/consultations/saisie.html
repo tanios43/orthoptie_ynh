@@ -599,7 +599,31 @@ function champHTML(idx, champ, val) {
 }
 
 // ── Rendu d'une section complète ──
-function renderSection(type, label, idx, titre, obs, donnees) {
+// Mapping couleurs par catégorie de section
+const SECTION_COLORS = {
+  anam:             {bg:'#F1EFE8', color:'#444441', icon:'ti-notes'},
+  correction_portee:{bg:'#EEEDFE', color:'#3C3489', icon:'ti-eye'},
+  refraction_obj:   {bg:'#EEEDFE', color:'#3C3489', icon:'ti-eye'},
+  refraction_subj:  {bg:'#EEEDFE', color:'#3C3489', icon:'ti-eye'},
+  acuite:           {bg:'#EAF3DE', color:'#27500A', icon:'ti-focus-2'},
+  swaine:           {bg:'#EAF3DE', color:'#27500A', icon:'ti-focus-2'},
+  stereoscopie:     {bg:'#FAEEDA', color:'#633806', icon:'ti-3d-cube-sphere'},
+  cover:            {bg:'#FAECE7', color:'#712B13', icon:'ti-arrows-move'},
+  motilite:         {bg:'#FAECE7', color:'#712B13', icon:'ti-arrows-move'},
+  ppc:              {bg:'#FAECE7', color:'#712B13', icon:'ti-arrows-move'},
+  facilites_accom:  {bg:'#FAECE7', color:'#712B13', icon:'ti-activity'},
+  facilites_verg:   {bg:'#FAECE7', color:'#712B13', icon:'ti-activity'},
+  conclusions:      {bg:'#E1F5EE', color:'#085041', icon:'ti-clipboard-text'},
+  ordonnance:       {bg:'#FBEAF0', color:'#72243E', icon:'ti-prescription'},
+  ordonnance_lunettes:{bg:'#FBEAF0', color:'#72243E', icon:'ti-eyeglass'},
+  courrier:         {bg:'#E6F1FB', color:'#0C447C', icon:'ti-mail'},
+};
+
+function getSectionColor(type) {
+  return SECTION_COLORS[type] || {bg:'#F1EFE8', color:'#444441', icon:'ti-layout-grid'};
+}
+
+
   const def = SECTIONS_DEF[type];
   if (!def) return null;
   donnees = donnees || {};
@@ -834,41 +858,35 @@ function renderSection(type, label, idx, titre, obs, donnees) {
   }
 
   // Comptage pour le badge de doublon
+  const col = getSectionColor(type);
   return `
   <div class="bilan-section" id="sec-wrap-${idx}" data-idx="${idx}" data-type="${type}" data-section-type="${type}">
-    <div class="bilan-section-header" onclick="toggleSection('s${idx}')">
-      <span class="bilan-section-num">${idx + 1}</span>
+    <div class="bilan-section-header" onclick="toggleSection('s${idx}')"
+         style="background:${col.bg};color:${col.color};">
+      <span class="bilan-section-num" style="background:rgba(0,0,0,.1);color:${col.color};">${idx + 1}</span>
+      <i class="ti ${col.icon}" style="font-size:15px;flex-shrink:0;" aria-hidden="true"></i>
       <span class="bilan-section-title">${label}</span>
-      <span class="bilan-section-toggle" id="ico-s${idx}" tabindex="-1">▶</span>
-      <button type="button"
-              tabindex="-1"
+      <span class="bilan-section-preview" id="preview-s${idx}"
+            style="font-size:11px;opacity:.7;flex:1;overflow:hidden;text-overflow:ellipsis;
+                   white-space:nowrap;display:none;margin-left:8px;font-family:monospace;"></span>
+      <span class="bilan-section-toggle" id="ico-s${idx}" tabindex="-1" style="font-size:11px;opacity:.6;">▼</span>
+      <button type="button" tabindex="-1"
               onclick="event.stopPropagation();ouvrirHistoriqueSection('${type}', '${label}', ${idx})"
               title="Historique de cette section"
-              style="margin-left:auto;background:none;border:none;
-                     color:var(--muted);cursor:pointer;font-size:13px;
-                     padding:0 6px;line-height:1;"
-              onmouseover="this.style.color='var(--accent)'"
-              onmouseout="this.style.color='var(--muted)'">🕐</button>
+              style="background:none;border:none;color:${col.color};opacity:.7;cursor:pointer;font-size:13px;padding:0 4px;"
+              onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'">🕐</button>
       ${['prescription','courrier'].includes(type) && CONSULTATION_ID ? `
-      <a href="#"
-         tabindex="-1"
+      <a href="#" tabindex="-1"
          onclick="event.stopPropagation(); sauverEtGenerer('${type}'); return false;"
-         title="Enregistrer et générer un document"
-         style="background:none;border:1px solid var(--accent);border-radius:6px;
-                color:var(--accent);font-size:11px;font-weight:500;
-                padding:2px 8px;text-decoration:none;line-height:1.8;"
-         onmouseover="this.style.background='var(--accent-lt)'"
-         onmouseout="this.style.background='none'">📄 Générer</a>
-      ` : ''}
-      <button type="button"
-              tabindex="-1"
+         style="background:rgba(0,0,0,.1);border-radius:4px;color:${col.color};
+                font-size:10px;font-weight:500;padding:2px 7px;text-decoration:none;flex-shrink:0;"
+         onmouseover="this.style.background='rgba(0,0,0,.2)'"
+         onmouseout="this.style.background='rgba(0,0,0,.1)'">📄 Générer</a>` : ''}
+      <button type="button" tabindex="-1"
               onclick="event.stopPropagation();supprimerSection(${idx})"
               title="Supprimer cette section"
-              style="background:none;border:none;
-                     color:var(--muted);cursor:pointer;font-size:14px;
-                     padding:0 4px;line-height:1;"
-              onmouseover="this.style.color='var(--danger)'"
-              onmouseout="this.style.color='var(--muted)'">✕</button>
+              style="background:none;border:none;color:${col.color};opacity:.6;cursor:pointer;font-size:14px;padding:0 4px;flex-shrink:0;"
+              onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'">✕</button>
     </div>
     <div class="bilan-section-body open" id="sec-s${idx}">
 
