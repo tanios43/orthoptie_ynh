@@ -845,7 +845,9 @@ def admin_journal():
                            praticiens=praticiens, praticien_filter=praticien_filter)
 
 
-
+@app.route('/recherche')
+@login_required
+def recherche():
     q = request.args.get('q', '').strip(); patients = []
     if q:
         dn = None
