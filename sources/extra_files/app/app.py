@@ -899,10 +899,17 @@ def suivi_amblyopie_nouveau(patient_id):
                 prefill['lunettes_od'] = od.strip()
                 prefill['lunettes_og'] = og.strip()
             elif sec.type == 'acuite':
-                av_od = f"Loin: {d.get('od_av_loin','')}\nPrès: {d.get('od_av_pres','')}".strip()
-                av_og = f"Loin: {d.get('og_av_loin','')}\nPrès: {d.get('og_av_pres','')}".strip()
-                prefill['av_od_init'] = av_od
-                prefill['av_og_init'] = av_og
+                parts_od, parts_og = [], []
+                if d.get('av_correction'): 
+                    parts_od.append(d['av_correction'])
+                    parts_og.append(d['av_correction'])
+                if d.get('av_od_loin'): parts_od.append(f"Loin: {d['av_od_loin']}")
+                if d.get('av_od_pres'): parts_od.append(f"Près: {d['av_od_pres']}")
+                if d.get('av_og_loin'): parts_og.append(f"Loin: {d['av_og_loin']}")
+                if d.get('av_og_pres'): parts_og.append(f"Près: {d['av_og_pres']}")
+                if d.get('av_bino'): parts_od.append(f"Bino: {d['av_bino']}")
+                prefill['av_od_init'] = '\n'.join(parts_od)
+                prefill['av_og_init'] = '\n'.join(parts_og)
             elif sec.type == 'stereoscopie':
                 parts = []
                 if d.get('lang'): parts.append(f"Lang: {d['lang']}")
