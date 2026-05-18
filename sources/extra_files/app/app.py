@@ -858,7 +858,8 @@ def suivi_amblyopie_nouveau(patient_id):
         log_acces('creation_suivi_amblyopie', patient_id=patient_id)
         flash('Suivi amblyopie créé.', 'success')
         return redirect(url_for('suivi_amblyopie_detail', suivi_id=s.id))
-    return render_template('amblyopie/nouveau.html', patient=patient, cabinet=cabinet)
+    return render_template('amblyopie/nouveau.html', patient=patient,
+                           cabinet=cabinet, today=datetime.utcnow().date())
 
 
 @app.route('/suivi-amblyopie/<int:suivi_id>', methods=['GET', 'POST'])
