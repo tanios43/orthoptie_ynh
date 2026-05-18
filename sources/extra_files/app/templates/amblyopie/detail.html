@@ -21,7 +21,189 @@
 {% endblock %}
 
 {% block content %}
-<form method="POST" style="max-width:960px;">
+<form method="POST">
+
+  {# En-tête — pleine largeur #}
+  <div class="card" style="margin-bottom:14px;overflow:hidden;">
+    <div class="card-header" style="background:#E1F5EE;color:#085041;cursor:pointer;"
+         onclick="toggle('entete')">
+      <h2 style="color:#085041;flex:1;">
+        Bilan initial — {{ suivi.date_bilan.strftime('%d/%m/%Y') }}
+        <span style="font-size:12px;font-weight:400;opacity:.7;margin-left:8px;">
+          {{ suivi.patient.prenom }} {{ suivi.patient.nom }}
+          {% if suivi.patient.date_naissance %}· {{ age_a_la_date(suivi.patient.date_naissance, suivi.date_bilan) }}{% endif %}
+        </span>
+      </h2>
+      <span id="ico-entete" style="font-size:11px;opacity:.6;">▼</span>
+    </div>
+    <div class="card-body" id="sec-entete">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <div class="field-group">
+          <label class="field-label">Date du BO</label>
+          <input type="date" name="date_bilan" value="{{ suivi.date_bilan.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Ophtalmologiste</label>
+          <input type="text" name="ophthalmo" value="{{ suivi.ophthalmo or '' }}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Lunettes OD</label>
+          <input type="text" name="lunettes_od" value="{{ suivi.lunettes_od or '' }}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Lunettes OG</label>
+          <input type="text" name="lunettes_og" value="{{ suivi.lunettes_og or '' }}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">AV initiale OD</label>
+          <input type="text" name="av_od_init" value="{{ suivi.av_od_init or '' }}" placeholder="ex: 4/10">
+        </div>
+        <div class="field-group">
+          <label class="field-label">AV initiale OG</label>
+          <input type="text" name="av_og_init" value="{{ suivi.av_og_init or '' }}" placeholder="ex: 10/10">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Stéréoscopie</label>
+          <input type="text" name="stereo" value="{{ suivi.stereo or '' }}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">VB</label>
+          <input type="text" name="ese" value="{{ suivi.ese or '' }}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Versions</label>
+          <input type="text" name="versions" value="{{ suivi.versions or '' }}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Date Cs ophthalmo</label>
+          <input type="date" name="date_cs" value="{{ suivi.date_cs.strftime('%Y-%m-%d') if suivi.date_cs else '' }}">
+        </div>
+        <div class="field-group" style="grid-column:span 2;">
+          <label class="field-label">Traitement</label>
+          <input type="text" name="traitement" value="{{ suivi.traitement or '' }}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">À revoir dans</label>
+          <input type="text" name="prochain_rdv" value="{{ suivi.prochain_rdv or '' }}">
+        </div>
+        <div class="field-group" style="grid-column:span 3;">
+          <label class="field-label">Notes</label>
+          <textarea name="notes" rows="2" class="auto-resize">{{ suivi.notes or '' }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Tableau des séances — pleine largeur #}
+  <div class="card" style="margin-bottom:14px;overflow:hidden;">
+    <div class="card-header" style="background:#EEEDFE;color:#3C3489;">
+      <h2 style="color:#3C3489;">Séances ({{ suivi.seances|length }})</h2>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">
+        <colgroup>
+          <col style="width:36px;">
+          <col style="width:120px;">
+          <col style="width:18%;">
+          <col style="width:80px;">
+          <col style="width:80px;">
+          <col style="width:18%;">
+          <col>
+        </colgroup>
+        <thead>
+          <tr style="background:#EEEDFE;">
+            <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:11px;font-weight:600;border-bottom:1px solid #AFA9EC44;">#</th>
+            <th style="padding:7px 8px;color:#3C3489;font-size:11px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Date</th>
+            <th style="padding:7px 8px;color:#3C3489;font-size:11px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Occlusion</th>
+            <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:11px;font-weight:600;border-bottom:1px solid #AFA9EC44;">AV OD</th>
+            <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:11px;font-weight:600;border-bottom:1px solid #AFA9EC44;">AV OG</th>
+            <th style="padding:7px 8px;color:#3C3489;font-size:11px;font-weight:600;border-bottom:1px solid #AFA9EC44;">VB</th>
+            <th style="padding:7px 8px;color:#3C3489;font-size:11px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for seance in suivi.seances %}
+          <tr style="background:{% if loop.index is odd %}white{% else %}#EEEDFE22{% endif %};">
+            <td style="padding:5px 6px;text-align:center;font-weight:600;color:#3C3489;border-bottom:0.5px solid var(--border);vertical-align:top;padding-top:8px;">
+              {{ seance.numero }}
+            </td>
+            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <input type="date" name="seance_{{ seance.id }}_date"
+                     value="{{ seance.date_seance.strftime('%Y-%m-%d') if seance.date_seance else '' }}"
+                     style="font-size:11px;padding:3px 4px;width:100%;">
+            </td>
+            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <textarea name="seance_{{ seance.id }}_occlusion"
+                        class="auto-resize"
+                        placeholder="ex: 4h portées"
+                        style="font-size:11px;padding:3px 5px;width:100%;min-height:28px;resize:none;overflow:hidden;">{{ seance.occlusion or '' }}</textarea>
+            </td>
+            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <input type="text" name="seance_{{ seance.id }}_av_od"
+                     value="{{ seance.av_od or '' }}"
+                     placeholder="5/10"
+                     style="font-size:11px;padding:3px 4px;width:100%;text-align:center;color:#185FA5;font-weight:500;">
+            </td>
+            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <input type="text" name="seance_{{ seance.id }}_av_og"
+                     value="{{ seance.av_og or '' }}"
+                     placeholder="10/10"
+                     style="font-size:11px;padding:3px 4px;width:100%;text-align:center;color:#A32D2D;font-weight:500;">
+            </td>
+            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <textarea name="seance_{{ seance.id }}_ese"
+                        class="auto-resize"
+                        placeholder="ex: +2δ"
+                        style="font-size:11px;padding:3px 5px;width:100%;min-height:28px;resize:none;overflow:hidden;">{{ seance.ese or '' }}</textarea>
+            </td>
+            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <textarea name="seance_{{ seance.id }}_notes"
+                        class="auto-resize"
+                        placeholder="P: L: Vers: Lang:"
+                        style="font-size:11px;padding:3px 5px;width:100%;min-height:28px;resize:none;overflow:hidden;">{{ seance.notes or '' }}</textarea>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# Actions #}
+  <div class="flex gap-2" style="flex-wrap:wrap;">
+    <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button>
+    <button type="submit" name="action" value="ajouter_seance" class="btn btn-secondary">+ Ajouter une séance</button>
+    <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
+    <a href="{{ url_for('patient_detail', patient_id=suivi.patient_id) }}" class="btn btn-secondary" style="margin-left:auto;">← Retour patient</a>
+    <form method="POST" action="{{ url_for('suivi_amblyopie_supprimer', suivi_id=suivi.id) }}"
+          onsubmit="return confirm('Supprimer ce suivi ?')">
+      <button type="submit" class="btn btn-secondary" style="color:#e53e3e;border-color:#e53e3e;">🗑 Supprimer</button>
+    </form>
+  </div>
+
+</form>
+
+<script>
+function toggle(id) {
+  const body = document.getElementById('sec-' + id);
+  const icon = document.getElementById('ico-' + id);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  icon.textContent = open ? '▶' : '▼';
+}
+
+// Auto-resize textareas
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+document.querySelectorAll('.auto-resize').forEach(el => {
+  autoResize(el);
+  el.addEventListener('input', () => autoResize(el));
+});
+</script>
+{% endblock %}
+
 
   {# En-tête #}
   <div class="card" style="margin-bottom:14px;overflow:hidden;">
