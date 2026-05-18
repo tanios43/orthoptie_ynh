@@ -813,7 +813,8 @@ def admin_categorie_supprimer(cat_id):
     return redirect(url_for('admin_categories'))
 
 
-
+@app.route('/admin/sauvegarde', methods=['GET'])
+@login_required
 def admin_sauvegarde():
     """Page de gestion des sauvegardes."""
     if current_user.role != 'admin':
