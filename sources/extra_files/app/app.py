@@ -324,6 +324,16 @@ class SuiviAmblyopie(db.Model):
     def __str__(self):
         return f'Suivi amblyopie du {self.date_bilan.strftime("%d/%m/%Y")}'
 
+    @property
+    def derniere_seance_date(self):
+        """Date de la dernière séance renseignée, ou date du bilan."""
+        dates = [s.date_seance for s in self.seances if s.date_seance]
+        return max(dates) if dates else self.date_bilan
+
+    @property
+    def date_tri(self):
+        return self.derniere_seance_date
+
 
 class SeanceAmblyopie(db.Model):
     """Séance individuelle dans un suivi amblyopie."""
@@ -737,7 +747,16 @@ def patient_detail(patient_id):
     sections, _ = get_sections()
     log_acces('patient_detail', patient_id=patient_id,
               detail=f'{patient.prenom} {patient.nom}')
-    return render_template('patients/fiche.html', patient=patient, sections_def=sections)
+    # Mélanger bilans et suivis dans l'ordre chronologique inversé
+    suivis = SuiviAmblyopie.query.filter_by(patient_id=patient_id).all()
+    timeline = []
+    for c in patient.consultations:
+        timeline.append({'type': 'bilan', 'date': c.date_consult, 'obj': c})
+    for s in suivis:
+        timeline.append({'type': 'suivi', 'date': s.derniere_seance_date, 'obj': s})
+    timeline.sort(key=lambda x: x['date'], reverse=True)
+    return render_template('patients/fiche.html', patient=patient,
+                           sections_def=sections, timeline=timeline)
 
 
 @app.route('/patient/<int:patient_id>/dossier')

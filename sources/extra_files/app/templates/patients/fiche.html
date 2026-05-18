@@ -99,17 +99,210 @@
       {%- endmacro -%}
       {%- macro axe(val) -%}{%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}{%- endmacro -%}
 
-      {% if patient.consultations %}
+      {% if timeline %}
       <div>
-        {% for c in patient.consultations %}
+        {% for entry in timeline %}
+        {% set c = entry.obj %}
 
-        {# ── En-tête cliquable ── #}
+        {% if entry.type == 'bilan' %}
+        {# ── BILAN ── #}
         <div style="border-bottom:1px solid var(--border);">
           <div style="padding:14px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;
                       transition:background .15s;"
                onclick="toggleBilan('bilan-{{ c.id }}')"
                onmouseover="this.style.background='var(--bg)'"
                onmouseout="this.style.background=''">
+
+            {# Date #}
+            <div style="text-align:center;min-width:44px;flex-shrink:0;">
+              <div style="font-size:18px;font-weight:600;color:var(--accent);line-height:1;">
+                {{ c.date_consult.strftime('%d') }}
+              </div>
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
+                {{ c.date_consult.strftime('%b %Y') }}
+              </div>
+            </div>
+
+            {# Infos principales #}
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:500;">
+                {{ c.motif or 'Bilan orthoptique' }}
+              </div>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
+                {% set coul = c.praticien.couleur or '#2E7D6B' %}
+                <span style="display:inline-flex;align-items:center;gap:5px;
+                             padding:2px 9px;border-radius:20px;font-size:12px;font-weight:500;
+                             background:{{ coul }}20;color:{{ coul }};
+                             border:1px solid {{ coul }}40;">
+                  <span style="width:8px;height:8px;border-radius:50%;
+                               background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+                  {{ c.praticien.titre }} {{ c.praticien.prenom }} {{ c.praticien.nom }}
+                </span>
+                {% if c.cabinet %}
+                {% set cc = c.cabinet.couleur or '#1C2B3A' %}
+                <span style="display:inline-flex;align-items:center;gap:4px;
+                             padding:1px 8px;border-radius:20px;font-size:11px;font-weight:500;
+                             background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+                  <span style="width:6px;height:6px;border-radius:50%;
+                               background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
+                  🏥 {{ c.cabinet.nom }}
+                </span>
+                {% endif %}
+                {% if patient.date_naissance %}
+                <span style="font-size:12px;color:var(--accent);font-weight:500;">
+                  {{ age_a_la_date(patient.date_naissance, c.date_consult) }}
+                </span>
+                {% endif %}
+              </div>
+              {# Aperçu condensé sections avec couleurs #}
+              {% if c.sections %}
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">
+                {% for sec in c.sections %}
+                  {% set d = sec.get_donnees() %}
+                  {% set col = section_style(sec.type, sec.categorie if sec.categorie is defined else '') %}
+                  {% if sec.type in ['refraction_obj','refraction_subj','correction_portee'] %}
+                    {% set od = (d.get('od_sph','') ~ ('(' ~ d.get('od_cyl','') ~ ')' if d.get('od_cyl')) ~ (d.get('od_axe','') ~ '°' if d.get('od_axe'))) %}
+                    {% set og = (d.get('og_sph','') ~ ('(' ~ d.get('og_cyl','') ~ ')' if d.get('og_cyl')) ~ (d.get('og_axe','') ~ '°' if d.get('og_axe'))) %}
+                    {% if od or og %}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};font-family:monospace;white-space:nowrap;">
+                      OD {{ od or '—' }} / OG {{ og or '—' }}
+                    </span>
+                    {% endif %}
+                  {% elif sec.type == 'acuite' %}
+                    {% if d.get('od_av_loin') or d.get('og_av_loin') %}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};white-space:nowrap;">
+                      AV {{ d.get('od_av_loin','') }}/{{ d.get('og_av_loin','') }}
+                    </span>
+                    {% endif %}
+                  {% elif sec.type == 'cover' %}
+                    {% if d.get('cover_loin') %}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};white-space:nowrap;">
+                      {{ d.get('cover_loin','') }}{% if d.get('cover_pres') and d.get('cover_pres') != d.get('cover_loin') %}/{{ d.get('cover_pres','') }}{% endif %}
+                    </span>
+                    {% endif %}
+                  {% elif sec.type == 'conclusions' %}
+                    {% if d.get('conclusions') %}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">
+                      {{ d.get('conclusions','')[:60] }}
+                    </span>
+                    {% endif %}
+                  {% else %}
+                    {% if d %}
+                    <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{{ col.bg }};color:{{ col.color }};white-space:nowrap;">
+                      {{ sec.label }}
+                    </span>
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            {# Actions #}
+            <div style="display:flex;gap:6px;flex-shrink:0;" onclick="event.stopPropagation()">
+              <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}"
+                 class="btn btn-secondary btn-sm">✎</a>
+              <a href="{{ url_for('consultation_detail', consultation_id=c.id) }}"
+                 class="btn btn-secondary btn-sm">👁</a>
+            </div>
+          </div>
+
+          {# Corps dépliable #}
+          <div id="bilan-{{ c.id }}" style="display:none;padding:0 20px 16px;border-top:1px solid var(--border);">
+            {% if c.sections %}
+            {% for sec in c.sections %}
+              {% set d = sec.get_donnees() %}
+              {% set col = section_style(sec.type, sec.categorie if sec.categorie is defined else '') %}
+              <div style="margin-bottom:8px;">
+                <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;
+                            color:{{ col.color }};padding:3px 8px;background:{{ col.bg }};
+                            border-radius:4px;display:inline-block;margin-bottom:4px;">
+                  {{ sec.label }}
+                </div>
+                {% if sec.observations %}
+                <div style="font-size:12px;font-style:italic;color:var(--muted);margin-bottom:3px;">
+                  {{ sec.observations }}
+                </div>
+                {% endif %}
+                {% set sdef = sections_def.get(sec.type, {}) %}
+                {% if sdef %}
+                {% for champ in sdef.champs %}
+                  {% if champ.type != 'fichier' and d.get(champ.name) %}
+                  <div style="font-size:12px;padding:1px 0;">
+                    <span style="color:var(--muted);">{{ champ.label }} :</span>
+                    <span style="font-weight:500;">{{ d[champ.name] }}</span>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+                {% endif %}
+              </div>
+            {% endfor %}
+            {% else %}
+            <div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px;">
+              Bilan vide — <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}">ajouter des sections</a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% else %}
+        {# ── SUIVI AMBLYOPIE ── #}
+        <div style="border-bottom:1px solid var(--border);">
+          <a href="{{ url_for('suivi_amblyopie_detail', suivi_id=c.id) }}"
+             style="padding:14px 20px;display:flex;align-items:center;gap:12px;
+                    text-decoration:none;color:inherit;transition:background .15s;"
+             onmouseover="this.style.background='var(--bg)'"
+             onmouseout="this.style.background=''">
+            {# Date dernière séance #}
+            <div style="text-align:center;min-width:44px;flex-shrink:0;">
+              <div style="font-size:18px;font-weight:600;color:#085041;line-height:1;">
+                {{ c.derniere_seance_date.strftime('%d') }}
+              </div>
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
+                {{ c.derniere_seance_date.strftime('%b %Y') }}
+              </div>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:14px;font-weight:500;">Suivi amblyopie</span>
+                <span style="background:#E1F5EE;color:#085041;border-radius:10px;
+                             font-size:11px;padding:1px 8px;font-weight:500;">
+                  👁 {{ c.seances|length }} séances
+                </span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+                {% if c.traitement %}
+                <span style="font-size:11px;color:var(--muted);">{{ c.traitement }}</span>
+                {% endif %}
+                {% set filled = c.seances|selectattr('av_od')|list|length %}
+                {% if filled %}
+                <span style="font-size:11px;color:#085041;font-weight:500;">
+                  {{ filled }} séance{{ 's' if filled > 1 }} renseignée{{ 's' if filled > 1 }}
+                </span>
+                {% endif %}
+                {% if patient.date_naissance %}
+                <span style="font-size:11px;color:var(--accent);font-weight:500;">
+                  {{ age_a_la_date(patient.date_naissance, c.date_bilan) }}
+                </span>
+                {% endif %}
+              </div>
+            </div>
+            <i class="ti ti-chevron-right" style="color:var(--muted);flex-shrink:0;"></i>
+          </a>
+        </div>
+        {% endif %}
+
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <p>Aucun bilan enregistré pour ce patient.</p>
+        <a href="{{ url_for('consultation_nouvelle', patient_id=patient.id) }}"
+           class="btn btn-primary mt-2">Créer le premier bilan</a>
+      </div>
+      {% endif %}
 
             {# Date #}
             <div style="text-align:center;min-width:44px;flex-shrink:0;">
@@ -429,41 +622,6 @@
     </div>
   </div>
 
-  {# Suivis amblyopie #}
-  {% set suivis = patient.id | suivi_amblyopie_list %}
-  {% if suivis %}
-  <div class="card mt-3">
-    <div class="card-header" style="background:#E1F5EE;color:#085041;">
-      <h2 style="color:#085041;">Suivis amblyopie ({{ suivis|length }})</h2>
-      <a href="{{ url_for('suivi_amblyopie_nouveau', patient_id=patient.id) }}"
-         class="btn btn-secondary btn-sm" style="margin-left:auto;">+ Nouveau suivi</a>
-    </div>
-    <div class="card-body" style="padding:0;">
-      {% for s in suivis %}
-      <a href="{{ url_for('suivi_amblyopie_detail', suivi_id=s.id) }}"
-         style="display:flex;align-items:center;gap:12px;padding:10px 16px;
-                border-bottom:0.5px solid var(--border);text-decoration:none;color:inherit;
-                transition:background .1s;"
-         onmouseover="this.style.background='#E1F5EE33'"
-         onmouseout="this.style.background=''">
-        <span style="background:#E1F5EE;color:#085041;border-radius:6px;
-                     padding:3px 10px;font-size:12px;font-weight:500;white-space:nowrap;">
-          {{ s.date_bilan.strftime('%d/%m/%Y') }}
-        </span>
-        <span style="font-size:12px;color:var(--muted);">
-          {{ s.seances|length }} séance{{ 's' if s.seances|length > 1 }}
-          {% set filled = s.seances|selectattr('av_od')|list|length %}
-          {% if filled %} · {{ filled }} renseignée{{ 's' if filled > 1 }}{% endif %}
-        </span>
-        {% if s.traitement %}
-        <span style="font-size:11px;color:var(--muted);font-style:italic;">{{ s.traitement[:50] }}</span>
-        {% endif %}
-        <i class="ti ti-chevron-right" style="margin-left:auto;color:var(--muted);"></i>
-      </a>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
 
 </div>
 
