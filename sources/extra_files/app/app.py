@@ -1034,6 +1034,7 @@ def suivi_amblyopie_generer(suivi_id):
         rows += f'<w:tr>{cells}</w:tr>'
 
     total_w = sum(col_w)
+    gridcols = ''.join(f'<w:gridCol w:w="{w}"/>' for w in col_w)
     table = (f'<w:tbl>'
              f'<w:tblPr><w:tblW w:w="{total_w}" w:type="dxa"/>'
              f'<w:tblBorders>'
@@ -1044,7 +1045,7 @@ def suivi_amblyopie_generer(suivi_id):
              f'<w:insideH w:val="single" w:sz="4" w:color="DAE9F7"/>'
              f'<w:insideV w:val="single" w:sz="4" w:color="DAE9F7"/>'
              f'</w:tblBorders></w:tblPr>'
-             f'<w:tblGrid>{"".join(f"<w:gridCol w:w=\"{w}\"/>" for w in col_w)}</w:tblGrid>'
+             f'<w:tblGrid>{gridcols}</w:tblGrid>'
              f'{rows}</w:tbl>')
     body.append(f'<w:p><w:pPr><w:spacing w:before="240"/></w:pPr></w:p>')
     body.append(table)
