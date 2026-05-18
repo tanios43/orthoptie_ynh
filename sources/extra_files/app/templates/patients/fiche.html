@@ -246,7 +246,7 @@
                   {% if wopi_fics %}
                   <div style="margin-top:4px;">
                     {% for f in wopi_fics %}
-                    <a href="{{ url_for('wopi_view', fichier_id=f.id) }}" target="_blank"
+                    <a href="{{ url_for('editer_fichier_collabora', consultation_id=c.id, fichier_id=f.id) }}" target="_blank"
                        style="font-size:11px;color:var(--accent);display:block;">📝 {{ f.nom_original }}</a>
                     {% endfor %}
                   </div>
