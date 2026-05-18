@@ -208,35 +208,57 @@
           </div>
 
           {# Corps dépliable #}
-          <div id="bilan-{{ c.id }}" style="display:none;padding:0 20px 16px;border-top:1px solid var(--border);">
+          <div id="bilan-{{ c.id }}" style="display:none;padding:12px 20px 16px;border-top:1px solid var(--border);">
             {% if c.sections %}
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
             {% for sec in c.sections %}
               {% set d = sec.get_donnees() %}
               {% set col = section_style(sec.type, sec.categorie if sec.categorie is defined else '') %}
-              <div style="margin-bottom:8px;">
-                <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;
-                            color:{{ col.color }};padding:3px 8px;background:{{ col.bg }};
-                            border-radius:4px;display:inline-block;margin-bottom:4px;">
+              <div style="border-radius:8px;overflow:hidden;border:0.5px solid {{ col.color }}22;">
+                <div style="padding:5px 10px;background:{{ col.bg }};color:{{ col.color }};
+                            font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">
                   {{ sec.label }}
                 </div>
-                {% if sec.observations %}
-                <div style="font-size:12px;font-style:italic;color:var(--muted);margin-bottom:3px;">
-                  {{ sec.observations }}
-                </div>
-                {% endif %}
-                {% set sdef = sections_def.get(sec.type, {}) %}
-                {% if sdef %}
-                {% for champ in sdef.champs %}
-                  {% if champ.type != 'fichier' and d.get(champ.name) %}
-                  <div style="font-size:12px;padding:1px 0;">
-                    <span style="color:var(--muted);">{{ champ.label }} :</span>
-                    <span style="font-weight:500;">{{ d[champ.name] }}</span>
+                <div style="padding:8px 10px;background:white;">
+                  {% if sec.observations %}
+                  <div style="font-size:11px;font-style:italic;color:var(--muted);margin-bottom:4px;padding-bottom:4px;border-bottom:0.5px solid var(--border);">
+                    {{ sec.observations }}
                   </div>
                   {% endif %}
-                {% endfor %}
-                {% endif %}
+                  {% set sdef = sections_def.get(sec.type, {}) %}
+                  {% if sdef %}
+                  {% set ns = namespace(has_data=false) %}
+                  {% for champ in sdef.champs %}
+                    {% if champ.type != 'fichier' and d.get(champ.name) %}
+                    {% set ns.has_data = true %}
+                    <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:0.5px solid var(--border);">
+                      <span style="color:var(--muted);">{{ champ.label }}</span>
+                      <span style="font-weight:500;text-align:right;margin-left:8px;">{{ d[champ.name] }}</span>
+                    </div>
+                    {% endif %}
+                  {% endfor %}
+                  {% if not ns.has_data %}
+                  <div style="font-size:11px;color:var(--muted);font-style:italic;">—</div>
+                  {% endif %}
+                  {% endif %}
+                  {# Documents WOPI #}
+                  {% set wopi_fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', 'wopi_doc') | list %}
+                  {% if wopi_fics %}
+                  <div style="margin-top:4px;">
+                    {% for f in wopi_fics %}
+                    <a href="{{ url_for('wopi_view', fichier_id=f.id) }}" target="_blank"
+                       style="font-size:11px;color:var(--accent);display:block;">📝 {{ f.nom_original }}</a>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
               </div>
             {% endfor %}
+            </div>
+            <div style="margin-top:10px;text-align:right;">
+              <a href="{{ url_for('consultation_detail', consultation_id=c.id) }}"
+                 class="btn btn-secondary btn-sm">Voir le bilan complet →</a>
+            </div>
             {% else %}
             <div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px;">
               Bilan vide — <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}">ajouter des sections</a>
