@@ -22,6 +22,7 @@
   <a href="{{ url_for('patient_modifier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">✎ Modifier</a>
   <a href="{{ url_for('patient_dossier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm" target="_blank">🖨 Imprimer le dossier</a>
   <a href="{{ url_for('consultation_nouvelle', patient_id=patient.id) }}" class="btn btn-primary btn-sm">+ Nouveau bilan</a>
+  <a href="{{ url_for('suivi_amblyopie_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi amblyopie</a>
 {% endblock %}
 
 {% block content %}
@@ -427,6 +428,42 @@
       {% endif %}
     </div>
   </div>
+
+  {# Suivis amblyopie #}
+  {% set suivis = patient.id | suivi_amblyopie_list %}
+  {% if suivis %}
+  <div class="card mt-3">
+    <div class="card-header" style="background:#E1F5EE;color:#085041;">
+      <h2 style="color:#085041;">Suivis amblyopie ({{ suivis|length }})</h2>
+      <a href="{{ url_for('suivi_amblyopie_nouveau', patient_id=patient.id) }}"
+         class="btn btn-secondary btn-sm" style="margin-left:auto;">+ Nouveau suivi</a>
+    </div>
+    <div class="card-body" style="padding:0;">
+      {% for s in suivis %}
+      <a href="{{ url_for('suivi_amblyopie_detail', suivi_id=s.id) }}"
+         style="display:flex;align-items:center;gap:12px;padding:10px 16px;
+                border-bottom:0.5px solid var(--border);text-decoration:none;color:inherit;
+                transition:background .1s;"
+         onmouseover="this.style.background='#E1F5EE33'"
+         onmouseout="this.style.background=''">
+        <span style="background:#E1F5EE;color:#085041;border-radius:6px;
+                     padding:3px 10px;font-size:12px;font-weight:500;white-space:nowrap;">
+          {{ s.date_bilan.strftime('%d/%m/%Y') }}
+        </span>
+        <span style="font-size:12px;color:var(--muted);">
+          {{ s.seances|length }} séance{{ 's' if s.seances|length > 1 }}
+          {% set filled = s.seances|selectattr('av_od')|list|length %}
+          {% if filled %} · {{ filled }} renseignée{{ 's' if filled > 1 }}{% endif %}
+        </span>
+        {% if s.traitement %}
+        <span style="font-size:11px;color:var(--muted);font-style:italic;">{{ s.traitement[:50] }}</span>
+        {% endif %}
+        <i class="ti ti-chevron-right" style="margin-left:auto;color:var(--muted);"></i>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
 </div>
 

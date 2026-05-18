@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Nouveau suivi amblyopie — {{ patient.prenom }} {{ patient.nom }}{% endblock %}
+{% block page_title %}Nouveau suivi amblyopie{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">← {{ patient.prenom }} {{ patient.nom }}</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;">
+  <form method="POST">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header" style="background:#E1F5EE;color:#085041;">
+        <h2 style="color:#085041;">Informations du bilan initial</h2>
+      </div>
+      <div class="card-body">
+        <div class="field-grid field-grid-2" style="gap:14px;">
+          <div class="field-group">
+            <label class="field-label">Date du bilan orthoptique</label>
+            <input type="date" name="date_bilan" value="{{ today.strftime('%Y-%m-%d') }}" required>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Ophtalmologiste</label>
+            <input type="text" name="ophthalmo" placeholder="Dr ...">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Lunettes OD</label>
+            <input type="text" name="lunettes_od" placeholder="ex: +2.00(-0.50)90°">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Lunettes OG</label>
+            <input type="text" name="lunettes_og" placeholder="ex: +0.50">
+          </div>
+          <div class="field-group">
+            <label class="field-label">AV initiale OD</label>
+            <input type="text" name="av_od_init" placeholder="ex: 4/10">
+          </div>
+          <div class="field-group">
+            <label class="field-label">AV initiale OG</label>
+            <input type="text" name="av_og_init" placeholder="ex: 10/10">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Stéréoscopie</label>
+            <input type="text" name="stereo" placeholder="ex: Lang positif">
+          </div>
+          <div class="field-group">
+            <label class="field-label">ESE</label>
+            <input type="text" name="ese" placeholder="ex: +2δ">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Versions</label>
+            <input type="text" name="versions" placeholder="ex: normales">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Date Cs ophthalmo</label>
+            <input type="date" name="date_cs">
+          </div>
+          <div class="field-group" style="grid-column:1/-1;">
+            <label class="field-label">Traitement prescrit</label>
+            <input type="text" name="traitement" placeholder="ex: Ortopad OD 4h/jour">
+          </div>
+          <div class="field-group">
+            <label class="field-label">À revoir dans</label>
+            <input type="text" name="prochain_rdv" placeholder="ex: 3 mois">
+          </div>
+          <div class="field-group" style="grid-column:1/-1;">
+            <label class="field-label">Notes</label>
+            <textarea name="notes" rows="2" placeholder="Observations complémentaires…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-primary">Créer le suivi</button>
+      <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

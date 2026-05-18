@@ -94,6 +94,15 @@ def inject_categories():
     return {'CATEGORIES': get_categories(), 'get_categories': get_categories}
 
 
+@app.template_filter('suivi_amblyopie_list')
+def suivi_amblyopie_list_filter(patient_id):
+    try:
+        return SuiviAmblyopie.query.filter_by(patient_id=patient_id)\
+            .order_by(SuiviAmblyopie.date_bilan.desc()).all()
+    except Exception:
+        return []
+
+
 BUILTIN_CATEGORIES = {
     'anam': 'anamnese', 'correction_portee': 'refraction',
     'refraction_obj': 'refraction', 'refraction_subj': 'refraction',
@@ -279,6 +288,55 @@ class FichierSection(db.Model):
     type_fichier    = db.Column(db.String(10))
     titre           = db.Column(db.String(255), default='')
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class SuiviAmblyopie(db.Model):
+    """Suivi de rééducation amblyopie."""
+    __tablename__ = 'suivi_amblyopie'
+    id            = db.Column(db.Integer, primary_key=True)
+    patient_id    = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    praticien_id  = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    cabinet_id    = db.Column(db.Integer, db.ForeignKey('cabinet.id'), nullable=True)
+    date_bilan    = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    # En-tête
+    lunettes_od   = db.Column(db.String(50), default='')
+    lunettes_og   = db.Column(db.String(50), default='')
+    av_od_init    = db.Column(db.String(20), default='')
+    av_og_init    = db.Column(db.String(20), default='')
+    ophthalmo     = db.Column(db.String(100), default='')
+    stereo        = db.Column(db.String(50), default='')
+    ese           = db.Column(db.String(50), default='')
+    versions      = db.Column(db.String(50), default='')
+    date_cs       = db.Column(db.Date, nullable=True)
+    traitement    = db.Column(db.Text, default='')
+    prochain_rdv  = db.Column(db.String(100), default='')
+    notes         = db.Column(db.Text, default='')
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at    = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    patient   = db.relationship('Patient',   foreign_keys=[patient_id])
+    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+    cabinet   = db.relationship('Cabinet',  foreign_keys=[cabinet_id])
+    seances   = db.relationship('SeanceAmblyopie', backref='suivi',
+                                order_by='SeanceAmblyopie.numero',
+                                cascade='all, delete-orphan')
+
+    def __str__(self):
+        return f'Suivi amblyopie du {self.date_bilan.strftime("%d/%m/%Y")}'
+
+
+class SeanceAmblyopie(db.Model):
+    """Séance individuelle dans un suivi amblyopie."""
+    __tablename__ = 'seance_amblyopie'
+    id        = db.Column(db.Integer, primary_key=True)
+    suivi_id  = db.Column(db.Integer, db.ForeignKey('suivi_amblyopie.id'), nullable=False)
+    numero    = db.Column(db.Integer, nullable=False)
+    date_seance = db.Column(db.Date, nullable=True)
+    occlusion = db.Column(db.String(100), default='')
+    av_od     = db.Column(db.String(20), default='')
+    av_og     = db.Column(db.String(20), default='')
+    ese       = db.Column(db.String(50), default='')
+    notes     = db.Column(db.Text, default='')
 
 
 class CategorieSection(db.Model):
@@ -767,9 +825,250 @@ def patient_supprimer(patient_id):
     return redirect(url_for('index'))
 
 
-@app.route('/admin/categories')
+@app.route('/patient/<int:patient_id>/suivi-amblyopie/nouveau', methods=['GET', 'POST'])
 @login_required
-@admin_required
+def suivi_amblyopie_nouveau(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    cabinet = get_current_cabinet()
+    if request.method == 'POST':
+        s = SuiviAmblyopie(
+            patient_id   = patient_id,
+            praticien_id = current_user.id,
+            cabinet_id   = cabinet.id if cabinet else None,
+            date_bilan   = _parse_date(request.form.get('date_bilan')) or datetime.utcnow().date(),
+            lunettes_od  = request.form.get('lunettes_od','').strip(),
+            lunettes_og  = request.form.get('lunettes_og','').strip(),
+            av_od_init   = request.form.get('av_od_init','').strip(),
+            av_og_init   = request.form.get('av_og_init','').strip(),
+            ophthalmo    = request.form.get('ophthalmo','').strip(),
+            stereo       = request.form.get('stereo','').strip(),
+            ese          = request.form.get('ese','').strip(),
+            versions     = request.form.get('versions','').strip(),
+            date_cs      = _parse_date(request.form.get('date_cs')),
+            traitement   = request.form.get('traitement','').strip(),
+            prochain_rdv = request.form.get('prochain_rdv','').strip(),
+            notes        = request.form.get('notes','').strip(),
+        )
+        db.session.add(s)
+        db.session.flush()
+        # Créer 10 séances vides
+        for i in range(1, 11):
+            db.session.add(SeanceAmblyopie(suivi_id=s.id, numero=i))
+        db.session.commit()
+        log_acces('creation_suivi_amblyopie', patient_id=patient_id)
+        flash('Suivi amblyopie créé.', 'success')
+        return redirect(url_for('suivi_amblyopie_detail', suivi_id=s.id))
+    return render_template('amblyopie/nouveau.html', patient=patient, cabinet=cabinet)
+
+
+@app.route('/suivi-amblyopie/<int:suivi_id>', methods=['GET', 'POST'])
+@login_required
+def suivi_amblyopie_detail(suivi_id):
+    s = SuiviAmblyopie.query.get_or_404(suivi_id)
+    if request.method == 'POST':
+        action = request.form.get('action', 'save')
+        # Mise à jour en-tête
+        s.date_bilan   = _parse_date(request.form.get('date_bilan')) or s.date_bilan
+        s.lunettes_od  = request.form.get('lunettes_od','').strip()
+        s.lunettes_og  = request.form.get('lunettes_og','').strip()
+        s.av_od_init   = request.form.get('av_od_init','').strip()
+        s.av_og_init   = request.form.get('av_og_init','').strip()
+        s.ophthalmo    = request.form.get('ophthalmo','').strip()
+        s.stereo       = request.form.get('stereo','').strip()
+        s.ese          = request.form.get('ese','').strip()
+        s.versions     = request.form.get('versions','').strip()
+        s.date_cs      = _parse_date(request.form.get('date_cs'))
+        s.traitement   = request.form.get('traitement','').strip()
+        s.prochain_rdv = request.form.get('prochain_rdv','').strip()
+        s.notes        = request.form.get('notes','').strip()
+        s.updated_at   = datetime.utcnow()
+        # Mise à jour séances
+        for seance in s.seances:
+            pfx = f'seance_{seance.id}_'
+            seance.date_seance = _parse_date(request.form.get(pfx+'date'))
+            seance.occlusion   = request.form.get(pfx+'occlusion','').strip()
+            seance.av_od       = request.form.get(pfx+'av_od','').strip()
+            seance.av_og       = request.form.get(pfx+'av_og','').strip()
+            seance.ese         = request.form.get(pfx+'ese','').strip()
+            seance.notes       = request.form.get(pfx+'notes','').strip()
+        # Ajouter une séance
+        if action == 'ajouter_seance':
+            next_num = max((se.numero for se in s.seances), default=0) + 1
+            db.session.add(SeanceAmblyopie(suivi_id=s.id, numero=next_num))
+        db.session.commit()
+        flash('Suivi enregistré.', 'success')
+        if action == 'generer':
+            return redirect(url_for('suivi_amblyopie_generer', suivi_id=suivi_id))
+        return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
+    log_acces('lecture_suivi_amblyopie', patient_id=s.patient_id)
+    return render_template('amblyopie/detail.html', suivi=s)
+
+
+@app.route('/suivi-amblyopie/<int:suivi_id>/supprimer', methods=['POST'])
+@login_required
+def suivi_amblyopie_supprimer(suivi_id):
+    s = SuiviAmblyopie.query.get_or_404(suivi_id)
+    patient_id = s.patient_id
+    db.session.delete(s)
+    db.session.commit()
+    flash('Suivi supprimé.', 'success')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
+@app.route('/suivi-amblyopie/<int:suivi_id>/generer')
+@login_required
+def suivi_amblyopie_generer(suivi_id):
+    """Génère le document Word du suivi amblyopie."""
+    import zipfile, re, tempfile, os, shutil, uuid, urllib.parse
+    s = SuiviAmblyopie.query.get_or_404(suivi_id)
+    p = s.patient
+    praticien = s.praticien
+    cabinet   = s.cabinet
+    pc = None
+    if cabinet:
+        pc = PraticienCabinet.query.filter_by(
+            praticien_id=praticien.id, cabinet_id=cabinet.id).first()
+
+    esc = lambda x: (x or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    entete_path = os.path.join(app.root_path, 'entete.docx')
+    tmpdir = tempfile.mkdtemp()
+    with zipfile.ZipFile(entete_path, 'r') as z:
+        doc_xml = z.read('word/document.xml').decode('utf-8')
+
+    # Substitutions entête cabinet
+    cab_rue     = (cabinet.rue or '') if cabinet else ''
+    cab_cp_comm = f"{(cabinet.code_postal or '')} {(cabinet.commune or '')}".strip() if cabinet else ''
+    cab_commune = (cabinet.commune or 'Yssingeaux') if cabinet else 'Yssingeaux'
+    cab_tel     = (cabinet.telephone or '') if cabinet else ''
+    cab_email   = (cabinet.email or '') if cabinet else ''
+    adeli       = (pc.adeli if pc else '') or ''
+    prat_nom    = f"{praticien.prenom} {praticien.nom}"
+    prat_rpps   = praticien.rpps or ''
+    prat_titre  = praticien.titre or 'Orthoptiste'
+
+    def sub(xml, old, new):
+        return xml.replace(old, esc(new)) if old in xml else xml
+
+    doc_xml = sub(doc_xml, '130, Boulevard de la Paix', cab_rue)
+    doc_xml = sub(doc_xml, '43200 Yssingeaux', cab_cp_comm)
+    doc_xml = sub(doc_xml, '04 71 59 01 38', cab_tel)
+    doc_xml = sub(doc_xml, 'orthoptistes-yssingeaux@outlook.fr', cab_email)
+    doc_xml = sub(doc_xml, 'ADELI\xa0: 439287145', f'ADELI : {adeli}' if adeli else '')
+    doc_xml = sub(doc_xml, 'RPPS\xa0: 10010253291', f'RPPS : {prat_rpps}' if prat_rpps else '')
+    doc_xml = sub(doc_xml, ' Cyprien Nesme', f' {prat_nom}')
+    doc_xml = sub(doc_xml, 'ORTHOPTISTE', prat_titre)
+    doc_xml = sub(doc_xml, 'Prise de rendez-vous sur Doctolib', '')
+    doc_xml = doc_xml.replace(
+        f'A\xa0Yssingeaux, le </w:t></w:r><w:bookmarkEnd w:id="0"/>',
+        f'A\xa0{esc(cab_commune)}, le {s.date_bilan.strftime("%d/%m/%Y")}</w:t></w:r><w:bookmarkEnd w:id="0"/>'
+    )
+    # Patient
+    pat_nom = f'{p.prenom} {p.nom}'
+    pat_ddn = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
+    doc_xml = re.sub(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Nom"/>.*?<w:sdtContent>.*?</w:sdtContent></w:sdt>',
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{esc(pat_nom)}</w:t></w:r>',
+        doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(r'<w:sdt><w:sdtPr><w:alias w:val="Pr[eé]nom"/>.*?</w:sdt>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = doc_xml.replace('DDN : </w:t></w:r>', f'DDN : {esc(pat_ddn)}</w:t></w:r>')
+    doc_xml = re.sub(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Commentaires ".*?<w:sdtContent>.*?</w:sdtContent></w:sdt>',
+        '<w:r><w:t></w:t></w:r>', doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(r'<w:tab/><w:t xml:space="preserve">Âge\s*:\s*</w:t>.*?<w:t xml:space="preserve">Classe\s*:\s*</w:t>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?[Mm]édecin(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=re.DOTALL)
+    doc_xml = doc_xml.replace('<w:t>BILAN ORTHOPTIQUE</w:t>', '<w:t>SUIVI AMBLYOPIE</w:t>')
+
+    def para(txt, bold=False, center=False, size=20, before=0, after=80):
+        b = '<w:b/>' if bold else ''
+        jc = f'<w:jc w:val="center"/>' if center else ''
+        return (f'<w:p><w:pPr>{jc}<w:spacing w:before="{before}" w:after="{after}"/></w:pPr>'
+                f'<w:r><w:rPr>{b}<w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                f'<w:sz w:val="{size}"/></w:rPr>'
+                f'<w:t xml:space="preserve">{esc(txt)}</w:t></w:r></w:p>')
+
+    def tbl_cell(txt, bold=False, bg=None, w=1000):
+        b = '<w:b/>' if bold else ''
+        shd = f'<w:shd w:val="clear" w:color="auto" w:fill="{bg}"/>' if bg else ''
+        return (f'<w:tc><w:tcPr><w:tcW w:w="{w}" w:type="dxa"/>{shd}'
+                f'<w:tcMar><w:top w:w="60"/><w:bottom w:w="60"/><w:left w:w="80"/><w:right w:w="80"/></w:tcMar>'
+                f'</w:tcPr>'
+                f'<w:p><w:r><w:rPr>{b}<w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                f'<w:sz w:val="18"/></w:rPr>'
+                f'<w:t xml:space="preserve">{esc(txt)}</w:t></w:r></w:p></w:tc>')
+
+    body = []
+    # En-tête infos
+    body.append(para(f'BO réalisé le : {s.date_bilan.strftime("%d/%m/%Y")}', bold=True, before=240))
+    body.append(para(f'Lunettes — OD : {s.lunettes_od or "—"}   OG : {s.lunettes_og or "—"}'))
+    body.append(para(f'AV initiale — OD : {s.av_od_init or "—"}   OG : {s.av_og_init or "—"}'))
+    if s.ophthalmo: body.append(para(f'Ophtalmologiste : {s.ophthalmo}'))
+    if s.traitement: body.append(para(f'Traitement : {s.traitement}'))
+    if s.prochain_rdv: body.append(para(f'À revoir dans : {s.prochain_rdv}'))
+
+    # Tableau séances
+    HDR_BG = 'DAE9F7'
+    col_w = [400, 900, 1400, 800, 800, 900, 1600]
+    hdr_cells = ''.join([
+        tbl_cell('#', bold=True, bg=HDR_BG, w=col_w[0]),
+        tbl_cell('Date', bold=True, bg=HDR_BG, w=col_w[1]),
+        tbl_cell('Occlusion', bold=True, bg=HDR_BG, w=col_w[2]),
+        tbl_cell('AV OD', bold=True, bg=HDR_BG, w=col_w[3]),
+        tbl_cell('AV OG', bold=True, bg=HDR_BG, w=col_w[4]),
+        tbl_cell('ESE', bold=True, bg=HDR_BG, w=col_w[5]),
+        tbl_cell('Notes', bold=True, bg=HDR_BG, w=col_w[6]),
+    ])
+    rows = f'<w:tr>{"".join(hdr_cells)}</w:tr>'
+    for seance in s.seances:
+        date_str = seance.date_seance.strftime('%d/%m/%Y') if seance.date_seance else ''
+        row_bg = 'F4F8FD' if seance.numero % 2 == 0 else None
+        cells = ''.join([
+            tbl_cell(str(seance.numero), bold=True, bg=row_bg, w=col_w[0]),
+            tbl_cell(date_str, bg=row_bg, w=col_w[1]),
+            tbl_cell(seance.occlusion or '', bg=row_bg, w=col_w[2]),
+            tbl_cell(seance.av_od or '', bg=row_bg, w=col_w[3]),
+            tbl_cell(seance.av_og or '', bg=row_bg, w=col_w[4]),
+            tbl_cell(seance.ese or '', bg=row_bg, w=col_w[5]),
+            tbl_cell(seance.notes or '', bg=row_bg, w=col_w[6]),
+        ])
+        rows += f'<w:tr>{cells}</w:tr>'
+
+    total_w = sum(col_w)
+    table = (f'<w:tbl>'
+             f'<w:tblPr><w:tblW w:w="{total_w}" w:type="dxa"/>'
+             f'<w:tblBorders>'
+             f'<w:top w:val="single" w:sz="4" w:color="4472C4"/>'
+             f'<w:left w:val="single" w:sz="4" w:color="4472C4"/>'
+             f'<w:bottom w:val="single" w:sz="4" w:color="4472C4"/>'
+             f'<w:right w:val="single" w:sz="4" w:color="4472C4"/>'
+             f'<w:insideH w:val="single" w:sz="4" w:color="DAE9F7"/>'
+             f'<w:insideV w:val="single" w:sz="4" w:color="DAE9F7"/>'
+             f'</w:tblBorders></w:tblPr>'
+             f'<w:tblGrid>{"".join(f"<w:gridCol w:w=\"{w}\"/>" for w in col_w)}</w:tblGrid>'
+             f'{rows}</w:tbl>')
+    body.append(f'<w:p><w:pPr><w:spacing w:before="240"/></w:pPr></w:p>')
+    body.append(table)
+    if s.notes:
+        body.append(para(f'Notes : {s.notes}', before=160))
+
+    doc_xml = doc_xml.replace('</w:body>', '\n'.join(body) + '</w:body>')
+
+    new_out = os.path.join(tmpdir, 'suivi_amblyopie.docx')
+    with zipfile.ZipFile(entete_path, 'r') as zin:
+        with zipfile.ZipFile(new_out, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                if item.filename == 'word/document.xml':
+                    zout.writestr(item, doc_xml.encode('utf-8'))
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+
+    nom = f'{p.nom}_{p.prenom}_SuiviAmblyopie_{s.date_bilan.strftime("%Y%m%d")}.docx'
+    from flask import send_file
+    return send_file(new_out, as_attachment=True, download_name=nom,
+                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+
+
 def admin_categories():
     cats_builtin = {k: v for k, v in CATEGORIES_BUILTIN.items() if k}
     cats_custom = CategorieSection.query.order_by(CategorieSection.ordre).all()
