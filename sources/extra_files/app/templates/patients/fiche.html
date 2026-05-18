@@ -205,7 +205,7 @@
               <a href="{{ url_for('consultation_detail', consultation_id=c.id) }}"
                  class="btn btn-secondary btn-sm">👁</a>
               <button type="button"
-                      onclick="ouvrirModalSuppression({{ c.id }})"
+                      onclick="confirmerSuppression({{ c.id }}, '{{ c.date_consult.strftime('%d/%m/%Y') }}', '{{ patient.prenom }} {{ patient.nom }}')"
                       class="btn btn-secondary btn-sm"
                       style="color:#e53e3e;border-color:#e53e3e;"
                       title="Supprimer ce bilan">🗑</button>
