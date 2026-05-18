@@ -1316,6 +1316,7 @@ function afficherHistoriqueSection(data, typeKey, sectionIdx) {
   // Construire les cartes sans données dans les attributs onclick
   const cards = data.map((entry, i) => {
     const d = entry.donnees;
+    const col = getSectionColor(typeKey);
     let champsHtml = champs
       .filter(c => c.type !== 'fichier' && d[c.name])
       .map(c => `<div style="display:flex;justify-content:space-between;
@@ -1332,23 +1333,24 @@ function afficherHistoriqueSection(data, typeKey, sectionIdx) {
       champsHtml = '<div style="font-size:12px;color:var(--muted);font-style:italic;">Section vide</div>';
     }
 
-    return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;">
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;
-                  background:var(--bg);border-bottom:1px solid var(--border);">
+    return `<div style="border:0.5px solid ${col.color}33;border-radius:8px;margin-bottom:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;
+                  background:${col.bg};border-bottom:0.5px solid ${col.color}22;">
         <div style="flex:1;">
-          <div style="font-size:13px;font-weight:500;color:var(--accent);">${entry.date}</div>
-          ${entry.motif ? `<div style="font-size:11px;color:var(--muted);">${entry.motif}</div>` : ''}
+          <div style="font-size:13px;font-weight:500;color:${col.color};">${entry.date}</div>
+          ${entry.motif ? `<div style="font-size:11px;opacity:.7;color:${col.color};">${entry.motif}</div>` : ''}
         </div>
         <button type="button"
                 data-entry-idx="${i}"
                 data-section-idx="${sectionIdx}"
                 class="btn btn-secondary btn-sm histo-copy-btn"
                 tabindex="-1"
-                style="font-size:11px;padding:4px 10px;">
+                style="font-size:11px;padding:4px 10px;background:rgba(0,0,0,.08);
+                       border-color:${col.color}44;color:${col.color};">
           Copier ici
         </button>
       </div>
-      <div style="padding:10px 12px;">
+      <div style="padding:10px 12px;background:white;">
         ${entry.observations ? `<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:6px;white-space:pre-wrap;">${entry.observations}</div>` : ''}
         ${champsHtml}
       </div>

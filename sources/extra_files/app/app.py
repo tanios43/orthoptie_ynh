@@ -263,6 +263,11 @@ class SectionBilan(db.Model):
         sd = SectionDef.query.filter_by(type_key=self.type).first()
         return sd.label if sd else self.type
 
+    @property
+    def categorie(self):
+        sd = SectionDef.query.filter_by(type_key=self.type).first()
+        return (sd.categorie or '') if sd else ''
+
 
 class FichierBilan(db.Model):
     __tablename__ = 'fichier_bilan'
