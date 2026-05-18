@@ -66,7 +66,7 @@ def age_a_la_date(date_naissance, date_ref=None):
     return f'{years} ans {months} mois'
 
 
-CATEGORIES = {
+CATEGORIES_BUILTIN = {
     'refraction':  {'label': 'Réfraction',          'bg': '#EEEDFE', 'color': '#3C3489', 'icon': 'ti-eye'},
     'acuite':      {'label': 'Acuité visuelle',      'bg': '#EAF3DE', 'color': '#27500A', 'icon': 'ti-focus-2'},
     'motilite':    {'label': 'Motilité / Vergences', 'bg': '#FAECE7', 'color': '#712B13', 'icon': 'ti-arrows-move'},
@@ -78,27 +78,27 @@ CATEGORIES = {
     '':            {'label': 'Sans catégorie',       'bg': '#F1EFE8', 'color': '#444441', 'icon': 'ti-layout-grid'},
 }
 
-# Catégories par défaut pour les sections builtin
-BUILTIN_CATEGORIES = {
-    'anam': 'anamnese', 'correction_portee': 'refraction',
-    'refraction_obj': 'refraction', 'refraction_subj': 'refraction',
-    'acuite': 'acuite', 'swaine': 'acuite',
-    'stereoscopie': 'stereoscopie',
-    'cover': 'motilite', 'motilite': 'motilite', 'ppc': 'motilite',
-    'facilites_accom': 'motilite', 'facilites_verg': 'motilite',
-    'conclusions': 'conclusions',
-    'ordonnance': 'ordonnance', 'ordonnance_lunettes': 'ordonnance',
-    'courrier': 'courrier',
-}
+def get_categories():
+    """Retourne le dict des catégories (builtin + DB)."""
+    cats = dict(CATEGORIES_BUILTIN)
+    try:
+        for c in CategorieSection.query.order_by(CategorieSection.ordre).all():
+            cats[c.key] = {'label': c.label, 'bg': c.bg, 'color': c.color, 'icon': c.icon}
+    except Exception:
+        pass
+    return cats
 
-app.jinja_env.globals['CATEGORIES'] = CATEGORIES
+
+@app.context_processor
+def inject_categories():
+    return {'CATEGORIES': get_categories()}
 
 
 @app.template_global()
 def section_style(section_type, categorie=''):
     """Retourne bg/color/icon pour une section selon sa catégorie."""
     cat = categorie or BUILTIN_CATEGORIES.get(section_type, '')
-    return CATEGORIES.get(cat, CATEGORIES[''])
+    return get_categories().get(cat, CATEGORIES_BUILTIN[''])
 app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
 app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(minutes=30)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
@@ -266,6 +266,18 @@ class FichierSection(db.Model):
     type_fichier    = db.Column(db.String(10))
     titre           = db.Column(db.String(255), default='')
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class CategorieSection(db.Model):
+    """Catégories personnalisables pour les sections de bilan."""
+    __tablename__ = 'categorie_section'
+    id     = db.Column(db.Integer, primary_key=True)
+    key    = db.Column(db.String(50), unique=True, nullable=False)
+    label  = db.Column(db.String(100), nullable=False)
+    bg     = db.Column(db.String(20), default='#F1EFE8')
+    color  = db.Column(db.String(20), default='#444441')
+    icon   = db.Column(db.String(50), default='ti-layout-grid')
+    ordre  = db.Column(db.Integer, default=99)
 
 
 class JournalAcces(db.Model):
@@ -742,8 +754,66 @@ def patient_supprimer(patient_id):
     return redirect(url_for('index'))
 
 
-@app.route('/admin/sauvegarde', methods=['GET'])
+@app.route('/admin/categories')
 @login_required
+@admin_required
+def admin_categories():
+    cats_builtin = {k: v for k, v in CATEGORIES_BUILTIN.items() if k}
+    cats_custom = CategorieSection.query.order_by(CategorieSection.ordre).all()
+    return render_template('admin/categories.html',
+                           cats_builtin=cats_builtin,
+                           cats_custom=cats_custom)
+
+
+@app.route('/admin/categories/creer', methods=['POST'])
+@login_required
+@admin_required
+def admin_categorie_creer():
+    key   = request.form.get('key', '').strip().lower().replace(' ', '_')
+    label = request.form.get('label', '').strip()
+    bg    = request.form.get('bg', '#F1EFE8').strip()
+    color = request.form.get('color', '#444441').strip()
+    icon  = request.form.get('icon', 'ti-layout-grid').strip()
+    if not key or not label:
+        flash('Clé et libellé requis.', 'danger')
+        return redirect(url_for('admin_categories'))
+    if CategorieSection.query.filter_by(key=key).first() or key in CATEGORIES_BUILTIN:
+        flash(f'La clé « {key} » existe déjà.', 'danger')
+        return redirect(url_for('admin_categories'))
+    c = CategorieSection(key=key, label=label, bg=bg, color=color, icon=icon)
+    db.session.add(c); db.session.commit()
+    flash(f'Catégorie « {label} » créée.', 'success')
+    return redirect(url_for('admin_categories'))
+
+
+@app.route('/admin/categories/<int:cat_id>/modifier', methods=['POST'])
+@login_required
+@admin_required
+def admin_categorie_modifier(cat_id):
+    c = CategorieSection.query.get_or_404(cat_id)
+    c.label = request.form.get('label', c.label).strip()
+    c.bg    = request.form.get('bg', c.bg).strip()
+    c.color = request.form.get('color', c.color).strip()
+    c.icon  = request.form.get('icon', c.icon).strip()
+    db.session.commit()
+    flash('Catégorie mise à jour.', 'success')
+    return redirect(url_for('admin_categories'))
+
+
+@app.route('/admin/categories/<int:cat_id>/supprimer', methods=['POST'])
+@login_required
+@admin_required
+def admin_categorie_supprimer(cat_id):
+    c = CategorieSection.query.get_or_404(cat_id)
+    label = c.label
+    # Remettre à vide les sections qui utilisaient cette catégorie
+    SectionDef.query.filter_by(categorie=c.key).update({'categorie': ''})
+    db.session.delete(c); db.session.commit()
+    flash(f'Catégorie « {label} » supprimée.', 'success')
+    return redirect(url_for('admin_categories'))
+
+
+
 def admin_sauvegarde():
     """Page de gestion des sauvegardes."""
     if current_user.role != 'admin':

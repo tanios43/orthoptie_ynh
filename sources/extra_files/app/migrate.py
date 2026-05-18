@@ -6,6 +6,65 @@ import warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='flask_sqlalchemy')
 warnings.filterwarnings('ignore', message='.*already contains a class.*')
 
+# Créer les tables et colonnes critiques AVANT l'import de app.py
+# pour éviter que SQLAlchemy plante si le schéma est incomplet
+import sqlite3, os, glob
+
+def _find_db():
+    candidates = [
+        '/home/yunohost.app/orthoptie/orthoptie_v2.db',
+        os.path.join(os.path.dirname(__file__), 'instance', 'orthoptie_v2.db'),
+        os.path.join(os.path.dirname(__file__), 'orthoptie_v2.db'),
+    ]
+    for p in candidates:
+        real = os.path.realpath(p)
+        if os.path.exists(real):
+            return real
+    return None
+
+_db_path = _find_db()
+if _db_path:
+    _conn = sqlite3.connect(_db_path)
+    _cur = _conn.cursor()
+    # Toutes les colonnes/tables critiques créées AVANT l'import de app.py
+    _pre_migrations = [
+        "ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''",
+        "ALTER TABLE section_def ADD COLUMN avec_observations BOOLEAN DEFAULT 1",
+        "ALTER TABLE section_def ADD COLUMN obs_defaut TEXT DEFAULT ''",
+        """CREATE TABLE IF NOT EXISTS categorie_section (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key VARCHAR(50) UNIQUE NOT NULL,
+            label VARCHAR(100) NOT NULL,
+            bg VARCHAR(20) DEFAULT '#F1EFE8',
+            color VARCHAR(20) DEFAULT '#444441',
+            icon VARCHAR(50) DEFAULT 'ti-layout-grid',
+            ordre INTEGER DEFAULT 99
+        )""",
+        """CREATE TABLE IF NOT EXISTS journal_acces (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            praticien_id INTEGER NOT NULL,
+            patient_id INTEGER,
+            consultation_id INTEGER,
+            action VARCHAR(100) NOT NULL,
+            detail VARCHAR(500) DEFAULT '',
+            ip_address VARCHAR(50) DEFAULT '',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
+        "ALTER TABLE journal_acces ADD COLUMN detail VARCHAR(500) DEFAULT ''",
+        "ALTER TABLE journal_acces ADD COLUMN ip_address VARCHAR(50) DEFAULT ''",
+        "ALTER TABLE fichier_section ADD COLUMN section_type VARCHAR(50) DEFAULT ''",
+        "ALTER TABLE praticien ADD COLUMN signature VARCHAR(500)",
+        "ALTER TABLE wopi_session ADD COLUMN section_ordre INTEGER DEFAULT 0",
+    ]
+    for sql in _pre_migrations:
+        try:
+            _cur.execute(sql)
+        except sqlite3.OperationalError:
+            pass  # colonne/table déjà existante
+    _conn.commit()
+    _conn.close()
+    print("Pré-migration SQLite OK")
+
 from app import db, app, SectionDef, ChampDef
 
 with app.app_context():
@@ -142,6 +201,25 @@ with app.app_context():
             print("Present : section_ordre sur wopi_session")
         else:
             print(f"ERREUR  : section_ordre — {e}")
+
+    # Table categorie_section
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS categorie_section (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key VARCHAR(50) UNIQUE NOT NULL,
+                    label VARCHAR(100) NOT NULL,
+                    bg VARCHAR(20) DEFAULT '#F1EFE8',
+                    color VARCHAR(20) DEFAULT '#444441',
+                    icon VARCHAR(50) DEFAULT 'ti-layout-grid',
+                    ordre INTEGER DEFAULT 99
+                )
+            """))
+            conn.commit()
+        print("OK      : table categorie_section")
+    except Exception as e:
+        print(f"Present/ERREUR categorie_section : {e}")
 
     # Table journal_acces
     try:

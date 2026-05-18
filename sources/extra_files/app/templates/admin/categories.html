@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Catégories{% endblock %}
+{% block page_title %}🎨 Catégories de sections{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:20px;">
+
+  {# Catégories builtin #}
+  <div class="card">
+    <div class="card-header"><h2>Catégories intégrées</h2></div>
+    <div class="card-body" style="padding:0;">
+      {% for key, cat in cats_builtin.items() %}
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);">
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;
+                     background:{{ cat.bg }};color:{{ cat.color }};font-size:13px;font-weight:500;min-width:180px;">
+          <i class="ti {{ cat.icon }}"></i> {{ cat.label }}
+        </span>
+        <span style="font-family:monospace;font-size:11px;color:var(--muted);">{{ key }}</span>
+        <div style="display:flex;gap:6px;margin-left:auto;">
+          <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:{{ cat.bg }};color:{{ cat.color }};">{{ cat.bg }}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:{{ cat.bg }};color:{{ cat.color }};">{{ cat.icon }}</span>
+        </div>
+        <span style="font-size:11px;color:var(--muted);font-style:italic;">intégrée</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Catégories personnalisées #}
+  <div class="card">
+    <div class="card-header"><h2>Catégories personnalisées</h2></div>
+    <div class="card-body" style="padding:0;">
+      {% if cats_custom %}
+        {% for cat in cats_custom %}
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);">
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;
+                       background:{{ cat.bg }};color:{{ cat.color }};font-size:13px;font-weight:500;min-width:180px;">
+            <i class="ti {{ cat.icon }}"></i> {{ cat.label }}
+          </span>
+          <span style="font-family:monospace;font-size:11px;color:var(--muted);">{{ cat.key }}</span>
+
+          {# Formulaire d'édition inline #}
+          <form method="POST" action="{{ url_for('admin_categorie_modifier', cat_id=cat.id) }}"
+                style="display:flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap;">
+            <input type="text" name="label" value="{{ cat.label }}"
+                   style="width:120px;font-size:12px;padding:3px 6px;">
+            <div style="display:flex;align-items:center;gap:4px;">
+              <label style="font-size:11px;color:var(--muted);">Fond</label>
+              <input type="color" name="bg" value="{{ cat.bg }}" style="width:32px;height:24px;padding:1px;cursor:pointer;">
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <label style="font-size:11px;color:var(--muted);">Texte</label>
+              <input type="color" name="color" value="{{ cat.color }}" style="width:32px;height:24px;padding:1px;cursor:pointer;">
+            </div>
+            <input type="text" name="icon" value="{{ cat.icon }}"
+                   placeholder="ti-layout-grid" style="width:130px;font-size:11px;padding:3px 6px;">
+            <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
+          </form>
+
+          <form method="POST" action="{{ url_for('admin_categorie_supprimer', cat_id=cat.id) }}"
+                onsubmit="return confirm('Supprimer cette catégorie ?')">
+            <button type="submit" class="btn btn-secondary btn-sm"
+                    style="color:#e53e3e;border-color:#e53e3e;">🗑</button>
+          </form>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">
+        Aucune catégorie personnalisée. Créez-en une ci-dessous.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Créer une nouvelle catégorie #}
+  <div class="card">
+    <div class="card-header"><h2>Créer une catégorie</h2></div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('admin_categorie_creer') }}"
+            style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="field-group">
+          <label class="field-label">Clé (identifiant unique)</label>
+          <input type="text" name="key" placeholder="ex: binoculaire" required
+                 pattern="[a-z0-9_]+" title="Lettres minuscules, chiffres et _ uniquement"
+                 style="width:160px;">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Libellé</label>
+          <input type="text" name="label" placeholder="ex: Binoculaire" required style="width:160px;">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Couleur fond</label>
+          <input type="color" name="bg" value="#E8F4FD" style="width:48px;height:34px;padding:2px;cursor:pointer;">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Couleur texte</label>
+          <input type="color" name="color" value="#0C447C" style="width:48px;height:34px;padding:2px;cursor:pointer;">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Icône <a href="https://tabler-icons.io" target="_blank" style="font-size:10px;">tabler-icons.io</a></label>
+          <input type="text" name="icon" value="ti-layout-grid" placeholder="ti-eye" style="width:140px;">
+        </div>
+        <button type="submit" class="btn btn-primary">Créer</button>
+      </form>
+
+      <div style="margin-top:12px;font-size:12px;color:var(--muted);">
+        <b>Aperçu des icônes disponibles :</b>
+        <span style="font-family:monospace;">ti-eye, ti-focus-2, ti-arrows-move, ti-notes, ti-clipboard-text, ti-prescription, ti-mail, ti-brain, ti-activity, ti-heart-rate-monitor</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

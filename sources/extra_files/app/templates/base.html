@@ -395,6 +395,10 @@
        class="nav-item {% if request.endpoint == 'admin_journal' %}active{% endif %}">
       <span class="icon">🔒</span> Journal RGPD
     </a>
+    <a href="{{ url_for('admin_categories') }}"
+       class="nav-item {% if request.endpoint in ['admin_categories','admin_categorie_creer','admin_categorie_modifier','admin_categorie_supprimer'] %}active{% endif %}">
+      <span class="icon">🎨</span> Catégories
+    </a>
     {% endif %}
   </nav>
 
