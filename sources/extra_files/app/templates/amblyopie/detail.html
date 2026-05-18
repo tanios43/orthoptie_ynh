@@ -169,17 +169,27 @@
     </div>
   </div>
 
-  {# Actions #}
-  <div class="flex gap-2" style="flex-wrap:wrap;">
+  {# Barre d'actions fixe en bas #}
+  <div style="position:fixed;bottom:0;
+              left:calc(var(--sidebar-w, 220px) + 32px);right:32px;
+              background:var(--surface);border-top:1px solid var(--border);
+              padding:12px 20px;display:flex;gap:10px;align-items:center;
+              border-radius:10px 10px 0 0;
+              box-shadow:0 -2px 8px rgba(0,0,0,.06);z-index:90;flex-wrap:wrap;">
     <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button>
     <button type="submit" name="action" value="ajouter_seance" class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
-    <a href="{{ url_for('patient_detail', patient_id=suivi.patient_id) }}" class="btn btn-secondary" style="margin-left:auto;">← Retour patient</a>
+    <a href="{{ url_for('patient_detail', patient_id=suivi.patient_id) }}"
+       class="btn btn-secondary" style="margin-left:auto;">← Retour patient</a>
     <form method="POST" action="{{ url_for('suivi_amblyopie_supprimer', suivi_id=suivi.id) }}"
           onsubmit="return confirm('Supprimer ce suivi ?')">
-      <button type="submit" class="btn btn-secondary" style="color:#e53e3e;border-color:#e53e3e;">🗑 Supprimer</button>
+      <button type="submit" class="btn btn-secondary"
+              style="color:#e53e3e;border-color:#e53e3e;">🗑 Supprimer</button>
     </form>
   </div>
+
+  {# Espace pour ne pas cacher le contenu sous la barre fixe #}
+  <div style="height:64px;"></div>
 
 </form>
 
