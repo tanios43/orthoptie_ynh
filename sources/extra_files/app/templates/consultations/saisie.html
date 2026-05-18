@@ -146,8 +146,9 @@
           {% if c.sections %}
           <div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px;">
             {% for sec in c.sections %}
+            {% set col = section_style(sec.type, sec.categorie) %}
             <span style="font-size:10px;padding:1px 6px;border-radius:10px;
-                         background:var(--accent-lt);color:var(--accent-dk);">{{ sec.label }}</span>
+                         background:{{ col.bg }};color:{{ col.color }};">{{ sec.label }}</span>
             {% endfor %}
           </div>
           {% endif %}
@@ -171,12 +172,13 @@
                     gap:8px;margin-top:10px;">
           {% for sec in c.sections %}
           {% set d = sec.get_donnees() %}
-          <div style="background:var(--surface);border:1px solid var(--border);
-                      border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:600;color:var(--accent);
-                        text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
+          {% set col = section_style(sec.type, sec.categorie) %}
+          <div style="border:0.5px solid {{ col.color }}22;border-radius:8px;overflow:hidden;">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;
+                        padding:5px 10px;background:{{ col.bg }};color:{{ col.color }};">
               {{ sec.label }}
             </div>
+            <div style="padding:8px 12px;background:white;">
             {% if sec.observations %}
             <div style="font-size:11px;color:var(--muted);font-style:italic;
                         margin-bottom:5px;white-space:pre-wrap;">{{ sec.observations }}</div>
@@ -284,6 +286,7 @@
             </div>
             {% endif %}
             {% endif %}
+            </div>{# fin padding inner #}
           </div>
           {% endfor %}
         </div>
@@ -627,7 +630,9 @@ function getSectionColor(type) {
   // Utiliser le mapping dynamique des catégories (depuis Python)
   if (cat && CAT_COLORS[cat]) return CAT_COLORS[cat];
   // Fallback sur le mapping builtin par type
-  return SECTION_COLORS[type] || CAT_COLORS[''] || {bg:'#F1EFE8', color:'#444441', icon:'ti-layout-grid'};
+  if (SECTION_COLORS[type]) return SECTION_COLORS[type];
+  // Fallback final
+  return CAT_COLORS[''] || {bg:'#F1EFE8', color:'#444441', icon:'ti-layout-grid'};
 }
 
 
