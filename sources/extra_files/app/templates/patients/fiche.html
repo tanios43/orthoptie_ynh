@@ -204,6 +204,11 @@
                  class="btn btn-secondary btn-sm">✎</a>
               <a href="{{ url_for('consultation_detail', consultation_id=c.id) }}"
                  class="btn btn-secondary btn-sm">👁</a>
+              <button type="button"
+                      onclick="ouvrirModalSuppression({{ c.id }})"
+                      class="btn btn-secondary btn-sm"
+                      style="color:#e53e3e;border-color:#e53e3e;"
+                      title="Supprimer ce bilan">🗑</button>
             </div>
           </div>
 
