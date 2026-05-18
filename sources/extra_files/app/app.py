@@ -1069,7 +1069,9 @@ def suivi_amblyopie_generer(suivi_id):
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 
-
+@app.route('/admin/categories')
+@login_required
+@admin_required
 def admin_categories():
     cats_builtin = {k: v for k, v in CATEGORIES_BUILTIN.items() if k}
     cats_custom = CategorieSection.query.order_by(CategorieSection.ordre).all()
