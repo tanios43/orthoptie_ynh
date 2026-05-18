@@ -44,35 +44,35 @@
         </div>
         <div class="field-group">
           <label class="field-label">Ophtalmologiste</label>
-          <input type="text" name="ophthalmo" value="{{ suivi.ophthalmo or '' }}">
+          <textarea name="ophthalmo" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.ophthalmo or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">Lunettes OD</label>
-          <input type="text" name="lunettes_od" value="{{ suivi.lunettes_od or '' }}">
+          <textarea name="lunettes_od" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.lunettes_od or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">Lunettes OG</label>
-          <input type="text" name="lunettes_og" value="{{ suivi.lunettes_og or '' }}">
+          <textarea name="lunettes_og" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.lunettes_og or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">AV initiale OD</label>
-          <input type="text" name="av_od_init" value="{{ suivi.av_od_init or '' }}" placeholder="ex: 4/10">
+          <textarea name="av_od_init" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.av_od_init or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">AV initiale OG</label>
-          <input type="text" name="av_og_init" value="{{ suivi.av_og_init or '' }}" placeholder="ex: 10/10">
+          <textarea name="av_og_init" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.av_og_init or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">Stéréoscopie</label>
-          <input type="text" name="stereo" value="{{ suivi.stereo or '' }}">
+          <textarea name="stereo" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.stereo or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">VB</label>
-          <input type="text" name="ese" value="{{ suivi.ese or '' }}">
+          <textarea name="ese" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.ese or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">Versions</label>
-          <input type="text" name="versions" value="{{ suivi.versions or '' }}">
+          <textarea name="versions" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.versions or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">Date Cs ophthalmo</label>
@@ -80,11 +80,11 @@
         </div>
         <div class="field-group" style="grid-column:span 2;">
           <label class="field-label">Traitement</label>
-          <input type="text" name="traitement" value="{{ suivi.traitement or '' }}">
+          <textarea name="traitement" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.traitement or '' }}</textarea>
         </div>
         <div class="field-group">
           <label class="field-label">À revoir dans</label>
-          <input type="text" name="prochain_rdv" value="{{ suivi.prochain_rdv or '' }}">
+          <textarea name="prochain_rdv" class="auto-resize" style="min-height:36px;resize:none;overflow:hidden;">{{ suivi.prochain_rdv or '' }}</textarea>
         </div>
         <div class="field-group" style="grid-column:span 3;">
           <label class="field-label">Notes</label>

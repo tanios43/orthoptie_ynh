@@ -7,66 +7,108 @@
 {% endblock %}
 
 {% block content %}
-<div style="max-width:720px;">
+<div style="max-width:760px;">
+
+  {% if dernier_bilan %}
+  <div style="background:#E1F5EE;border:1px solid #A8DFCC;border-radius:8px;padding:10px 16px;
+              margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;color:#085041;">
+      Dernier bilan : <b>{{ dernier_bilan.date_consult.strftime('%d/%m/%Y') }}</b>
+    </span>
+    <button type="button" id="btn-prefill"
+            onclick="prefillFromBilan()"
+            style="background:#085041;color:white;border:none;border-radius:6px;
+                   padding:5px 14px;font-size:12px;cursor:pointer;font-weight:500;">
+      📋 Copier les données de ce bilan
+    </button>
+  </div>
+  {% endif %}
+
   <form method="POST">
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header" style="background:#E1F5EE;color:#085041;">
         <h2 style="color:#085041;">Informations du bilan initial</h2>
       </div>
       <div class="card-body">
-        <div class="field-grid field-grid-2" style="gap:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
           <div class="field-group">
             <label class="field-label">Date du bilan orthoptique</label>
-            <input type="date" name="date_bilan" value="{{ today.strftime('%Y-%m-%d') }}" required>
+            <input type="date" name="date_bilan" id="f-date_bilan"
+                   value="{{ prefill.get('date_bilan', today.strftime('%Y-%m-%d')) }}" required>
           </div>
+
           <div class="field-group">
-            <label class="field-label">Ophtalmologiste</label>
-            <input type="text" name="ophthalmo" placeholder="Dr ...">
+            <label class="field-label">Médecin prescripteur (ophtalmologiste)</label>
+            <textarea name="ophthalmo" id="f-ophthalmo" class="auto-resize"
+                      style="min-height:36px;resize:none;overflow:hidden;">{{ prefill.get('ophthalmo','') }}</textarea>
           </div>
+
           <div class="field-group">
-            <label class="field-label">Lunettes OD</label>
-            <input type="text" name="lunettes_od" placeholder="ex: +2.00(-0.50)90°">
+            <label class="field-label">Correction portée OD</label>
+            <textarea name="lunettes_od" id="f-lunettes_od" class="auto-resize"
+                      style="min-height:36px;resize:none;overflow:hidden;">{{ prefill.get('lunettes_od','') }}</textarea>
           </div>
+
           <div class="field-group">
-            <label class="field-label">Lunettes OG</label>
-            <input type="text" name="lunettes_og" placeholder="ex: +0.50">
+            <label class="field-label">Correction portée OG</label>
+            <textarea name="lunettes_og" id="f-lunettes_og" class="auto-resize"
+                      style="min-height:36px;resize:none;overflow:hidden;">{{ prefill.get('lunettes_og','') }}</textarea>
           </div>
+
           <div class="field-group">
-            <label class="field-label">AV initiale OD</label>
-            <input type="text" name="av_od_init" placeholder="ex: 4/10">
+            <label class="field-label">Acuité visuelle initiale OD</label>
+            <textarea name="av_od_init" id="f-av_od_init" class="auto-resize"
+                      style="min-height:52px;resize:none;overflow:hidden;">{{ prefill.get('av_od_init','') }}</textarea>
           </div>
+
           <div class="field-group">
-            <label class="field-label">AV initiale OG</label>
-            <input type="text" name="av_og_init" placeholder="ex: 10/10">
+            <label class="field-label">Acuité visuelle initiale OG</label>
+            <textarea name="av_og_init" id="f-av_og_init" class="auto-resize"
+                      style="min-height:52px;resize:none;overflow:hidden;">{{ prefill.get('av_og_init','') }}</textarea>
           </div>
+
           <div class="field-group">
             <label class="field-label">Stéréoscopie</label>
-            <input type="text" name="stereo" placeholder="ex: Lang positif">
+            <textarea name="stereo" id="f-stereo" class="auto-resize"
+                      style="min-height:52px;resize:none;overflow:hidden;">{{ prefill.get('stereo','') }}</textarea>
           </div>
+
           <div class="field-group">
-            <label class="field-label">ESE</label>
-            <input type="text" name="ese" placeholder="ex: +2δ">
+            <label class="field-label">Examen sous écran (VB)</label>
+            <textarea name="ese" id="f-ese" class="auto-resize"
+                      style="min-height:52px;resize:none;overflow:hidden;">{{ prefill.get('ese','') }}</textarea>
           </div>
-          <div class="field-group">
-            <label class="field-label">Versions</label>
-            <input type="text" name="versions" placeholder="ex: normales">
+
+          <div class="field-group" style="grid-column:1/-1;">
+            <label class="field-label">Versions (motilité)</label>
+            <textarea name="versions" id="f-versions" class="auto-resize"
+                      style="min-height:36px;resize:none;overflow:hidden;">{{ prefill.get('versions','') }}</textarea>
           </div>
+
           <div class="field-group">
             <label class="field-label">Date Cs ophthalmo</label>
-            <input type="date" name="date_cs">
+            <input type="date" name="date_cs" id="f-date_cs">
           </div>
+
           <div class="field-group" style="grid-column:1/-1;">
             <label class="field-label">Traitement prescrit</label>
-            <input type="text" name="traitement" placeholder="ex: Ortopad OD 4h/jour">
+            <textarea name="traitement" id="f-traitement" class="auto-resize"
+                      style="min-height:36px;resize:none;overflow:hidden;"></textarea>
           </div>
+
           <div class="field-group">
             <label class="field-label">À revoir dans</label>
-            <input type="text" name="prochain_rdv" placeholder="ex: 3 mois">
+            <textarea name="prochain_rdv" id="f-prochain_rdv" class="auto-resize"
+                      style="min-height:36px;resize:none;overflow:hidden;"></textarea>
           </div>
+
           <div class="field-group" style="grid-column:1/-1;">
             <label class="field-label">Notes</label>
-            <textarea name="notes" rows="2" placeholder="Observations complémentaires…"></textarea>
+            <textarea name="notes" id="f-notes" class="auto-resize"
+                      style="min-height:52px;resize:none;overflow:hidden;"></textarea>
           </div>
+
         </div>
       </div>
     </div>
@@ -77,4 +119,30 @@
     </div>
   </form>
 </div>
+
+<script>
+const PREFILL_DATA = {{ prefill | tojson }};
+
+function prefillFromBilan() {
+  Object.entries(PREFILL_DATA).forEach(([key, val]) => {
+    const el = document.getElementById('f-' + key);
+    if (el && val) {
+      el.value = val;
+      autoResize(el);
+    }
+  });
+  const btn = document.getElementById('btn-prefill');
+  btn.textContent = '✓ Données copiées';
+  btn.style.background = '#27500A';
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+document.querySelectorAll('.auto-resize').forEach(el => {
+  autoResize(el);
+  el.addEventListener('input', () => autoResize(el));
+});
+</script>
 {% endblock %}

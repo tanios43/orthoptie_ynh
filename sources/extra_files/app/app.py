@@ -882,8 +882,48 @@ def suivi_amblyopie_nouveau(patient_id):
         log_acces('creation_suivi_amblyopie', patient_id=patient_id)
         flash('Suivi amblyopie créé.', 'success')
         return redirect(url_for('suivi_amblyopie_detail', suivi_id=s.id))
+    # Récupérer le dernier bilan pour pré-remplissage
+    dernier_bilan = Consultation.query\
+        .filter_by(patient_id=patient_id)\
+        .order_by(Consultation.date_consult.desc()).first()
+    prefill = {}
+    if dernier_bilan:
+        sections, _ = get_sections()
+        for sec in dernier_bilan.sections:
+            d = sec.get_donnees()
+            if sec.type == 'correction_portee':
+                od = f"{d.get('od_sph','')} {d.get('od_cyl','')} {d.get('od_axe','')}°".strip()
+                og = f"{d.get('og_sph','')} {d.get('og_cyl','')} {d.get('og_axe','')}°".strip()
+                if d.get('od_add'): od += f"\nAdd: {d['od_add']}"
+                if d.get('og_add'): og += f"\nAdd: {d['og_add']}"
+                prefill['lunettes_od'] = od.strip()
+                prefill['lunettes_og'] = og.strip()
+            elif sec.type == 'acuite':
+                av_od = f"Loin: {d.get('od_av_loin','')}\nPrès: {d.get('od_av_pres','')}".strip()
+                av_og = f"Loin: {d.get('og_av_loin','')}\nPrès: {d.get('og_av_pres','')}".strip()
+                prefill['av_od_init'] = av_od
+                prefill['av_og_init'] = av_og
+            elif sec.type == 'stereoscopie':
+                parts = []
+                if d.get('lang'): parts.append(f"Lang: {d['lang']}")
+                if d.get('tno'): parts.append(f"TNO: {d['tno']}")
+                prefill['stereo'] = '\n'.join(parts)
+            elif sec.type == 'cover':
+                parts = []
+                if d.get('cover_loin'): parts.append(f"Loin: {d['cover_loin']}")
+                if d.get('cover_pres'): parts.append(f"Près: {d['cover_pres']}")
+                if d.get('dip_mm'): parts.append(f"DIP: {d['dip_mm']}mm")
+                if d.get('ac_a'): parts.append(f"AC/A: {d['ac_a']}")
+                prefill['ese'] = '\n'.join(parts)
+            elif sec.type == 'motilite':
+                prefill['versions'] = d.get('motilite', '')
+            elif sec.type == 'anam':
+                if d.get('medecin_prescripteur'):
+                    prefill['ophthalmo'] = d.get('medecin_prescripteur', '')
+        prefill['date_bilan'] = dernier_bilan.date_consult.strftime('%Y-%m-%d')
     return render_template('amblyopie/nouveau.html', patient=patient,
-                           cabinet=cabinet, today=datetime.utcnow().date())
+                           cabinet=cabinet, today=datetime.utcnow().date(),
+                           prefill=prefill, dernier_bilan=dernier_bilan)
 
 
 @app.route('/suivi-amblyopie/<int:suivi_id>', methods=['GET', 'POST'])
