@@ -111,7 +111,7 @@
   {% for sec in c.sections %}
     {% set d = sec.get_donnees() %}
     {% set def = sections_def.get(sec.type, {}) %}
-    {% set col = section_style(sec.type, def.get('categorie','') if def else '') %}
+    {% set col = section_style(sec.type, sec.categorie) %}
 
     <div class="card" style="margin-bottom:12px;overflow:hidden;">
       <div class="card-header" style="background:{{ col.bg }};color:{{ col.color }};border-bottom:1px solid rgba(0,0,0,.08);">
