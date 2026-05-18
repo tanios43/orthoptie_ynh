@@ -94,6 +94,19 @@ def inject_categories():
     return {'CATEGORIES': get_categories()}
 
 
+BUILTIN_CATEGORIES = {
+    'anam': 'anamnese', 'correction_portee': 'refraction',
+    'refraction_obj': 'refraction', 'refraction_subj': 'refraction',
+    'acuite': 'acuite', 'swaine': 'acuite',
+    'stereoscopie': 'stereoscopie',
+    'cover': 'motilite', 'motilite': 'motilite', 'ppc': 'motilite',
+    'facilites_accom': 'motilite', 'facilites_verg': 'motilite',
+    'conclusions': 'conclusions',
+    'ordonnance': 'ordonnance', 'ordonnance_lunettes': 'ordonnance',
+    'courrier': 'courrier',
+}
+
+
 @app.template_global()
 def section_style(section_type, categorie=''):
     """Retourne bg/color/icon pour une section selon sa catégorie."""
