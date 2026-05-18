@@ -517,6 +517,7 @@
 {# Définition JSON des sections pour le JS #}
 <script>
 const SECTIONS_DEF = {{ sections_dispo | tojson }};
+const CAT_COLORS = {{ get_categories() | tojson }};
 const SECTIONS_ORDRE = {{ sections_ordre | tojson }};
 const MODELES = {{ modeles_json | tojson }};
 const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
@@ -622,20 +623,10 @@ const SECTION_COLORS = {
 function getSectionColor(type) {
   const def = SECTIONS_DEF[type];
   const cat = (def && def.categorie) ? def.categorie : null;
-  // Mapping catégorie -> couleur (synchronisé avec Python CATEGORIES)
-  const CAT_COLORS = {
-    'refraction':   {bg:'#EEEDFE', color:'#3C3489', icon:'ti-eye'},
-    'acuite':       {bg:'#EAF3DE', color:'#27500A', icon:'ti-focus-2'},
-    'motilite':     {bg:'#FAECE7', color:'#712B13', icon:'ti-arrows-move'},
-    'stereoscopie': {bg:'#FAEEDA', color:'#633806', icon:'ti-3d-cube-sphere'},
-    'anamnese':     {bg:'#F1EFE8', color:'#444441', icon:'ti-notes'},
-    'conclusions':  {bg:'#E1F5EE', color:'#085041', icon:'ti-clipboard-text'},
-    'ordonnance':   {bg:'#FBEAF0', color:'#72243E', icon:'ti-prescription'},
-    'courrier':     {bg:'#E6F1FB', color:'#0C447C', icon:'ti-mail'},
-  };
+  // Utiliser le mapping dynamique des catégories (depuis Python)
   if (cat && CAT_COLORS[cat]) return CAT_COLORS[cat];
-  // Fallback sur l'ancien mapping par type
-  return SECTION_COLORS[type] || {bg:'#F1EFE8', color:'#444441', icon:'ti-layout-grid'};
+  // Fallback sur le mapping builtin par type
+  return SECTION_COLORS[type] || CAT_COLORS[''] || {bg:'#F1EFE8', color:'#444441', icon:'ti-layout-grid'};
 }
 
 

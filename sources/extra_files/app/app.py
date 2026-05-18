@@ -91,7 +91,7 @@ def get_categories():
 
 @app.context_processor
 def inject_categories():
-    return {'CATEGORIES': get_categories()}
+    return {'CATEGORIES': get_categories(), 'get_categories': get_categories}
 
 
 BUILTIN_CATEGORIES = {
