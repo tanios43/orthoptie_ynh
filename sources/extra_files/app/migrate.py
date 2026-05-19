@@ -52,11 +52,8 @@ if _db_path:
             stereogrammes TEXT DEFAULT '',
             notes TEXT DEFAULT ''
         )""",
+        """CREATE TABLE IF NOT EXISTS suivi_amblyopie (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            patient_id INTEGER NOT NULL REFERENCES patient(id),
-            praticien_id INTEGER NOT NULL REFERENCES praticien(id),
-            cabinet_id INTEGER REFERENCES cabinet(id),
-            date_bilan DATE NOT NULL,
             lunettes_od VARCHAR(50) DEFAULT '',
             lunettes_og VARCHAR(50) DEFAULT '',
             av_od_init VARCHAR(20) DEFAULT '',
