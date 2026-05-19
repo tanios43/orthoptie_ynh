@@ -543,7 +543,7 @@ function champHTML(idx, champ, val) {
       <div class="md-toolbar">
         <button type="button" title="Gras (Ctrl+B)" onmousedown="event.preventDefault();document.execCommand('bold')"><b>B</b></button>
         <button type="button" title="Italique (Ctrl+I)" onmousedown="event.preventDefault();document.execCommand('italic')"><i>I</i></button>
-        <button type="button" title="Souligné" onmousedown="event.preventDefault();document.execCommand('underline')"><u>U</u></button>
+        <button type="button" title="Souligné" onmousedown="event.preventDefault();document.execCommand('underline')" onclick="setTimeout(()=>{const d=this.closest('.field-group').querySelector('[contenteditable]');if(d){console.log('U HTML:',d.innerHTML);syncWysiwyg(d.id,d.id.replace('ta_',''));console.log('U stored:',document.getElementById(d.id+'_hidden')?.value);}},50)"><u>U</u></button>
       </div>
       <div id="${uid}"
            contenteditable="true"
