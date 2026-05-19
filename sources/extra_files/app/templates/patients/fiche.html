@@ -23,6 +23,7 @@
   <a href="{{ url_for('patient_dossier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm" target="_blank">🖨 Imprimer le dossier</a>
   <a href="{{ url_for('consultation_nouvelle', patient_id=patient.id) }}" class="btn btn-primary btn-sm">+ Nouveau bilan</a>
   <a href="{{ url_for('suivi_amblyopie_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi amblyopie</a>
+  <a href="{{ url_for('suivi_vb_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi VB</a>
 {% endblock %}
 
 {% block content %}
@@ -325,8 +326,57 @@
                     title="Supprimer ce suivi">🗑</button>
           </div>
         </div>
-        {% endif %}
+        {% elif entry.type == 'suivi_vb' %}
+        {# ── SUIVI VB ── #}
+        <div style="border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;">
+            <a href="{{ url_for('suivi_vb_detail', suivi_id=c.id) }}"
+               style="padding:14px 20px;display:flex;align-items:center;gap:12px;
+                      text-decoration:none;color:inherit;transition:background .15s;flex:1;"
+               onmouseover="this.parentElement.style.background='var(--bg)'"
+               onmouseout="this.parentElement.style.background=''">
+              <div style="text-align:center;min-width:44px;flex-shrink:0;">
+                <div style="font-size:18px;font-weight:600;color:#633806;line-height:1;">
+                  {{ c.derniere_seance_date.strftime('%d') }}
+                </div>
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
+                  {{ c.derniere_seance_date.strftime('%b %Y') }}
+                </div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:14px;font-weight:500;">Rééducation VB</span>
+                  <span style="background:#FAEEDA;color:#633806;border-radius:10px;
+                               font-size:11px;padding:1px 8px;font-weight:500;">
+                    👁 {{ c.seances|length }} séances
+                  </span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+                  {% set filled = c.seances|selectattr('fusion')|list|length %}
+                  {% if filled %}
+                  <span style="font-size:11px;color:#633806;font-weight:500;">
+                    {{ filled }} séance{{ 's' if filled > 1 }} renseignée{{ 's' if filled > 1 }}
+                  </span>
+                  {% endif %}
+                  {% if patient.date_naissance %}
+                  <span style="font-size:11px;color:var(--accent);font-weight:500;">
+                    {{ age_a_la_date(patient.date_naissance, c.date_debut) }}
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+              <i class="ti ti-chevron-right" style="color:var(--muted);flex-shrink:0;"></i>
+            </a>
+            <div style="padding:0 12px;" onclick="event.stopPropagation()">
+              <button type="button"
+                      onclick="confirmerSuppressionVB({{ c.id }}, '{{ c.date_debut.strftime('%d/%m/%Y') }}', '{{ patient.prenom }} {{ patient.nom }}')"
+                      class="btn btn-secondary btn-sm"
+                      style="color:#e53e3e;border-color:#e53e3e;">🗑</button>
+            </div>
+          </div>
+        </div>
 
+        {% endif %}
         {% endfor %}
       </div>
 
@@ -339,6 +389,38 @@
       </div>
       {% endif %}
 
+
+{# ── MODALE SUPPRESSION SUIVI VB ── #}
+<div id="modal-suppression-vb" style="
+  display:none; position:fixed; inset:0; z-index:1000;
+  background:rgba(0,0,0,.45);
+  align-items:center; justify-content:center;">
+  <div style="background:var(--surface);border-radius:var(--radius);
+              box-shadow:0 8px 32px rgba(0,0,0,.18);
+              padding:28px 28px 24px;max-width:440px;width:90%;margin:20px;">
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;">
+      <div style="width:40px;height:40px;border-radius:50%;flex-shrink:0;
+                  background:var(--danger-lt);display:flex;align-items:center;
+                  justify-content:center;font-size:18px;">⚠️</div>
+      <div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Supprimer ce suivi VB ?</div>
+        <div id="modal-vb-desc" style="font-size:14px;color:var(--muted);line-height:1.5;"></div>
+      </div>
+    </div>
+    <div style="background:var(--danger-lt);border:1px solid #F5C6C2;
+                border-radius:7px;padding:10px 14px;margin-bottom:20px;">
+      <div style="font-size:13px;color:var(--danger);font-weight:500;">⚠ Action irréversible</div>
+      <div style="font-size:13px;color:var(--danger);">Toutes les séances seront définitivement effacées.</div>
+    </div>
+    <form id="form-suppression-vb" method="POST" action="">
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('modal-suppression-vb').style.display='none'">Annuler</button>
+        <button type="submit" style="background:#e53e3e;color:white;border:none;border-radius:6px;padding:7px 16px;cursor:pointer;font-weight:500;">Supprimer</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 {# ── MODALE SUPPRESSION SUIVI AMBLYOPIE ── #}
 <div id="modal-suppression-suivi" style="
@@ -430,6 +512,17 @@ function toggleBilan(id) {
   body.style.display = open ? 'none' : 'block';
   if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
 }
+
+function confirmerSuppressionVB(id, date, patient) {
+  document.getElementById('modal-vb-desc').textContent =
+    'Suivi VB débuté le ' + date + ' pour ' + patient + '.';
+  document.getElementById('form-suppression-vb').action =
+    '/suivi-vb/' + id + '/supprimer';
+  document.getElementById('modal-suppression-vb').style.display = 'flex';
+}
+document.getElementById('modal-suppression-vb').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
 
 function confirmerSuppressionSuivi(id, date, patient) {
   document.getElementById('modal-suivi-desc').textContent =
