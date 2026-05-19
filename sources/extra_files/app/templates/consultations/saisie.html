@@ -541,9 +541,9 @@ function champHTML(idx, champ, val) {
     return `<div class="field-group">
       <label class="field-label">${champ.label}</label>
       <div class="md-toolbar">
-        <button type="button" title="Gras (Ctrl+B)" onmousedown="event.preventDefault();document.execCommand('bold')"><b>B</b></button>
-        <button type="button" title="Italique (Ctrl+I)" onmousedown="event.preventDefault();document.execCommand('italic')"><i>I</i></button>
-        <button type="button" title="Souligné" onmousedown="event.preventDefault();document.execCommand('underline')" onclick="setTimeout(()=>{const d=this.closest('.field-group').querySelector('[contenteditable]');if(d){console.log('U HTML:',d.innerHTML);syncWysiwyg(d.id,d.id.replace('ta_',''));console.log('U stored:',document.getElementById(d.id+'_hidden')?.value);}},50)"><u>U</u></button>
+        <button type="button" title="Gras (Ctrl+B)" onmousedown="event.preventDefault();applyFormat('strong',this)"><b>B</b></button>
+        <button type="button" title="Italique (Ctrl+I)" onmousedown="event.preventDefault();applyFormat('em',this)"><i>I</i></button>
+        <button type="button" title="Souligné" onmousedown="event.preventDefault();applyFormat('u',this)"><u>U</u></button>
       </div>
       <div id="${uid}"
            contenteditable="true"
@@ -1738,15 +1738,49 @@ function htmlToMd(html) {
   return t;
 }
 
+function applyFormat(tag, btn) {
+  // Trouver le contenteditable associé
+  const div = btn.closest('.field-group').querySelector('[contenteditable]');
+  if (!div) return;
+  div.focus();
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+  const selected = range.toString();
+  if (!selected) return;
+
+  // Vérifier si déjà formaté (toggle)
+  const parent = range.commonAncestorContainer;
+  const parentEl = parent.nodeType === 3 ? parent.parentElement : parent;
+  if (parentEl.tagName === tag.toUpperCase() || parentEl.closest(tag)) {
+    // Déjà formaté — retirer
+    document.execCommand('removeFormat');
+  } else {
+    // Insérer le tag
+    const el = document.createElement(tag);
+    try {
+      range.surroundContents(el);
+    } catch(e) {
+      // Sélection partielle — utiliser insertHTML
+      const html = `<${tag}>${selected}</${tag}>`;
+      range.deleteContents();
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const frag = document.createDocumentFragment();
+      while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+      range.insertNode(frag);
+    }
+  }
+  // Sync
+  const uid = div.id;
+  const hidden = document.getElementById(uid + '_hidden');
+  if (hidden) hidden.value = htmlToMd(div.innerHTML);
+}
+
 function syncWysiwyg(uid, name) {
   const div = document.getElementById(uid);
   const hidden = document.getElementById(uid + '_hidden');
-  if (div && hidden) {
-    console.log('HTML brut:', div.innerHTML);
-    const md = htmlToMd(div.innerHTML);
-    console.log('MD converti:', md);
-    hidden.value = md;
-  }
+  if (div && hidden) hidden.value = htmlToMd(div.innerHTML);
 }
 
 // Synchroniser tous les champs WYSIWYG avant soumission
