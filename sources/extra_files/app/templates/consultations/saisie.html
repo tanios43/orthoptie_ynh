@@ -1707,9 +1707,10 @@ function escHtml(s) {
 function mdToHtml(text) {
   if (!text) return '';
   let t = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  t = t.replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>');
-  t = t.replace(/\*(.+?)\*/gs,     '<em>$1</em>');
-  t = t.replace(/<u>(.+?)<\/u>/gs, '<u>$1</u>');
+  t = t.replace(/\*\*\*(.+?)\*\*\*/gs, '<strong><em>$1</em></strong>');
+  t = t.replace(/\*\*(.+?)\*\*/gs,     '<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/gs,         '<em>$1</em>');
+  t = t.replace(/<u>(.+?)<\/u>/gs,     '<u>$1</u>');
   t = t.replace(/\n/g, '<br>');
   return t;
 }
