@@ -39,7 +39,7 @@
     <span class="text-sm text-muted">{{ label }}
       {% if hint %}<span style="font-size:10px;color:var(--accent);margin-left:4px;">{{ hint }}</span>{% endif %}
     </span>
-    <span class="text-sm" style="font-weight:500;text-align:right;max-width:60%;">{{ value }}</span>
+    <span class="text-sm" style="font-weight:500;text-align:right;max-width:60%;">{{ value | md | safe }}</span>
   </div>
   {% endif %}
 {% endmacro %}

@@ -535,11 +535,18 @@ function champHTML(idx, champ, val) {
   const v = val || '';
 
   if (champ.type === 'textarea') {
+    const uid = `ta_${name.replace(/[^a-z0-9]/gi,'_')}`;
     return `<div class="field-group">
       <label class="field-label">${champ.label}</label>
-      <textarea name="${name}" class="auto-resize-ta"
-                style="min-height:64px;resize:none;overflow:hidden;"
-                oninput="autoResizeTA(this)">${v}</textarea>
+      <div class="md-toolbar">
+        <button type="button" title="Gras (Ctrl+B)" onclick="mdWrap('${uid}','**','**')"><b>B</b></button>
+        <button type="button" title="Italique (Ctrl+I)" onclick="mdWrap('${uid}','*','*')"><i>I</i></button>
+        <button type="button" title="Souligné" onclick="mdWrap('${uid}','<u>','</u>')"><u>U</u></button>
+      </div>
+      <textarea id="${uid}" name="${name}" class="auto-resize-ta"
+                style="min-height:64px;resize:none;overflow:hidden;border-radius:0 0 6px 6px;"
+                oninput="autoResizeTA(this)"
+                onkeydown="mdKeydown(event,'${uid}')">${v}</textarea>
     </div>`;
   }
 
@@ -1683,6 +1690,34 @@ function _appliquerRefraction(idxLunettes, secIdx) {
     updateDonnees(idxLunettes);
   } else {
     alert('Aucune donnée trouvée dans la section réfraction subjective sélectionnée.');
+  }
+}
+
+// ── Markdown toolbar ─────────────────────────────────────────────────
+function mdWrap(id, before, after) {
+  const ta = document.getElementById(id);
+  if (!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const sel = ta.value.substring(start, end);
+  // Toggle : si déjà entouré, on retire
+  const full = ta.value;
+  if (full.substring(start - before.length, start) === before &&
+      full.substring(end, end + after.length) === after) {
+    ta.value = full.substring(0, start - before.length) + sel + full.substring(end + after.length);
+    ta.setSelectionRange(start - before.length, end - before.length);
+  } else {
+    const replacement = before + (sel || 'texte') + after;
+    ta.value = full.substring(0, start) + replacement + full.substring(end);
+    ta.setSelectionRange(start + before.length, start + before.length + (sel || 'texte').length);
+  }
+  ta.focus();
+  autoResizeTA(ta);
+}
+
+function mdKeydown(e, id) {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'b') { e.preventDefault(); mdWrap(id, '**', '**'); }
+    if (e.key === 'i') { e.preventDefault(); mdWrap(id, '*', '*'); }
   }
 }
 

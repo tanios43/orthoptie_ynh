@@ -189,6 +189,18 @@
       transition: transform .2s;
     }
     .bilan-section-toggle.open { transform: rotate(90deg); }
+    .md-toolbar {
+      display: flex; gap: 2px; padding: 3px 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-bottom: none; border-radius: 6px 6px 0 0;
+    }
+    .md-toolbar button {
+      background: none; border: none; padding: 2px 7px;
+      border-radius: 4px; cursor: pointer; font-size: 13px;
+      color: var(--text); line-height: 1.4;
+      transition: background .1s;
+    }
+    .md-toolbar button:hover { background: var(--border); }
     .bilan-section-body {
       padding: 0 16px;
       background: var(--surface);

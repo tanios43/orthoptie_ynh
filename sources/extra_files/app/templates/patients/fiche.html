@@ -239,7 +239,7 @@
                     {% set ns.has_data = true %}
                     <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:0.5px solid var(--border);">
                       <span style="color:var(--muted);">{{ champ.label }}</span>
-                      <span style="font-weight:500;text-align:right;margin-left:8px;">{{ d[champ.name] }}</span>
+                      <span style="font-weight:500;text-align:right;margin-left:8px;">{{ d[champ.name] | md | safe }}</span>
                     </div>
                     {% endif %}
                   {% endfor %}

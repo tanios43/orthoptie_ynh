@@ -94,6 +94,56 @@ def inject_categories():
     return {'CATEGORIES': get_categories(), 'get_categories': get_categories}
 
 
+def _md_runs(text, font='Verdana', size=20):
+    """Convertit le Markdown simple en runs Word XML (gras, italique, souligné)."""
+    import re
+    if not text: return ''
+    def run(t, bold=False, italic=False, underline=False):
+        if not t: return ''
+        b = '<w:b/>' if bold else ''
+        i = '<w:i/>' if italic else ''
+        u = '<w:u w:val="single"/>' if underline else ''
+        t_esc = t.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+        lines = t_esc.split('\n')
+        content = ''
+        for j, line in enumerate(lines):
+            br = '<w:br/>' if j < len(lines)-1 else ''
+            content += f'<w:t xml:space="preserve">{line}</w:t>{br}'
+        return (f'<w:r><w:rPr>{b}{i}{u}'
+                f'<w:rFonts w:ascii="{font}" w:hAnsi="{font}"/>'
+                f'<w:sz w:val="{size}"/></w:rPr>{content}</w:r>')
+
+    # Parser les marqueurs dans l'ordre : **gras**, *italique*, <u>souligné</u>
+    pattern = re.compile(r'\*\*(.+?)\*\*|\*(.+?)\*|<u>(.+?)</u>', re.DOTALL)
+    result = ''
+    last = 0
+    for m in pattern.finditer(text):
+        if m.start() > last:
+            result += run(text[last:m.start()])
+        if m.group(1) is not None:
+            result += run(m.group(1), bold=True)
+        elif m.group(2) is not None:
+            result += run(m.group(2), italic=True)
+        elif m.group(3) is not None:
+            result += run(m.group(3), underline=True)
+        last = m.end()
+    if last < len(text):
+        result += run(text[last:])
+    return result
+
+
+
+    """Convertit le Markdown simple (gras, italique, souligné) en HTML."""
+    import re
+    if not text: return ''
+    t = str(text)
+    t = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', t)
+    t = re.sub(r'\*(.+?)\*',     r'<em>\1</em>', t)
+    t = re.sub(r'<u>(.+?)</u>',  r'<u>\1</u>', t)
+    t = t.replace('\n', '<br>')
+    return t
+
+
 @app.template_filter('suivi_vb_list')
 def suivi_vb_list_filter(patient_id):
     try:
