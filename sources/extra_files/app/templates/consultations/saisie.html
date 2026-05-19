@@ -1723,18 +1723,20 @@ function htmlToMd(html) {
   t = t.replace(/<u>([\s\S]*?)<\/u>/gi,           '<u>$1</u>');
   // Cas Chrome : <div><br></div> = ligne vide
   t = t.replace(/<div><br\s*\/?><\/div>/gi, '\n');
-  // <br> avant </div> est redondant
-  t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '</div>');
+  // <br> avant </div> : garder le saut de ligne
+  t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '\n</div>');
   t = t.replace(/<br\s*\/?>/gi, '\n');
+  // Chaque <div> = nouvelle ligne
   t = t.replace(/<\/div>\s*<div>/gi, '\n');
-  t = t.replace(/<div>/gi, '').replace(/<\/div>/gi, '\n');
+  t = t.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
   t = t.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n');
   t = t.replace(/<[^>]+>/g, '');
   t = t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
-  // Normaliser : supprimer \r, limiter lignes vides consécutives
   t = t.replace(/\r/g, '');
   t = t.replace(/\n{3,}/g, '\n\n');
-  return t.trim();
+  // trim uniquement le début, pas la fin (pour préserver le dernier \n)
+  t = t.replace(/^\n+/, '');
+  return t;
 }
 
 function syncWysiwyg(uid, name) {
