@@ -1699,16 +1699,21 @@ function mdWrap(id, before, after) {
   if (!ta) return;
   const start = ta.selectionStart, end = ta.selectionEnd;
   const sel = ta.value.substring(start, end);
-  // Toggle : si déjà entouré, on retire
   const full = ta.value;
-  if (full.substring(start - before.length, start) === before &&
+
+  // Toggle : si le texte sélectionné est déjà entouré, on retire
+  if (sel && full.substring(start - before.length, start) === before &&
       full.substring(end, end + after.length) === after) {
     ta.value = full.substring(0, start - before.length) + sel + full.substring(end + after.length);
     ta.setSelectionRange(start - before.length, end - before.length);
+  } else if (sel) {
+    // Entourer la sélection
+    ta.value = full.substring(0, start) + before + sel + after + full.substring(end);
+    ta.setSelectionRange(start + before.length, start + before.length + sel.length);
   } else {
-    const replacement = before + (sel || 'texte') + after;
-    ta.value = full.substring(0, start) + replacement + full.substring(end);
-    ta.setSelectionRange(start + before.length, start + before.length + (sel || 'texte').length);
+    // Rien de sélectionné : insérer les marqueurs et positionner le curseur entre eux
+    ta.value = full.substring(0, start) + before + after + full.substring(end);
+    ta.setSelectionRange(start + before.length, start + before.length);
   }
   ta.focus();
   autoResizeTA(ta);
