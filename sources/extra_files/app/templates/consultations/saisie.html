@@ -1741,7 +1741,12 @@ function htmlToMd(html) {
 function syncWysiwyg(uid, name) {
   const div = document.getElementById(uid);
   const hidden = document.getElementById(uid + '_hidden');
-  if (div && hidden) hidden.value = htmlToMd(div.innerHTML);
+  if (div && hidden) {
+    console.log('HTML brut:', div.innerHTML);
+    const md = htmlToMd(div.innerHTML);
+    console.log('MD converti:', md);
+    hidden.value = md;
+  }
 }
 
 // Synchroniser tous les champs WYSIWYG avant soumission
