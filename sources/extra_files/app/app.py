@@ -3674,26 +3674,22 @@ def _generer_docx(consultation, modele, sections_incluses):
                     for obs_line in sec['observations'].split('\n'):
                         body_paras.append(
                             f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
-                            f'<w:r><w:rPr><w:i/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                            f'<w:sz w:val="20"/></w:rPr>'
-                            f'<w:t xml:space="preserve">{esc(obs_line)}</w:t></w:r></w:p>'
+                            + _md_runs(obs_line, size=20) + '</w:p>'
                         )
                 for label, valeur in sec['lignes']:
-                    valeur_lines = valeur.split('\n') if valeur else ['']
+                    valeur_lines = str(valeur).split('\n') if valeur else ['']
                     for i, vline in enumerate(valeur_lines):
                         if i == 0:
                             body_paras.append(
                                 f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
                                 f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
                                 f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(label) + " : " if label.strip() else ""}</w:t></w:r>'
-                                f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                                f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(vline)}</w:t></w:r></w:p>'
+                                + _md_runs(vline) + '</w:p>'
                             )
                         else:
                             body_paras.append(
                                 f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
-                                f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                                f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(vline)}</w:t></w:r></w:p>'
+                                + _md_runs(vline) + '</w:p>'
                             )
 
     # Signature — prénom nom uniquement (sans titre)
