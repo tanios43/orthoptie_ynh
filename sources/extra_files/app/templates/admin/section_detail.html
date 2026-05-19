@@ -16,56 +16,49 @@
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header"><h2>Propriétés</h2></div>
       <div class="card-body">
-        <form method="POST" action="{{ url_for('admin_section_modifier', section_id=section.id) }}"
-              style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-          <div class="field-group" style="flex:1;min-width:200px;">
-            <label class="field-label">Nom affiché</label>
-            <input type="text" name="label" value="{{ section.label }}" required>
+        <form method="POST" action="{{ url_for('admin_section_modifier', section_id=section.id) }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="field-group">
+              <label class="field-label">Nom affiché</label>
+              <input type="text" name="label" value="{{ section.label }}" required>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Statut</label>
+              <select name="actif">
+                <option value="1" {{ 'selected' if section.actif }}>Active</option>
+                <option value="0" {{ 'selected' if not section.actif }}>Désactivée</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Catégorie</label>
+              <select name="categorie">
+                {% for cat_key, cat_info in CATEGORIES.items() %}
+                <option value="{{ cat_key }}"
+                  {{ 'selected' if section.categorie == cat_key or (not section.categorie and cat_key == '') }}>
+                  {{ cat_info.label }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Observations libres</label>
+              <select name="avec_observations">
+                <option value="1" {{ 'selected' if section.avec_observations != False }}>Afficher le champ</option>
+                <option value="0" {{ 'selected' if section.avec_observations == False }}>Masquer le champ</option>
+              </select>
+            </div>
+            <div class="field-group" style="grid-column:1/-1;">
+              <label class="field-label">
+                Observation par défaut
+                <span style="font-weight:400;color:var(--muted);font-size:10px;margin-left:4px;">
+                  pré-remplie à l'ajout de la section dans un bilan
+                </span>
+              </label>
+              <textarea name="obs_defaut" rows="3"
+                        placeholder="Laisser vide pour ne pas pré-remplir…">{{ section.obs_defaut or '' }}</textarea>
+            </div>
           </div>
-          <div class="field-group">
-            <label class="field-label">Statut</label>
-            <select name="actif">
-              <option value="1" {{ 'selected' if section.actif }}>Active</option>
-              <option value="0" {{ 'selected' if not section.actif }}>Désactivée</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <label class="field-label">Catégorie</label>
-            <select name="categorie">
-              {% for cat_key, cat_info in CATEGORIES.items() %}
-              <option value="{{ cat_key }}"
-                {{ 'selected' if section.categorie == cat_key or (not section.categorie and cat_key == '') }}>
-                {{ cat_info.label }}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="field-group">
-            <label class="field-label">Observations libres</label>
-            <select name="avec_observations">
-              <option value="1" {{ 'selected' if section.avec_observations != False }}>Afficher le champ</option>
-              <option value="0" {{ 'selected' if section.avec_observations == False }}>Masquer le champ</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
-        </form>
-        <form method="POST" action="{{ url_for('admin_section_modifier', section_id=section.id) }}"
-              style="margin-top:12px;">
-          <input type="hidden" name="label" value="{{ section.label }}">
-          <input type="hidden" name="actif" value="{{ '1' if section.actif else '0' }}">
-          <div class="field-group">
-            <label class="field-label">
-              Observation par défaut
-              <span style="font-weight:400;color:var(--muted);font-size:10px;margin-left:4px;">
-                pré-remplie à l'ajout de la section dans un bilan
-              </span>
-            </label>
-            <textarea name="obs_defaut" rows="3"
-                      placeholder="Laisser vide pour ne pas pré-remplir…">{{ section.obs_defaut or '' }}</textarea>
-          </div>
-          <button type="submit" class="btn btn-secondary btn-sm" style="margin-top:6px;">
-            Enregistrer l'observation par défaut
-          </button>
+          <button type="submit" class="btn btn-primary">Enregistrer toutes les propriétés</button>
         </form>
         {% if section.builtin %}
         <div style="margin-top:10px;font-size:12px;color:var(--muted);">
