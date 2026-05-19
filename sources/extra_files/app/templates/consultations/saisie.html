@@ -536,17 +536,23 @@ function champHTML(idx, champ, val) {
 
   if (champ.type === 'textarea') {
     const uid = `ta_${name.replace(/[^a-z0-9]/gi,'_')}`;
+    // Convertir le Markdown stocké en HTML pour l'affichage
+    const html = mdToHtml(v);
     return `<div class="field-group">
       <label class="field-label">${champ.label}</label>
       <div class="md-toolbar">
-        <button type="button" title="Gras (Ctrl+B)" onclick="mdWrap('${uid}','**','**')"><b>B</b></button>
-        <button type="button" title="Italique (Ctrl+I)" onclick="mdWrap('${uid}','*','*')"><i>I</i></button>
-        <button type="button" title="Souligné" onclick="mdWrap('${uid}','<u>','</u>')"><u>U</u></button>
+        <button type="button" title="Gras (Ctrl+B)" onmousedown="event.preventDefault();document.execCommand('bold')"><b>B</b></button>
+        <button type="button" title="Italique (Ctrl+I)" onmousedown="event.preventDefault();document.execCommand('italic')"><i>I</i></button>
+        <button type="button" title="Souligné" onmousedown="event.preventDefault();document.execCommand('underline')"><u>U</u></button>
       </div>
-      <textarea id="${uid}" name="${name}" class="auto-resize-ta"
-                style="min-height:64px;resize:none;overflow:hidden;border-radius:0 0 6px 6px;"
-                oninput="autoResizeTA(this)"
-                onkeydown="mdKeydown(event,'${uid}')">${v}</textarea>
+      <div id="${uid}"
+           contenteditable="true"
+           class="wysiwyg-field"
+           style="min-height:64px;padding:6px 10px;border:1px solid var(--border);
+                  border-radius:0 0 6px 6px;background:white;font-size:13px;
+                  line-height:1.5;outline:none;"
+           oninput="syncWysiwyg('${uid}','${name}')">${html}</div>
+      <input type="hidden" name="${name}" id="${uid}_hidden" value="${escHtml(v)}">
     </div>`;
   }
 
@@ -1693,40 +1699,53 @@ function _appliquerRefraction(idxLunettes, secIdx) {
   }
 }
 
-// ── Markdown toolbar ─────────────────────────────────────────────────
-function mdWrap(id, before, after) {
-  const ta = document.getElementById(id);
-  if (!ta) return;
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const sel = ta.value.substring(start, end);
-  const full = ta.value;
-
-  // Toggle : si le texte sélectionné est déjà entouré, on retire
-  if (sel && full.substring(start - before.length, start) === before &&
-      full.substring(end, end + after.length) === after) {
-    ta.value = full.substring(0, start - before.length) + sel + full.substring(end + after.length);
-    ta.setSelectionRange(start - before.length, end - before.length);
-  } else if (sel) {
-    // Entourer la sélection
-    ta.value = full.substring(0, start) + before + sel + after + full.substring(end);
-    ta.setSelectionRange(start + before.length, start + before.length + sel.length);
-  } else {
-    // Rien de sélectionné : insérer les marqueurs et positionner le curseur entre eux
-    ta.value = full.substring(0, start) + before + after + full.substring(end);
-    ta.setSelectionRange(start + before.length, start + before.length);
-  }
-  ta.focus();
-  autoResizeTA(ta);
+// ── WYSIWYG helpers ──────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function mdKeydown(e, id) {
-  if (e.ctrlKey || e.metaKey) {
-    if (e.key === 'b') { e.preventDefault(); mdWrap(id, '**', '**'); }
-    if (e.key === 'i') { e.preventDefault(); mdWrap(id, '*', '*'); }
-  }
+function mdToHtml(text) {
+  // Convertit le Markdown stocké en HTML pour affichage dans contenteditable
+  if (!text) return '';
+  let t = String(text);
+  t = t.replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/gs,     '<em>$1</em>');
+  t = t.replace(/<u>(.+?)<\/u>/gs, '<u>$1</u>');
+  t = t.replace(/\n/g, '<br>');
+  return t;
 }
 
-// ── Auto-resize textareas ────────────────────────────────────────────
+function htmlToMd(html) {
+  // Convertit le HTML du contenteditable en Markdown pour stockage
+  let t = html;
+  t = t.replace(/<strong>([\s\S]*?)<\/strong>/gi, '**$1**');
+  t = t.replace(/<b>([\s\S]*?)<\/b>/gi,           '**$1**');
+  t = t.replace(/<em>([\s\S]*?)<\/em>/gi,         '*$1*');
+  t = t.replace(/<i>([\s\S]*?)<\/i>/gi,           '*$1*');
+  t = t.replace(/<u>([\s\S]*?)<\/u>/gi,           '<u>$1</u>');
+  t = t.replace(/<br\s*\/?>/gi, '\n');
+  t = t.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
+  t = t.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n');
+  t = t.replace(/<[^>]+>/g, '');
+  t = t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
+  return t.trim();
+}
+
+function syncWysiwyg(uid, name) {
+  const div = document.getElementById(uid);
+  const hidden = document.getElementById(uid + '_hidden');
+  if (div && hidden) hidden.value = htmlToMd(div.innerHTML);
+}
+
+// Synchroniser tous les champs WYSIWYG avant soumission
+document.getElementById('form-bilan')?.addEventListener('submit', function() {
+  document.querySelectorAll('.wysiwyg-field[contenteditable]').forEach(div => {
+    const hidden = document.getElementById(div.id + '_hidden');
+    if (hidden) hidden.value = htmlToMd(div.innerHTML);
+  });
+});
+
+
 function autoResizeTA(el) {
   el.style.height = 'auto';
   el.style.height = Math.max(el.scrollHeight, 64) + 'px';
