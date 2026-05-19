@@ -1720,9 +1720,9 @@ function htmlToMd(html) {
   t = t.replace(/<b>([\s\S]*?)<\/b>/gi,           '**$1**');
   t = t.replace(/<em>([\s\S]*?)<\/em>/gi,         '*$1*');
   t = t.replace(/<i>([\s\S]*?)<\/i>/gi,           '*$1*');
-  // Souligné : navigateur génère <u> ou <span style="text-decoration...">
-  t = t.replace(/<u>([\s\S]*?)<\/u>/gi,                                    '<u>$1</u>');
-  t = t.replace(/<span[^>]*text-decoration[^>]*underline[^>]*>([\s\S]*?)<\/span>/gi, '<u>$1</u>');
+  // Souligné : utiliser marqueur temporaire pour survivre au strip des tags
+  t = t.replace(/<u>([\s\S]*?)<\/u>/gi,           '\x01U\x01$1\x02U\x02');
+  t = t.replace(/<span[^>]*text-decoration[^>]*underline[^>]*>([\s\S]*?)<\/span>/gi, '\x01U\x01$1\x02U\x02');
   // Cas Chrome : <div><br></div> = ligne vide
   t = t.replace(/<div><br\s*\/?><\/div>/gi, '\n');
   t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '\n</div>');
@@ -1730,7 +1730,10 @@ function htmlToMd(html) {
   t = t.replace(/<\/div>\s*<div>/gi, '\n');
   t = t.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
   t = t.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n');
+  // Supprimer tous les autres tags HTML
   t = t.replace(/<[^>]+>/g, '');
+  // Restaurer le souligné
+  t = t.replace(/\x01U\x01([\s\S]*?)\x02U\x02/g, '<u>$1</u>');
   t = t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
   t = t.replace(/\r/g, '');
   t = t.replace(/\n{3,}/g, '\n\n');
