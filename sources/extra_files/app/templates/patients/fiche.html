@@ -273,7 +273,7 @@
           </div>
         </div>
 
-        {% else %}
+        {% elif entry.type == 'suivi' %}
         {# ── SUIVI AMBLYOPIE ── #}
         <div style="border-bottom:1px solid var(--border);">
           <a href="{{ url_for('suivi_amblyopie_detail', suivi_id=c.id) }}"
