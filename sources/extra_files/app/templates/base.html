@@ -462,9 +462,23 @@ function toggleSection(id) {
   const body = document.getElementById('sec-' + id);
   const icon = document.getElementById('ico-' + id);
   const preview = document.getElementById('preview-' + id);
-  const isOpen = body.classList.contains('open');
-  body.classList.toggle('open');
-  icon.classList.toggle('open');
+  if (!body) return;
+
+  // Détecter si on utilise display:none (style inline) ou classe CSS
+  const usesDisplayNone = body.style.display !== undefined &&
+    (body.style.display === 'none' || (!body.classList.contains('open') && !body.classList.contains('bilan-section-body')));
+
+  let isOpen;
+  if (body.classList.contains('bilan-section-body')) {
+    // Mode CSS class (sections de bilan)
+    isOpen = body.classList.contains('open');
+    body.classList.toggle('open');
+    if (icon) icon.classList.toggle('open');
+  } else {
+    // Mode display:none (panneaux génériques)
+    isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : '';
+  }
   if (icon) icon.textContent = isOpen ? '▶' : '▼';
 
   // Afficher/masquer l'aperçu condensé
