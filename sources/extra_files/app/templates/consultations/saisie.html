@@ -537,7 +537,9 @@ function champHTML(idx, champ, val) {
   if (champ.type === 'textarea') {
     return `<div class="field-group">
       <label class="field-label">${champ.label}</label>
-      <textarea name="${name}" style="min-height:64px;">${v}</textarea>
+      <textarea name="${name}" class="auto-resize-ta"
+                style="min-height:64px;resize:none;overflow:hidden;"
+                oninput="autoResizeTA(this)">${v}</textarea>
     </div>`;
   }
 
@@ -909,8 +911,10 @@ function renderSection(type, label, idx, titre, obs, donnees) {
       <div class="obs-field" style="margin-bottom:14px;">
         <label class="field-label" style="color:var(--accent);">Observations libres</label>
         <textarea name="sections_obs[]"
+                  class="auto-resize-ta"
                   placeholder="Observations, remarques…"
-                  style="min-height:52px;background:#FAFAF8;">${obs || ''}</textarea>
+                  style="min-height:52px;background:#FAFAF8;resize:none;overflow:hidden;"
+                  oninput="autoResizeTA(this)">${obs || ''}</textarea>
       </div>` : '<input type="hidden" name="sections_obs[]" value="">'}
 
       <div style="${['anam','conclusions'].includes(type) ? '' : 'border-top:1px solid var(--border);padding-top:14px;margin-top:4px;'}">
@@ -1681,6 +1685,27 @@ function _appliquerRefraction(idxLunettes, secIdx) {
     alert('Aucune donnée trouvée dans la section réfraction subjective sélectionnée.');
   }
 }
+
+// ── Auto-resize textareas ────────────────────────────────────────────
+function autoResizeTA(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(el.scrollHeight, 64) + 'px';
+}
+function initAutoResize() {
+  document.querySelectorAll('.auto-resize-ta').forEach(el => autoResizeTA(el));
+}
+// Observer les nouvelles sections ajoutées dynamiquement
+const _arObserver = new MutationObserver(() => {
+  document.querySelectorAll('.auto-resize-ta:not([data-ar])').forEach(el => {
+    el.setAttribute('data-ar', '1');
+    autoResizeTA(el);
+  });
+});
+_arObserver.observe(document.getElementById('sections-container') || document.body,
+  {childList: true, subtree: true});
+document.addEventListener('DOMContentLoaded', initAutoResize);
+// Init immédiate si DOM déjà chargé
+if (document.readyState !== 'loading') initAutoResize();
 
 // ── Raccourcis clavier ──────────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
