@@ -320,6 +320,28 @@ with app.app_context():
     except Exception as e:
         print(f"ERREUR  : catégories builtin — {e}")
 
+    # Nettoyer les \r\n dans section_bilan.donnees
+    try:
+        import json
+        with db.engine.connect() as conn:
+            rows = conn.execute(db.text(
+                "SELECT id, donnees FROM section_bilan WHERE donnees LIKE '%\\r%'"
+            )).fetchall()
+            for row in rows:
+                try:
+                    d = json.loads(row[1])
+                    cleaned = {k: v.replace('\r\n', '\n').replace('\r', '\n') if isinstance(v, str) else v
+                               for k, v in d.items()}
+                    conn.execute(db.text(
+                        "UPDATE section_bilan SET donnees=:d WHERE id=:id"
+                    ), {'d': json.dumps(cleaned, ensure_ascii=False), 'id': row[0]})
+                except Exception:
+                    pass
+            conn.commit()
+        print(f"OK      : nettoyé {len(rows)} section_bilan avec \\r")
+    except Exception as e:
+        print(f"ERREUR  : nettoyage \\r : {e}")
+
     # signature sur praticien
     try:
         with db.engine.connect() as conn:

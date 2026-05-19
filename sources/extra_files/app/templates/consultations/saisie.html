@@ -1705,36 +1705,34 @@ function escHtml(s) {
 }
 
 function mdToHtml(text) {
-  // Convertit le Markdown stocké en HTML pour affichage dans contenteditable
   if (!text) return '';
-  let t = String(text);
+  let t = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   t = t.replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>');
   t = t.replace(/\*(.+?)\*/gs,     '<em>$1</em>');
   t = t.replace(/<u>(.+?)<\/u>/gs, '<u>$1</u>');
-  // Convertir les sauts de ligne en <br> simples pour contenteditable
   t = t.replace(/\n/g, '<br>');
   return t;
 }
 
 function htmlToMd(html) {
-  // Convertit le HTML du contenteditable en Markdown pour stockage
   let t = html;
   t = t.replace(/<strong>([\s\S]*?)<\/strong>/gi, '**$1**');
   t = t.replace(/<b>([\s\S]*?)<\/b>/gi,           '**$1**');
   t = t.replace(/<em>([\s\S]*?)<\/em>/gi,         '*$1*');
   t = t.replace(/<i>([\s\S]*?)<\/i>/gi,           '*$1*');
   t = t.replace(/<u>([\s\S]*?)<\/u>/gi,           '<u>$1</u>');
-  // Cas spécial Chrome : <div><br></div> = ligne vide
+  // Cas Chrome : <div><br></div> = ligne vide
   t = t.replace(/<div><br\s*\/?><\/div>/gi, '\n');
-  // Normaliser les sauts de ligne — éviter les doublons
-  t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '</div>'); // <br> avant </div> = redondant
+  // <br> avant </div> est redondant
+  t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '</div>');
   t = t.replace(/<br\s*\/?>/gi, '\n');
   t = t.replace(/<\/div>\s*<div>/gi, '\n');
   t = t.replace(/<div>/gi, '').replace(/<\/div>/gi, '\n');
   t = t.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n');
   t = t.replace(/<[^>]+>/g, '');
   t = t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
-  // Supprimer les lignes vides consécutives
+  // Normaliser : supprimer \r, limiter lignes vides consécutives
+  t = t.replace(/\r/g, '');
   t = t.replace(/\n{3,}/g, '\n\n');
   return t.trim();
 }
