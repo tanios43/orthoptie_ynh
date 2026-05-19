@@ -106,8 +106,7 @@
           <col style="width:120px;">
           <col style="width:140px;">
           <col style="width:15%;">
-          <col style="width:72px;">
-          <col style="width:72px;">
+          <col style="width:160px;">
           <col style="width:15%;">
           <col>
         </colgroup>
@@ -117,8 +116,13 @@
             <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Date</th>
             <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Praticien</th>
             <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Occlusion</th>
-            <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">AV OD</th>
-            <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">AV OG</th>
+            <th colspan="2" style="padding:7px 8px;text-align:center;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">
+              Acuité visuelle
+              <div style="display:flex;gap:4px;justify-content:center;font-size:10px;font-weight:400;margin-top:2px;">
+                <span style="flex:1;text-align:center;">OD</span>
+                <span style="flex:1;text-align:center;">OG</span>
+              </div>
+            </th>
             <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">VB</th>
             <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Notes</th>
           </tr>
@@ -152,17 +156,21 @@
                         placeholder=""
                         style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;resize:none;overflow:hidden;">{{ seance.occlusion or '' }}</textarea>
             </td>
-            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <input type="text" name="seance_{{ seance.id }}_av_od"
-                     value="{{ seance.av_od or '' }}"
-                     placeholder=""
-                     style="font-size:13px;padding:4px 6px;width:100%;text-align:center;color:#185FA5;font-weight:500;">
-            </td>
-            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <input type="text" name="seance_{{ seance.id }}_av_og"
-                     value="{{ seance.av_og or '' }}"
-                     placeholder=""
-                     style="font-size:13px;padding:4px 6px;width:100%;text-align:center;color:#A32D2D;font-weight:500;">
+            <td colspan="2" style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <div style="display:flex;gap:4px;margin-bottom:3px;">
+                <input type="text" name="seance_{{ seance.id }}_av_od"
+                       value="{{ seance.av_od or '' }}"
+                       placeholder="OD"
+                       style="font-size:13px;padding:4px 6px;flex:1;text-align:center;color:#185FA5;font-weight:500;border-radius:5px;border:1px solid var(--border);">
+                <input type="text" name="seance_{{ seance.id }}_av_og"
+                       value="{{ seance.av_og or '' }}"
+                       placeholder="OG"
+                       style="font-size:13px;padding:4px 6px;flex:1;text-align:center;color:#A32D2D;font-weight:500;border-radius:5px;border:1px solid var(--border);">
+              </div>
+              <textarea name="seance_{{ seance.id }}_av_notes"
+                        class="auto-resize"
+                        placeholder="notes AV…"
+                        style="font-size:12px;padding:3px 5px;width:100%;min-height:24px;resize:none;overflow:hidden;color:var(--muted);">{{ seance.av_notes or '' }}</textarea>
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
               <textarea name="seance_{{ seance.id }}_ese"

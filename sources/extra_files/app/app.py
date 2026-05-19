@@ -351,6 +351,7 @@ class SeanceAmblyopie(db.Model):
     occlusion   = db.Column(db.String(100), default='')
     av_od       = db.Column(db.String(20), default='')
     av_og       = db.Column(db.String(20), default='')
+    av_notes    = db.Column(db.Text, default='')
     ese         = db.Column(db.String(50), default='')
     notes       = db.Column(db.Text, default='')
 
@@ -964,6 +965,7 @@ def suivi_amblyopie_detail(suivi_id):
             seance.occlusion    = request.form.get(pfx+'occlusion','').strip()
             seance.av_od        = request.form.get(pfx+'av_od','').strip()
             seance.av_og        = request.form.get(pfx+'av_og','').strip()
+            seance.av_notes     = request.form.get(pfx+'av_notes','').strip()
             seance.ese          = request.form.get(pfx+'ese','').strip()
             seance.notes        = request.form.get(pfx+'notes','').strip()
             prat_id = request.form.get(pfx+'praticien_id','').strip()

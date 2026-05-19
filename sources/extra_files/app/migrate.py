@@ -86,6 +86,7 @@ if _db_path:
         "ALTER TABLE journal_acces ADD COLUMN ip_address VARCHAR(50) DEFAULT ''",
         "ALTER TABLE fichier_section ADD COLUMN section_type VARCHAR(50) DEFAULT ''",
         "ALTER TABLE praticien ADD COLUMN signature VARCHAR(500)",
+        "ALTER TABLE seance_amblyopie ADD COLUMN av_notes TEXT DEFAULT ''",
         "ALTER TABLE seance_amblyopie ADD COLUMN praticien_id INTEGER REFERENCES praticien(id)",
         "ALTER TABLE wopi_session ADD COLUMN section_ordre INTEGER DEFAULT 0",
     ]
