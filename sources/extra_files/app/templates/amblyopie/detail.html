@@ -104,16 +104,18 @@
         <colgroup>
           <col style="width:36px;">
           <col style="width:120px;">
-          <col style="width:18%;">
-          <col style="width:80px;">
-          <col style="width:80px;">
-          <col style="width:18%;">
+          <col style="width:140px;">
+          <col style="width:15%;">
+          <col style="width:72px;">
+          <col style="width:72px;">
+          <col style="width:15%;">
           <col>
         </colgroup>
         <thead>
           <tr style="background:#EEEDFE;">
             <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">#</th>
             <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Date</th>
+            <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Praticien</th>
             <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Occlusion</th>
             <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">AV OD</th>
             <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">AV OG</th>
@@ -133,6 +135,17 @@
                      style="font-size:13px;padding:4px 6px;width:100%;">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <select name="seance_{{ seance.id }}_praticien_id"
+                      style="font-size:12px;padding:4px 6px;width:100%;border-radius:5px;border:1px solid var(--border);">
+                <option value="">—</option>
+                {% for p in praticiens %}
+                <option value="{{ p.id }}"
+                  {{ 'selected' if seance.praticien_id == p.id or (not seance.praticien_id and p.id == current_user.id) }}>
+                  {{ p.prenom }} {{ p.nom }}
+                </option>
+                {% endfor %}
+              </select>
+            </td>
               <textarea name="seance_{{ seance.id }}_occlusion"
                         class="auto-resize"
                         placeholder=""

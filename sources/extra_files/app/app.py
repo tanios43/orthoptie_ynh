@@ -343,15 +343,18 @@ class SuiviAmblyopie(db.Model):
 class SeanceAmblyopie(db.Model):
     """Séance individuelle dans un suivi amblyopie."""
     __tablename__ = 'seance_amblyopie'
-    id        = db.Column(db.Integer, primary_key=True)
-    suivi_id  = db.Column(db.Integer, db.ForeignKey('suivi_amblyopie.id'), nullable=False)
-    numero    = db.Column(db.Integer, nullable=False)
+    id          = db.Column(db.Integer, primary_key=True)
+    suivi_id    = db.Column(db.Integer, db.ForeignKey('suivi_amblyopie.id'), nullable=False)
+    numero      = db.Column(db.Integer, nullable=False)
     date_seance = db.Column(db.Date, nullable=True)
-    occlusion = db.Column(db.String(100), default='')
-    av_od     = db.Column(db.String(20), default='')
-    av_og     = db.Column(db.String(20), default='')
-    ese       = db.Column(db.String(50), default='')
-    notes     = db.Column(db.Text, default='')
+    praticien_id= db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    occlusion   = db.Column(db.String(100), default='')
+    av_od       = db.Column(db.String(20), default='')
+    av_og       = db.Column(db.String(20), default='')
+    ese         = db.Column(db.String(50), default='')
+    notes       = db.Column(db.Text, default='')
+
+    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
 
 
 class CategorieSection(db.Model):
@@ -957,12 +960,14 @@ def suivi_amblyopie_detail(suivi_id):
         # Mise à jour séances
         for seance in s.seances:
             pfx = f'seance_{seance.id}_'
-            seance.date_seance = _parse_date(request.form.get(pfx+'date'))
-            seance.occlusion   = request.form.get(pfx+'occlusion','').strip()
-            seance.av_od       = request.form.get(pfx+'av_od','').strip()
-            seance.av_og       = request.form.get(pfx+'av_og','').strip()
-            seance.ese         = request.form.get(pfx+'ese','').strip()
-            seance.notes       = request.form.get(pfx+'notes','').strip()
+            seance.date_seance  = _parse_date(request.form.get(pfx+'date'))
+            seance.occlusion    = request.form.get(pfx+'occlusion','').strip()
+            seance.av_od        = request.form.get(pfx+'av_od','').strip()
+            seance.av_og        = request.form.get(pfx+'av_og','').strip()
+            seance.ese          = request.form.get(pfx+'ese','').strip()
+            seance.notes        = request.form.get(pfx+'notes','').strip()
+            prat_id = request.form.get(pfx+'praticien_id','').strip()
+            seance.praticien_id = int(prat_id) if prat_id else None
         # Ajouter une séance
         if action == 'ajouter_seance':
             next_num = max((se.numero for se in s.seances), default=0) + 1
@@ -973,7 +978,8 @@ def suivi_amblyopie_detail(suivi_id):
             return redirect(url_for('suivi_amblyopie_generer', suivi_id=suivi_id))
         return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
     log_acces('lecture_suivi_amblyopie', patient_id=s.patient_id)
-    return render_template('amblyopie/detail.html', suivi=s)
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
+    return render_template('amblyopie/detail.html', suivi=s, praticiens=praticiens)
 
 
 @app.route('/suivi-amblyopie/<int:suivi_id>/supprimer', methods=['POST'])
