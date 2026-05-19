@@ -1720,13 +1720,13 @@ function htmlToMd(html) {
   t = t.replace(/<b>([\s\S]*?)<\/b>/gi,           '**$1**');
   t = t.replace(/<em>([\s\S]*?)<\/em>/gi,         '*$1*');
   t = t.replace(/<i>([\s\S]*?)<\/i>/gi,           '*$1*');
-  t = t.replace(/<u>([\s\S]*?)<\/u>/gi,           '<u>$1</u>');
+  // Souligné : navigateur génère <u> ou <span style="text-decoration...">
+  t = t.replace(/<u>([\s\S]*?)<\/u>/gi,                                    '<u>$1</u>');
+  t = t.replace(/<span[^>]*text-decoration[^>]*underline[^>]*>([\s\S]*?)<\/span>/gi, '<u>$1</u>');
   // Cas Chrome : <div><br></div> = ligne vide
   t = t.replace(/<div><br\s*\/?><\/div>/gi, '\n');
-  // <br> avant </div> : garder le saut de ligne
   t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '\n</div>');
   t = t.replace(/<br\s*\/?>/gi, '\n');
-  // Chaque <div> = nouvelle ligne
   t = t.replace(/<\/div>\s*<div>/gi, '\n');
   t = t.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
   t = t.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n');
@@ -1734,7 +1734,6 @@ function htmlToMd(html) {
   t = t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
   t = t.replace(/\r/g, '');
   t = t.replace(/\n{3,}/g, '\n\n');
-  // trim uniquement le début, pas la fin (pour préserver le dernier \n)
   t = t.replace(/^\n+/, '');
   return t;
 }
