@@ -1717,23 +1717,28 @@ function mdToHtml(text) {
 
 function htmlToMd(html) {
   let t = html;
+  // Souligné en premier avec marqueur temporaire (survit au strip des tags)
+  t = t.replace(/<u>([\s\S]*?)<\/u>/gi, '\x01U\x01$1\x02U\x02');
+  t = t.replace(/<span[^>]*text-decoration[^>]*underline[^>]*>([\s\S]*?)<\/span>/gi, '\x01U\x01$1\x02U\x02');
+  // Gras+italique combiné
+  t = t.replace(/<strong>\s*<em>([\s\S]*?)<\/em>\s*<\/strong>/gi, '***$1***');
+  t = t.replace(/<em>\s*<strong>([\s\S]*?)<\/strong>\s*<\/em>/gi, '***$1***');
+  // Gras seul
   t = t.replace(/<strong>([\s\S]*?)<\/strong>/gi, '**$1**');
   t = t.replace(/<b>([\s\S]*?)<\/b>/gi,           '**$1**');
+  // Italique seul
   t = t.replace(/<em>([\s\S]*?)<\/em>/gi,         '*$1*');
   t = t.replace(/<i>([\s\S]*?)<\/i>/gi,           '*$1*');
-  // Souligné : utiliser marqueur temporaire pour survivre au strip des tags
-  t = t.replace(/<u>([\s\S]*?)<\/u>/gi,           '\x01U\x01$1\x02U\x02');
-  t = t.replace(/<span[^>]*text-decoration[^>]*underline[^>]*>([\s\S]*?)<\/span>/gi, '\x01U\x01$1\x02U\x02');
-  // Cas Chrome : <div><br></div> = ligne vide
+  // Sauts de ligne
   t = t.replace(/<div><br\s*\/?><\/div>/gi, '\n');
   t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '\n</div>');
   t = t.replace(/<br\s*\/?>/gi, '\n');
   t = t.replace(/<\/div>\s*<div>/gi, '\n');
   t = t.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
   t = t.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n');
-  // Supprimer tous les autres tags HTML
+  // Supprimer les autres tags
   t = t.replace(/<[^>]+>/g, '');
-  // Restaurer le souligné
+  // Restaurer souligné
   t = t.replace(/\x01U\x01([\s\S]*?)\x02U\x02/g, '<u>$1</u>');
   t = t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
   t = t.replace(/\r/g, '');

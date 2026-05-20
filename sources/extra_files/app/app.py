@@ -109,7 +109,7 @@ def md_to_html(text):
 
 
 def _md_runs(text, font='Verdana', size=20):
-    """Convertit le Markdown simple en runs Word XML, gère les combinaisons."""
+    """Convertit le Markdown en runs Word XML, gère toutes les combinaisons."""
     import re
     if not text: return ''
 
@@ -129,36 +129,26 @@ def _md_runs(text, font='Verdana', size=20):
                 f'<w:sz w:val="{size}"/></w:rPr>{content}</w:r>')
 
     def parse(t, bold=False, italic=False, underline=False):
+        if not t: return ''
         result = ''
-        # Gras+italique combiné ***...***
-        m = re.search(r'\*\*\*(.+?)\*\*\*', t, re.DOTALL)
-        if m:
-            result += parse(t[:m.start()], bold, italic, underline)
-            result += parse(m.group(1), True, True, underline)
-            result += parse(t[m.end():], bold, italic, underline)
-            return result
-        # Gras **...**
-        m = re.search(r'\*\*(.+?)\*\*', t, re.DOTALL)
-        if m:
-            result += parse(t[:m.start()], bold, italic, underline)
-            result += parse(m.group(1), True, italic, underline)
-            result += parse(t[m.end():], bold, italic, underline)
-            return result
-        # Italique *...*
-        m = re.search(r'\*(.+?)\*', t, re.DOTALL)
-        if m:
-            result += parse(t[:m.start()], bold, italic, underline)
-            result += parse(m.group(1), bold, True, underline)
-            result += parse(t[m.end():], bold, italic, underline)
-            return result
-        # Souligné <u>...</u>
-        m = re.search(r'<u>(.+?)</u>', t, re.DOTALL)
-        if m:
-            result += parse(t[:m.start()], bold, italic, underline)
-            result += parse(m.group(1), bold, italic, True)
-            result += parse(t[m.end():], bold, italic, underline)
-            return result
-        # Texte brut
+        # Ordre important : tester d'abord les combinaisons les plus longues
+        patterns = [
+            (r'\*\*\*(.+?)\*\*\*', True,  True,  None),   # ***gras+ital***
+            (r'\*\*(.+?)\*\*',     True,  False, None),   # **gras**
+            (r'\*(.+?)\*',         False, True,  None),   # *ital*
+            (r'<u>(.+?)</u>',      None,  None,  True),   # <u>souligné</u>
+        ]
+        for pattern, b, i, u in patterns:
+            m = re.search(pattern, t, re.DOTALL)
+            if m:
+                result += parse(t[:m.start()], bold, italic, underline)
+                new_b = b if b is not None else bold
+                new_i = i if i is not None else italic
+                new_u = u if u is not None else underline
+                result += parse(m.group(1), new_b, new_i, new_u)
+                result += parse(t[m.end():], bold, italic, underline)
+                return result
+        # Aucun marqueur — texte brut
         return make_run(t, bold, italic, underline)
 
     return parse(text)
