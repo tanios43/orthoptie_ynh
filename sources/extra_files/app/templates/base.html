@@ -201,6 +201,22 @@
       transition: background .1s;
     }
     .md-toolbar button:hover { background: var(--border); }
+
+    /* Toolbar flottante pour les tableaux */
+    #float-toolbar {
+      position: fixed; z-index: 9999;
+      display: none;
+      background: white; border: 1px solid var(--border);
+      border-radius: 6px; padding: 3px 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+      gap: 2px;
+    }
+    #float-toolbar button {
+      background: none; border: none; padding: 2px 7px;
+      border-radius: 4px; cursor: pointer; font-size: 13px;
+      color: var(--text); line-height: 1.4; transition: background .1s;
+    }
+    #float-toolbar button:hover { background: var(--border); }
     .bilan-section-body {
       padding: 0 16px;
       background: var(--surface);
@@ -514,6 +530,102 @@ function toggleSection(id) {
 }
 </script>
 {% block scripts %}{% endblock %}
+
+{# Toolbar flottante WYSIWYG pour les tableaux #}
+<div id="float-toolbar" style="display:none;position:fixed;z-index:9999;
+     background:white;border:1px solid var(--border);border-radius:6px;
+     padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.15);gap:2px;display:none;">
+  <button type="button" onmousedown="event.preventDefault();floatApply('strong')"><b>B</b></button>
+  <button type="button" onmousedown="event.preventDefault();floatApply('em')"><i>I</i></button>
+  <button type="button" onmousedown="event.preventDefault();floatApply('u')"><u>U</u></button>
+</div>
+<script>
+let _floatTarget = null;
+
+function floatApply(tag) {
+  if (!_floatTarget) return;
+  _floatTarget.focus();
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+  const selected = range.toString();
+  if (!selected) return;
+  const el = document.createElement(tag);
+  try {
+    range.surroundContents(el);
+  } catch(e) {
+    const frag = document.createDocumentFragment();
+    const node = document.createElement(tag);
+    node.textContent = selected;
+    frag.appendChild(node);
+    range.deleteContents();
+    range.insertNode(frag);
+  }
+  // Sync hidden field
+  const uid = _floatTarget.id;
+  const hidden = document.getElementById(uid + '_hidden');
+  if (hidden && typeof htmlToMd === 'function') {
+    hidden.value = htmlToMd(_floatTarget.innerHTML);
+  }
+}
+
+function showFloatToolbar(div, e) {
+  _floatTarget = div;
+  const tb = document.getElementById('float-toolbar');
+  tb.style.display = 'flex';
+  // Positionner au-dessus du div
+  const rect = div.getBoundingClientRect();
+  tb.style.top = (rect.top - 40 + window.scrollY) + 'px';
+  tb.style.left = rect.left + 'px';
+}
+
+function hideFloatToolbar(e) {
+  setTimeout(() => {
+    const tb = document.getElementById('float-toolbar');
+    if (tb && !tb.contains(document.activeElement)) {
+      tb.style.display = 'none';
+      _floatTarget = null;
+    }
+  }, 200);
+}
+
+function htmlToMd(html) {
+  let t = html;
+  t = t.replace(/<u>([\s\S]*?)<\/u>/gi, '\x01U\x01$1\x02U\x02');
+  t = t.replace(/<span[^>]*text-decoration[^>]*underline[^>]*>([\s\S]*?)<\/span>/gi, '\x01U\x01$1\x02U\x02');
+  t = t.replace(/<strong>\s*<em>([\s\S]*?)<\/em>\s*<\/strong>/gi, '***$1***');
+  t = t.replace(/<em>\s*<strong>([\s\S]*?)<\/strong>\s*<\/em>/gi, '***$1***');
+  t = t.replace(/<strong>([\s\S]*?)<\/strong>/gi, '**$1**');
+  t = t.replace(/<b>([\s\S]*?)<\/b>/gi, '**$1**');
+  t = t.replace(/<em>([\s\S]*?)<\/em>/gi, '*$1*');
+  t = t.replace(/<i>([\s\S]*?)<\/i>/gi, '*$1*');
+  t = t.replace(/<div><br\s*\/?><\/div>/gi, '\n');
+  t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '\n</div>');
+  t = t.replace(/<br\s*\/?>/gi, '\n');
+  t = t.replace(/<\/div>\s*<div>/gi, '\n');
+  t = t.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
+  t = t.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n');
+  t = t.replace(/<[^>]+>/g, '');
+  t = t.replace(/\x01U\x01([\s\S]*?)\x02U\x02/g, '<u>$1</u>');
+  t = t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
+  t = t.replace(/\r/g, '');
+  t = t.replace(/\n{3,}/g, '\n\n');
+  t = t.replace(/^\n+/, '');
+  return t;
+}
+
+// Initialiser tous les .table-wysiwyg au chargement
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.table-wysiwyg').forEach(div => {
+    div.addEventListener('focus', (e) => showFloatToolbar(div, e));
+    div.addEventListener('blur',  (e) => hideFloatToolbar(e));
+    div.addEventListener('input', () => {
+      const hidden = document.getElementById(div.id + '_hidden');
+      if (hidden && typeof htmlToMd === 'function') hidden.value = htmlToMd(div.innerHTML);
+    });
+  });
+});
+</script>
 </body>
 {% if current_user.is_authenticated %}
 <script>

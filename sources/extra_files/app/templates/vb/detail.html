@@ -139,20 +139,44 @@
               </select>
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <textarea name="seance_{{ seance.id }}_fusion" class="auto-resize"
-                        style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;resize:none;overflow:hidden;">{{ seance.fusion or '' }}</textarea>
+              <div id="wy-vb-{{seance.id}}-fusion"
+     contenteditable="true"
+     class="table-wysiwyg"
+     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+  {{- (seance.fusion or "") | md | safe -}}
+</div>
+<input type="hidden" name="seance_{{seance.id}}_fusion" id="wy-vb-{{seance.id}}-fusion_hidden"
+       value="{{ seance.fusion or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <textarea name="seance_{{ seance.id }}_accommodation" class="auto-resize"
-                        style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;resize:none;overflow:hidden;">{{ seance.accommodation or '' }}</textarea>
+              <div id="wy-vb-{{seance.id}}-accommodation"
+     contenteditable="true"
+     class="table-wysiwyg"
+     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+  {{- (seance.accommodation or "") | md | safe -}}
+</div>
+<input type="hidden" name="seance_{{seance.id}}_accommodation" id="wy-vb-{{seance.id}}-accommodation_hidden"
+       value="{{ seance.accommodation or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <textarea name="seance_{{ seance.id }}_stereogrammes" class="auto-resize"
-                        style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;resize:none;overflow:hidden;">{{ seance.stereogrammes or '' }}</textarea>
+              <div id="wy-vb-{{seance.id}}-stereogrammes"
+     contenteditable="true"
+     class="table-wysiwyg"
+     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+  {{- (seance.stereogrammes or "") | md | safe -}}
+</div>
+<input type="hidden" name="seance_{{seance.id}}_stereogrammes" id="wy-vb-{{seance.id}}-stereogrammes_hidden"
+       value="{{ seance.stereogrammes or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <textarea name="seance_{{ seance.id }}_notes" class="auto-resize"
-                        style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;resize:none;overflow:hidden;">{{ seance.notes or '' }}</textarea>
+              <div id="wy-vb-{{seance.id}}-notes"
+     contenteditable="true"
+     class="table-wysiwyg"
+     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+  {{- (seance.notes or "") | md | safe -}}
+</div>
+<input type="hidden" name="seance_{{seance.id}}_notes" id="wy-vb-{{seance.id}}-notes_hidden"
+       value="{{ seance.notes or '' }}">
             </td>
           </tr>
           {% endfor %}
@@ -187,6 +211,14 @@ function autoResize(el) { el.style.height='auto'; el.style.height=el.scrollHeigh
 document.querySelectorAll('.auto-resize').forEach(el => {
   autoResize(el);
   el.addEventListener('input', () => autoResize(el));
+});
+
+// Sync WYSIWYG avant soumission
+document.querySelector('form')?.addEventListener('submit', function() {
+  document.querySelectorAll('.table-wysiwyg').forEach(div => {
+    const hidden = document.getElementById(div.id + '_hidden');
+    if (hidden && typeof htmlToMd === 'function') hidden.value = htmlToMd(div.innerHTML);
+  });
 });
 </script>
 {% endblock %}
