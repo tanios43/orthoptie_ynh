@@ -626,11 +626,9 @@ function htmlToMd(html) {
 // Initialiser tous les .table-wysiwyg
 function initTableWysiwyg() {
   document.querySelectorAll('.table-wysiwyg').forEach(div => {
-    if (div.dataset.wyInit) return; // déjà initialisé
+    if (div.dataset.wyInit) return;
     div.dataset.wyInit = '1';
-    // Sync initial
-    const hidden = document.getElementById(div.id + '_hidden');
-    if (hidden) hidden.value = htmlToMd(div.innerHTML);
+    // Ne pas sync au chargement — le champ hidden est déjà initialisé par Jinja
     div.addEventListener('focus', (e) => showFloatToolbar(div, e));
     div.addEventListener('blur',  (e) => hideFloatToolbar(e));
     div.addEventListener('input', () => {

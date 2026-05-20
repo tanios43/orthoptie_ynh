@@ -155,7 +155,7 @@
      contenteditable="true"
      class="table-wysiwyg"
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
-  {{- (seance.occlusion or "") | md | safe -}}
+  {{- (seance.occlusion or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_occlusion" id="wy-amb-{{seance.id}}-occlusion_hidden" form="form-suivi"
        value="{{ seance.occlusion or '' }}">
@@ -175,7 +175,7 @@
      contenteditable="true"
      class="table-wysiwyg"
      style="font-size:12px;padding:3px 5px;width:100%;min-height:24px;color:var(--muted);border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
-  {{- (seance.av_notes or "") | md | safe -}}
+  {{- (seance.av_notes or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_av_notes" id="wy-amb-{{seance.id}}-av_notes_hidden" form="form-suivi"
        value="{{ seance.av_notes or '' }}">
@@ -185,7 +185,7 @@
      contenteditable="true"
      class="table-wysiwyg"
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
-  {{- (seance.ese or "") | md | safe -}}
+  {{- (seance.ese or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_ese" id="wy-amb-{{seance.id}}-ese_hidden" form="form-suivi"
        value="{{ seance.ese or '' }}">
@@ -195,7 +195,7 @@
      contenteditable="true"
      class="table-wysiwyg"
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
-  {{- (seance.notes or "") | md | safe -}}
+  {{- (seance.notes or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_notes" id="wy-amb-{{seance.id}}-notes_hidden" form="form-suivi"
        value="{{ seance.notes or '' }}">
