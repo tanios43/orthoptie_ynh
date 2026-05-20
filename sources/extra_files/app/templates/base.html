@@ -664,11 +664,53 @@ const SESSION_TIMEOUT = 30 * 60 * 1000;
 let lastActivity = Date.now();
 let pingTimer = setInterval(sendPing, SESSION_PING_INTERVAL);
 
+function autoLogout() {
+  // Sauvegarder si on est sur une page de bilan/suivi avant de déconnecter
+  const formIds = ['form-bilan', 'form-suivi', 'form-suivi-vb'];
+  let saved = false;
+  for (const fid of formIds) {
+    const form = document.getElementById(fid);
+    if (form) {
+      // Sync WYSIWYG
+      if (typeof syncAllWysiwyg === 'function') syncAllWysiwyg();
+      document.querySelectorAll('.table-wysiwyg[contenteditable], .wysiwyg-field[contenteditable]').forEach(div => {
+        const hidden = document.getElementById(div.id + '_hidden');
+        if (hidden && typeof htmlToMd === 'function') hidden.value = htmlToMd(div.innerHTML);
+      });
+      // Ajouter un champ action=save si besoin
+      let actionInput = form.querySelector('input[name="action"]');
+      if (!actionInput) {
+        actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        form.appendChild(actionInput);
+      }
+      actionInput.value = 'save';
+      // Soumettre le form puis rediriger
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        fetch(form.action || window.location.href, {
+          method: 'POST',
+          body: new FormData(form),
+          credentials: 'include'
+        }).finally(() => {
+          window.location.href = "{{ url_for('logout') }}";
+        });
+      }, {once: true});
+      form.requestSubmit ? form.requestSubmit() : form.submit();
+      saved = true;
+      break;
+    }
+  }
+  if (!saved) {
+    window.location.href = "{{ url_for('logout') }}";
+  }
+}
+
 function sendPing() {
   if (Date.now() - lastActivity > SESSION_TIMEOUT) {
-    // Inactif depuis 30 min — déconnecter
     clearInterval(pingTimer);
-    window.location.href = "{{ url_for('logout') }}";
+    autoLogout();
     return;
   }
   fetch("{{ url_for('session_ping') }}", {method:'POST', credentials:'include',
@@ -690,7 +732,7 @@ document.addEventListener('visibilitychange', () => {
     // Page redevient visible
     const lastHidden = parseInt(sessionStorage.getItem('lastHidden') || '0');
     if (lastHidden && Date.now() - lastHidden > SESSION_TIMEOUT) {
-      window.location.href = "{{ url_for('logout') }}";
+      autoLogout();
     }
   }
 });
