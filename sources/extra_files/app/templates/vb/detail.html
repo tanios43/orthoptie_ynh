@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<form method="POST">
+<form method="POST" id="form-suivi-vb">
 
   {# Dernier bilan dépliable #}
   {% if dernier_bilan %}
@@ -145,7 +145,7 @@
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.fusion or "") | md | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_fusion" id="wy-vb-{{seance.id}}-fusion_hidden"
+<input type="hidden" name="seance_{{seance.id}}_fusion" id="wy-vb-{{seance.id}}-fusion_hidden" form="form-suivi-vb"
        value="{{ seance.fusion or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
@@ -155,7 +155,7 @@
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.accommodation or "") | md | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_accommodation" id="wy-vb-{{seance.id}}-accommodation_hidden"
+<input type="hidden" name="seance_{{seance.id}}_accommodation" id="wy-vb-{{seance.id}}-accommodation_hidden" form="form-suivi-vb"
        value="{{ seance.accommodation or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
@@ -165,7 +165,7 @@
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.stereogrammes or "") | md | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_stereogrammes" id="wy-vb-{{seance.id}}-stereogrammes_hidden"
+<input type="hidden" name="seance_{{seance.id}}_stereogrammes" id="wy-vb-{{seance.id}}-stereogrammes_hidden" form="form-suivi-vb"
        value="{{ seance.stereogrammes or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
@@ -175,7 +175,7 @@
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.notes or "") | md | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_notes" id="wy-vb-{{seance.id}}-notes_hidden"
+<input type="hidden" name="seance_{{seance.id}}_notes" id="wy-vb-{{seance.id}}-notes_hidden" form="form-suivi-vb"
        value="{{ seance.notes or '' }}">
             </td>
           </tr>

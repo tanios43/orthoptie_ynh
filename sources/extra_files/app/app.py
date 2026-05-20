@@ -1136,9 +1136,7 @@ def suivi_amblyopie_detail(suivi_id):
         for seance in s.seances:
             pfx = f'seance_{seance.id}_'
             seance.date_seance  = _parse_date(request.form.get(pfx+'date'))
-            val_occ = request.form.get(pfx+'occlusion','')
-            import sys; print(f"DEBUG occlusion repr: {repr(val_occ[:100])}", file=sys.stderr)
-            seance.occlusion    = val_occ.strip()
+            seance.occlusion    = request.form.get(pfx+'occlusion','').strip()
             seance.av_od        = request.form.get(pfx+'av_od','').strip()
             seance.av_og        = request.form.get(pfx+'av_og','').strip()
             seance.av_notes     = request.form.get(pfx+'av_notes','').strip()
