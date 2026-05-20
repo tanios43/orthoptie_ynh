@@ -534,10 +534,10 @@ function toggleSection(id) {
 {# Toolbar flottante WYSIWYG pour les tableaux #}
 <div id="float-toolbar" style="display:none;position:fixed;z-index:9999;
      background:white;border:1px solid var(--border);border-radius:6px;
-     padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.15);gap:2px;display:none;">
-  <button type="button" onmousedown="event.preventDefault();floatApply('strong')"><b>B</b></button>
-  <button type="button" onmousedown="event.preventDefault();floatApply('em')"><i>I</i></button>
-  <button type="button" onmousedown="event.preventDefault();floatApply('u')"><u>U</u></button>
+     padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.15);gap:2px;">
+  <button type="button" title="Gras" onmousedown="event.preventDefault();floatApply('strong')"><b>B</b></button>
+  <button type="button" title="Italique" onmousedown="event.preventDefault();floatApply('em')"><i>I</i></button>
+  <button type="button" title="Souligné" onmousedown="event.preventDefault();floatApply('u')"><u>U</u></button>
 </div>
 <script>
 let _floatTarget = null;
@@ -573,20 +573,25 @@ function showFloatToolbar(div, e) {
   _floatTarget = div;
   const tb = document.getElementById('float-toolbar');
   tb.style.display = 'flex';
-  // Positionner au-dessus du div
+  // Positionner au-dessus du div, dans le viewport
   const rect = div.getBoundingClientRect();
-  tb.style.top = (rect.top - 40 + window.scrollY) + 'px';
+  const tbH = 36;
+  let top = rect.top - tbH - 4;
+  if (top < 4) top = rect.bottom + 4; // Si trop haut, mettre en dessous
+  tb.style.top  = top + 'px';
   tb.style.left = rect.left + 'px';
 }
 
 function hideFloatToolbar(e) {
+  // Ne pas cacher si le focus va sur la toolbar elle-même
   setTimeout(() => {
     const tb = document.getElementById('float-toolbar');
-    if (tb && !tb.contains(document.activeElement)) {
-      tb.style.display = 'none';
-      _floatTarget = null;
-    }
-  }, 200);
+    if (!tb) return;
+    const active = document.activeElement;
+    if (tb.contains(active) || (_floatTarget && _floatTarget.contains(active))) return;
+    tb.style.display = 'none';
+    _floatTarget = null;
+  }, 150);
 }
 
 function htmlToMd(html) {
