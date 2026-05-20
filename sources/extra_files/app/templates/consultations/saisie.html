@@ -541,9 +541,9 @@ function champHTML(idx, champ, val) {
     return `<div class="field-group">
       <label class="field-label">${champ.label}</label>
       <div class="md-toolbar">
-        <button type="button" title="Gras (Ctrl+B)" onmousedown="event.preventDefault();applyFormat('strong',this)"><b>B</b></button>
-        <button type="button" title="Italique (Ctrl+I)" onmousedown="event.preventDefault();applyFormat('em',this)"><i>I</i></button>
-        <button type="button" title="Souligné" onmousedown="event.preventDefault();applyFormat('u',this)"><u>U</u></button>
+        <button type="button" tabindex="-1" title="Gras (Ctrl+B)" onmousedown="event.preventDefault();applyFormat('strong',this)"><b>B</b></button>
+        <button type="button" tabindex="-1" title="Italique (Ctrl+I)" onmousedown="event.preventDefault();applyFormat('em',this)"><i>I</i></button>
+        <button type="button" tabindex="-1" title="Souligné" onmousedown="event.preventDefault();applyFormat('u',this)"><u>U</u></button>
       </div>
       <div id="${uid}"
            contenteditable="true"

@@ -535,9 +535,9 @@ function toggleSection(id) {
 <div id="float-toolbar" style="display:none;position:fixed;z-index:9999;
      background:white;border:1px solid var(--border);border-radius:6px;
      padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.15);gap:2px;">
-  <button type="button" title="Gras" onmousedown="event.preventDefault();floatApply('strong')"><b>B</b></button>
-  <button type="button" title="Italique" onmousedown="event.preventDefault();floatApply('em')"><i>I</i></button>
-  <button type="button" title="Souligné" onmousedown="event.preventDefault();floatApply('u')"><u>U</u></button>
+  <button type="button" tabindex="-1" title="Gras" onmousedown="event.preventDefault();floatApply('strong')"><b>B</b></button>
+  <button type="button" tabindex="-1" title="Italique" onmousedown="event.preventDefault();floatApply('em')"><i>I</i></button>
+  <button type="button" tabindex="-1" title="Souligné" onmousedown="event.preventDefault();floatApply('u')"><u>U</u></button>
 </div>
 <script>
 let _floatTarget = null;
