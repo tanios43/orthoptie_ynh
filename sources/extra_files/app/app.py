@@ -96,7 +96,7 @@ def inject_categories():
 
 @app.template_filter('md')
 def md_to_html(text):
-    """Convertit le Markdown simple en HTML pour l'affichage."""
+    """Convertit le Markdown simple en HTML pour l'affichage dans contenteditable."""
     import re
     if not text: return ''
     t = str(text)
@@ -104,8 +104,11 @@ def md_to_html(text):
     t = re.sub(r'\*\*(.+?)\*\*',     r'<strong>\1</strong>', t, flags=re.DOTALL)
     t = re.sub(r'\*(.+?)\*',         r'<em>\1</em>', t, flags=re.DOTALL)
     t = re.sub(r'<u>(.+?)</u>',      r'<u>\1</u>', t, flags=re.DOTALL)
-    t = t.replace('\n', '<br>')
-    return t
+    # Utiliser <div> pour les sauts de ligne — format natif contenteditable Chrome
+    lines = t.split('\n')
+    if len(lines) == 1:
+        return t
+    return lines[0] + ''.join(f'<div>{l if l else "<br>"}</div>' for l in lines[1:])
 
 
 def _md_runs(text, font='Verdana', size=20):

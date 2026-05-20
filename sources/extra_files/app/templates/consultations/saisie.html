@@ -1711,8 +1711,10 @@ function mdToHtml(text) {
   t = t.replace(/\*\*(.+?)\*\*/gs,     '<strong>$1</strong>');
   t = t.replace(/\*(.+?)\*/gs,         '<em>$1</em>');
   t = t.replace(/<u>(.+?)<\/u>/gs,     '<u>$1</u>');
-  t = t.replace(/\n/g, '<br>');
-  return t;
+  // Utiliser <div> pour les sauts de ligne — format natif contenteditable Chrome
+  const lines = t.split('\n');
+  if (lines.length === 1) return t;
+  return lines[0] + lines.slice(1).map(l => `<div>${l || '<br>'}</div>`).join('');
 }
 
 function htmlToMd(html) {
