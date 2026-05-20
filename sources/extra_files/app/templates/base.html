@@ -604,17 +604,21 @@ function htmlToMd(html) {
   t = t.replace(/<b>([\s\S]*?)<\/b>/gi, '**$1**');
   t = t.replace(/<em>([\s\S]*?)<\/em>/gi, '*$1*');
   t = t.replace(/<i>([\s\S]*?)<\/i>/gi, '*$1*');
+  // Sauts de ligne — chaque <div> = une ligne, pas deux
   t = t.replace(/<div><br\s*\/?><\/div>/gi, '\n');
-  t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '\n</div>');
+  t = t.replace(/<br\s*\/?>\s*<\/div>/gi, '</div>');  // <br> avant </div> = redondant
   t = t.replace(/<br\s*\/?>/gi, '\n');
+  t = t.replace(/<\/div><div>/gi, '\n');              // </div><div> = saut simple
   t = t.replace(/<\/div>\s*<div>/gi, '\n');
-  t = t.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
+  t = t.replace(/^<div>/gi, '');                      // premier <div> = pas de saut
+  t = t.replace(/<div>/gi, '\n');
+  t = t.replace(/<\/div>/gi, '');
   t = t.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n');
   t = t.replace(/<[^>]+>/g, '');
   t = t.replace(/\x01U\x01([\s\S]*?)\x02U\x02/g, '<u>$1</u>');
   t = t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
   t = t.replace(/\r/g, '');
-  t = t.replace(/\n{3,}/g, '\n\n');
+  t = t.replace(/\n{3,}/g, '\n\n');  // max 2 sauts consécutifs
   t = t.replace(/^\n+/, '');
   return t;
 }
