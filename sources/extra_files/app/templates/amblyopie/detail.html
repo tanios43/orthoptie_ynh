@@ -249,5 +249,13 @@ document.querySelectorAll('.auto-resize').forEach(el => {
   autoResize(el);
   el.addEventListener('input', () => autoResize(el));
 });
+
+// Sync WYSIWYG avant soumission (même approche que saisie.html)
+document.getElementById('form-suivi')?.addEventListener('submit', function() {
+  document.querySelectorAll('.table-wysiwyg[contenteditable]').forEach(div => {
+    const hidden = document.getElementById(div.id + '_hidden');
+    if (hidden) hidden.value = htmlToMd(div.innerHTML);
+  });
+});
 </script>
 {% endblock %}
