@@ -622,11 +622,14 @@ function htmlToMd(html) {
 // Initialiser tous les .table-wysiwyg au chargement
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.table-wysiwyg').forEach(div => {
+    // Sync initial au chargement
+    const hidden = document.getElementById(div.id + '_hidden');
+    if (hidden) hidden.value = htmlToMd(div.innerHTML);
     div.addEventListener('focus', (e) => showFloatToolbar(div, e));
     div.addEventListener('blur',  (e) => hideFloatToolbar(e));
     div.addEventListener('input', () => {
-      const hidden = document.getElementById(div.id + '_hidden');
-      if (hidden && typeof htmlToMd === 'function') hidden.value = htmlToMd(div.innerHTML);
+      const h = document.getElementById(div.id + '_hidden');
+      if (h) h.value = htmlToMd(div.innerHTML);
     });
   });
 });
