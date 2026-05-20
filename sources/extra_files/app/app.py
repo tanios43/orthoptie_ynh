@@ -109,7 +109,7 @@ def md_to_html(text):
 
 
 def _md_runs(text, font='Verdana', size=20):
-    """Convertit le Markdown en runs Word XML, gère toutes les combinaisons."""
+    """Convertit le Markdown en runs Word XML avec tokenisation."""
     import re
     if not text: return ''
 
@@ -128,28 +128,73 @@ def _md_runs(text, font='Verdana', size=20):
                 f'<w:rFonts w:ascii="{font}" w:hAnsi="{font}"/>'
                 f'<w:sz w:val="{size}"/></w:rPr>{content}</w:r>')
 
+    # Tokeniser en liste de (texte, bold, italic, underline)
+    # Approche : remplacer les marqueurs par des tokens, puis parser
+    TOK = [
+        ('***', 'BI_OPEN'),  ('***', 'BI_CLOSE'),
+        ('**',  'B_OPEN'),   ('**',  'B_CLOSE'),
+        ('*',   'I_OPEN'),   ('*',   'I_CLOSE'),
+        ('<u>', 'U_OPEN'),   ('</u>','U_CLOSE'),
+    ]
+
+    # Approche récursive avec état
     def parse(t, bold=False, italic=False, underline=False):
         if not t: return ''
-        result = ''
-        # Ordre important : tester d'abord les combinaisons les plus longues
-        patterns = [
-            (r'\*\*\*(.+?)\*\*\*', True,  True,  None),   # ***gras+ital***
-            (r'\*\*(.+?)\*\*',     True,  False, None),   # **gras**
-            (r'\*(.+?)\*',         False, True,  None),   # *ital*
-            (r'<u>(.+?)</u>',      None,  None,  True),   # <u>souligné</u>
-        ]
-        for pattern, b, i, u in patterns:
-            m = re.search(pattern, t, re.DOTALL)
-            if m:
-                result += parse(t[:m.start()], bold, italic, underline)
-                new_b = b if b is not None else bold
-                new_i = i if i is not None else italic
-                new_u = u if u is not None else underline
-                result += parse(m.group(1), new_b, new_i, new_u)
-                result += parse(t[m.end():], bold, italic, underline)
-                return result
-        # Aucun marqueur — texte brut
-        return make_run(t, bold, italic, underline)
+        # Trouver le premier marqueur
+        first_pos = len(t)
+        first_pat = None
+        for pat, name in [
+            (r'\*\*\*',  'BI'), (r'\*\*', 'B'), (r'\*', 'I'),
+            (r'<u>',     'UO'), (r'</u>', 'UC'),
+        ]:
+            m = re.search(pat, t)
+            if m and m.start() < first_pos:
+                first_pos = m.start()
+                first_pat = (m, name, pat)
+
+        if first_pat is None:
+            return make_run(t, bold, italic, underline)
+
+        m, name, pat = first_pat
+        result = make_run(t[:m.start()], bold, italic, underline)
+
+        if name == 'BI':
+            # Trouver la fermeture ***
+            end = re.search(r'\*\*\*', t[m.end():])
+            if end:
+                inner = t[m.end():m.end()+end.start()]
+                result += parse(inner, True, True, underline)
+                result += parse(t[m.end()+end.end():], bold, italic, underline)
+            else:
+                result += make_run(t[m.start():], bold, italic, underline)
+        elif name == 'B':
+            end = re.search(r'\*\*', t[m.end():])
+            if end:
+                inner = t[m.end():m.end()+end.start()]
+                result += parse(inner, True, italic, underline)
+                result += parse(t[m.end()+end.end():], bold, italic, underline)
+            else:
+                result += make_run(t[m.start():], bold, italic, underline)
+        elif name == 'I':
+            end = re.search(r'\*', t[m.end():])
+            if end:
+                inner = t[m.end():m.end()+end.start()]
+                result += parse(inner, bold, True, underline)
+                result += parse(t[m.end()+end.end():], bold, italic, underline)
+            else:
+                result += make_run(t[m.start():], bold, italic, underline)
+        elif name == 'UO':
+            end = re.search(r'</u>', t[m.end():], re.IGNORECASE)
+            if end:
+                inner = t[m.end():m.end()+end.start()]
+                result += parse(inner, bold, italic, True)
+                result += parse(t[m.end()+end.end():], bold, italic, underline)
+            else:
+                result += make_run(t[m.start():], bold, italic, underline)
+        else:
+            result += make_run(t[m.start():], bold, italic, underline)
+
+        return result
 
     return parse(text)
 
