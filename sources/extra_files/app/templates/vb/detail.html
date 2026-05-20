@@ -212,13 +212,5 @@ document.querySelectorAll('.auto-resize').forEach(el => {
   autoResize(el);
   el.addEventListener('input', () => autoResize(el));
 });
-
-// Sync WYSIWYG avant soumission
-document.querySelector('form')?.addEventListener('submit', function() {
-  document.querySelectorAll('.table-wysiwyg').forEach(div => {
-    const hidden = document.getElementById(div.id + '_hidden');
-    if (hidden && typeof htmlToMd === 'function') hidden.value = htmlToMd(div.innerHTML);
-  });
-});
 </script>
 {% endblock %}

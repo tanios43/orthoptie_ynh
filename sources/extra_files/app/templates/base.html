@@ -619,10 +619,12 @@ function htmlToMd(html) {
   return t;
 }
 
-// Initialiser tous les .table-wysiwyg au chargement
-document.addEventListener('DOMContentLoaded', function() {
+// Initialiser tous les .table-wysiwyg
+function initTableWysiwyg() {
   document.querySelectorAll('.table-wysiwyg').forEach(div => {
-    // Sync initial au chargement
+    if (div.dataset.wyInit) return; // déjà initialisé
+    div.dataset.wyInit = '1';
+    // Sync initial
     const hidden = document.getElementById(div.id + '_hidden');
     if (hidden) hidden.value = htmlToMd(div.innerHTML);
     div.addEventListener('focus', (e) => showFloatToolbar(div, e));
@@ -632,7 +634,24 @@ document.addEventListener('DOMContentLoaded', function() {
       if (h) h.value = htmlToMd(div.innerHTML);
     });
   });
-});
+}
+
+// Sync globale de tous les champs WYSIWYG (appelée avant submit)
+function syncAllWysiwyg() {
+  document.querySelectorAll('.table-wysiwyg, .wysiwyg-field').forEach(div => {
+    const hidden = document.getElementById(div.id + '_hidden');
+    if (hidden) hidden.value = htmlToMd(div.innerHTML);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initTableWysiwyg);
+// Aussi au load complet (fallback)
+window.addEventListener('load', initTableWysiwyg);
+
+// Intercepter tous les submits de formulaires
+document.addEventListener('submit', function(e) {
+  syncAllWysiwyg();
+}, true); // capture phase = avant le submit
 </script>
 </body>
 {% if current_user.is_authenticated %}
