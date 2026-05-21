@@ -1743,7 +1743,10 @@ def note_patient_supprimer(note_id):
     return redirect(url_for('patient_detail', patient_id=patient_id))
 
 
-
+@app.route('/admin/categories')
+@login_required
+@admin_required
+def admin_categories():
     cats_builtin = {k: v for k, v in CATEGORIES_BUILTIN.items() if k}
     cats_custom = CategorieSection.query.order_by(CategorieSection.ordre).all()
     return render_template('admin/categories.html',
