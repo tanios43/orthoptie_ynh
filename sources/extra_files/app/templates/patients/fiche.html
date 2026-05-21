@@ -318,11 +318,53 @@
                         <td colspan="3" style="padding:3px 4px;">{{ d.get('og_add','—') }}</td>
                       </tr>
                       {% endif %}
-                      {% if sec.type == 'refraction_subj' and (d.get('od_av_loin') or d.get('og_av_loin')) %}
+                      {% if sec.type == 'refraction_subj' %}
+                      {% if d.get('od_av_loin') or d.get('og_av_loin') %}
                       <tr style="border-top:0.5px dashed var(--border);">
                         <td style="padding:3px 4px;color:var(--muted);font-size:10px;">AV loin</td>
                         <td colspan="3" style="padding:3px 4px;">{{ d.get('od_av_loin','—') }}</td>
                         <td colspan="3" style="padding:3px 4px;">{{ d.get('og_av_loin','—') }}</td>
+                      </tr>
+                      {% endif %}
+                      {% if d.get('od_av_pres') or d.get('og_av_pres') %}
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">AV près</td>
+                        <td colspan="3" style="padding:3px 4px;">{{ d.get('od_av_pres','—') }}</td>
+                        <td colspan="3" style="padding:3px 4px;">{{ d.get('og_av_pres','—') }}</td>
+                      </tr>
+                      {% endif %}
+                      {% endif %}
+                    </tbody>
+                  </table>
+
+                  {% elif sec.type in ['acuite','swaine'] %}
+                  <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                    <thead>
+                      <tr>
+                        <th style="padding:2px 4px;"></th>
+                        <th style="text-align:center;padding:2px 4px;color:#185FA5;font-weight:600;">OD</th>
+                        <th style="text-align:center;padding:2px 4px;color:#A32D2D;font-weight:600;">OG</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% if sec.type == 'acuite' %}
+                      {% if d.get('av_bino') %}<tr style="border-top:0.5px solid var(--border);"><td style="padding:3px 4px;color:var(--muted);font-size:10px;">Bino</td><td colspan="2" style="padding:3px 4px;">{{ d.get('av_bino') }}</td></tr>{% endif %}
+                      {% if d.get('av_correction') %}<tr style="border-top:0.5px solid var(--border);"><td style="padding:3px 4px;color:var(--muted);font-size:10px;">Correction</td><td colspan="2" style="padding:3px 4px;">{{ d.get('av_correction') }}</td></tr>{% endif %}
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">Loin</td>
+                        <td style="padding:3px 4px;">{{ d.get('av_od_loin','—') }}</td>
+                        <td style="padding:3px 4px;">{{ d.get('av_og_loin','—') }}</td>
+                      </tr>
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">Près</td>
+                        <td style="padding:3px 4px;">{{ d.get('av_od_pres','—') }}</td>
+                        <td style="padding:3px 4px;">{{ d.get('av_og_pres','—') }}</td>
+                      </tr>
+                      {% else %}
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">/10</td>
+                        <td style="padding:3px 4px;">{{ d.get('swaine_od','—') }}</td>
+                        <td style="padding:3px 4px;">{{ d.get('swaine_og','—') }}</td>
                       </tr>
                       {% endif %}
                     </tbody>
