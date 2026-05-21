@@ -225,8 +225,41 @@
                 <td style="text-align:center;">{{ d.get('av_og_pres','—') }}</td></tr>
             </table>
 
+            {% elif sec.type == 'swaine' %}
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <tr>
+                <td></td>
+                <td style="text-align:center;padding:1px 4px;"><span class="eye-label eye-od" style="font-size:9px;">OD</span></td>
+                <td style="text-align:center;padding:1px 4px;"><span class="eye-label eye-og" style="font-size:9px;">OG</span></td>
+              </tr>
+              <tr><td style="color:var(--muted);">/10</td>
+                <td style="text-align:center;">{{ d.get('swaine_od','—') }}</td>
+                <td style="text-align:center;">{{ d.get('swaine_og','—') }}</td></tr>
+            </table>
+
+            {% elif sec.type == 'ordonnance_lunettes' %}
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <tr>
+                <td></td>
+                <td style="text-align:center;padding:1px 4px;"><span class="eye-label eye-od" style="font-size:9px;">OD</span></td>
+                <td style="text-align:center;padding:1px 4px;"><span class="eye-label eye-og" style="font-size:9px;">OG</span></td>
+              </tr>
+              {% if d.get('lun_vl_od_sph') or d.get('lun_vl_og_sph') %}
+              <tr><td style="color:var(--muted);">VL Sph.</td>
+                <td style="text-align:center;font-family:monospace;">{{ sph(d.get('lun_vl_od_sph')) }}</td>
+                <td style="text-align:center;font-family:monospace;">{{ sph(d.get('lun_vl_og_sph')) }}</td></tr>
+              <tr><td style="color:var(--muted);">VL Cyl./Axe</td>
+                <td style="text-align:center;font-family:monospace;">{{ d.get('lun_vl_od_cyl','—') }} {{ axe(d.get('lun_vl_od_axe')) }}</td>
+                <td style="text-align:center;font-family:monospace;">{{ d.get('lun_vl_og_cyl','—') }} {{ axe(d.get('lun_vl_og_axe')) }}</td></tr>
+              {% endif %}
+              {% if d.get('lun_vp_od_add') or d.get('lun_vp_og_add') %}
+              <tr><td style="color:var(--muted);">VP Add.</td>
+                <td style="text-align:center;">{{ d.get('lun_vp_od_add','—') }}</td>
+                <td style="text-align:center;">{{ d.get('lun_vp_og_add','—') }}</td></tr>
+              {% endif %}
+            </table>
+
             {% else %}
-            {% set def = sections_def.get(sec.type, {}) %}
             {% for champ in def.get('champs', []) %}
               {% if champ.type == 'fichier' %}
                 {% set fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', champ.name) | list %}
