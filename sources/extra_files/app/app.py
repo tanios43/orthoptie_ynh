@@ -1636,9 +1636,15 @@ def suivi_vb_generer(suivi_id):
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 
-@app.route('/messages')
+@app.route('/api/messages/count')
 @login_required
-def messages_liste():
+def api_messages_count():
+    count = Message.query.filter_by(
+        destinataire_id=current_user.id, lu=False).count()
+    return {'count': count}
+
+
+
     """Liste des conversations du praticien connecté."""
     # Trouver tous les praticiens avec qui on a échangé
     sent = db.session.query(Message.destinataire_id).filter_by(

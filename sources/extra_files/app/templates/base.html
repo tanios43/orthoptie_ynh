@@ -390,12 +390,12 @@
        class="nav-item {% if request.endpoint == 'mon_historique' %}active{% endif %}">
       <span class="icon">🕐</span> Mon historique
     </a>
-    <a href="{{ url_for('messages_liste') }}"
+    <a href="{{ url_for('messages_liste') }}" id="msg-nav-link"
        class="nav-item {% if request.endpoint in ['messages_liste','messages_conversation'] %}active{% endif %}"
        style="display:flex;align-items:center;justify-content:space-between;">
       <span><span class="icon">💬</span> Messages</span>
       {% if messages_non_lus %}
-      <span style="background:#E24B4A;color:white;border-radius:9px;min-width:18px;height:18px;
+      <span id="msg-badge" style="background:#E24B4A;color:white;border-radius:9px;min-width:18px;height:18px;
                    display:inline-flex;align-items:center;justify-content:center;
                    font-size:11px;padding:0 5px;">{{ messages_non_lus }}</span>
       {% endif %}
@@ -748,8 +748,41 @@ document.addEventListener('visibilitychange', () => {
     if (lastHidden && Date.now() - lastHidden > SESSION_TIMEOUT) {
       autoLogout();
     }
-  }
 });
+
+// ── Polling badge messages non lus ──────────────────────────────────
+(function() {
+  function updateMessagesBadge(count) {
+    const badge = document.getElementById('msg-badge');
+    const link  = document.getElementById('msg-nav-link');
+    if (!link) return;
+    if (count > 0) {
+      if (!badge) {
+        const span = document.createElement('span');
+        span.id = 'msg-badge';
+        span.style.cssText = 'background:#E24B4A;color:white;border-radius:9px;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;padding:0 5px;flex-shrink:0;';
+        span.textContent = count;
+        link.appendChild(span);
+      } else {
+        badge.textContent = count;
+      }
+      document.title = document.title.replace(/^\(\d+\) /, '');
+      document.title = '(' + count + ') ' + document.title;
+    } else {
+      if (badge) badge.remove();
+      document.title = document.title.replace(/^\(\d+\) /, '');
+    }
+  }
+
+  function pollMessages() {
+    fetch("{{ url_for('api_messages_count') }}", {credentials: 'include'})
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) updateMessagesBadge(data.count); })
+      .catch(() => {});
+  }
+
+  setTimeout(() => { pollMessages(); setInterval(pollMessages, 30000); }, 10000);
+})();
 </script>
 {% endif %}
 </html>
