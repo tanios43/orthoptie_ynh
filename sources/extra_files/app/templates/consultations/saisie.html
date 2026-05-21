@@ -260,7 +260,8 @@
             </table>
 
             {% else %}
-            {% for champ in def.get('champs', []) %}
+            {% set sdef2 = sections_def.get(sec.type, {}) %}
+            {% for champ in sdef2.get('champs', []) %}
               {% if champ.type == 'fichier' %}
                 {% set fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', champ.name) | list %}
                 {% if fics %}
