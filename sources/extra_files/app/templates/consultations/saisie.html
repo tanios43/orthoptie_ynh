@@ -1057,7 +1057,7 @@ function odOgHTML(idx, champs, donnees, type) {
       <div class="field-group">
         <label class="field-label">Correction</label>
         <input list="dl-${idx}-corr" name="champ__${idx}__av_correction" value="${donnees.av_correction||''}" placeholder="Choisir ou saisir…" autocomplete="off">
-        <datalist id="dl-${idx}-corr">${['sans correction','avec correction habituelle','avec correction optimale','avec addition'].map(o=>`<option value="${o}">`).join('')}</datalist>
+        <datalist id="dl-${idx}-corr">${(champs.find(c=>c.name==='av_correction')?.options||['sans correction','avec correction habituelle','avec correction optimale','avec addition']).map(o=>`<option value="${o}">`).join('')}</datalist>
       </div>
     </div>
     <table style="width:100%;border-collapse:collapse;">
