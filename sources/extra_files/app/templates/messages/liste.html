@@ -43,7 +43,7 @@
         </div>
         {% if conv.dernier %}
         <div style="font-size:11px;color:var(--muted);margin-top:3px;padding-left:40px;">
-          {{ conv.dernier.created_at.strftime('%d/%m %H:%M') }}
+          {{ conv.dernier.created_at | localhour }}
         </div>
         {% endif %}
       </a>

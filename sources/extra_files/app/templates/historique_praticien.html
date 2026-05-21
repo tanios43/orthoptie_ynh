@@ -35,7 +35,7 @@
             {% if patient.date_naissance %}
             {{ patient.date_naissance.strftime('%d/%m/%Y') }} ·
             {% endif %}
-            Dernière consultation : {{ derniere_visite.strftime('%d/%m/%Y à %H:%M') }}
+            Dernière consultation : {{ derniere_visite | localtime }}
           </div>
         </div>
 

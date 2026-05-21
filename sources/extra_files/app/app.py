@@ -123,7 +123,36 @@ def md_to_contenteditable(text):
     return lines[0] + ''.join(f'<div>{l if l else "<br>"}</div>' for l in lines[1:])
 
 
-@app.template_filter('md')
+@app.template_filter('localtime')
+def localtime_filter(dt):
+    """Convertit un datetime UTC en heure locale (Europe/Paris)."""
+    if not dt: return ''
+    try:
+        from datetime import timezone, timedelta
+        import time
+        # Utiliser le décalage local du serveur
+        local_offset = timedelta(seconds=-time.timezone if time.daylight == 0 else -time.altzone)
+        local_dt = dt.replace(tzinfo=timezone.utc) + local_offset
+        return local_dt.strftime('%d/%m/%Y %H:%M')
+    except Exception:
+        return dt.strftime('%d/%m/%Y %H:%M')
+
+
+@app.template_filter('localhour')
+def localhour_filter(dt):
+    """Convertit en heure locale, format court HH:MM."""
+    if not dt: return ''
+    try:
+        from datetime import timezone, timedelta
+        import time
+        local_offset = timedelta(seconds=-time.timezone if time.daylight == 0 else -time.altzone)
+        local_dt = dt.replace(tzinfo=timezone.utc) + local_offset
+        return local_dt.strftime('%d/%m %H:%M')
+    except Exception:
+        return dt.strftime('%d/%m %H:%M')
+
+
+
 def md_to_html(text):
     """Convertit le Markdown simple en HTML pour l'affichage dans contenteditable."""
     import re

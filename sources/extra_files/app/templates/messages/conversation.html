@@ -73,7 +73,7 @@
           {{ msg.contenu }}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-          {{ msg.created_at.strftime('%d/%m %H:%M') }}
+          {{ msg.created_at | localhour }}
           {% if msg.lu %} · Lu{% endif %}
         </div>
       </div>
@@ -85,7 +85,7 @@
           {{ msg.contenu }}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-          {{ msg.created_at.strftime('%d/%m %H:%M') }}
+          {{ msg.created_at | localhour }}
         </div>
       </div>
       {% endif %}

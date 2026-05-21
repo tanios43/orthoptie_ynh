@@ -52,7 +52,7 @@
             {{ note.praticien.prenom[0] }}{{ note.praticien.nom[0] }}
           </div>
           <span style="font-size:12px;font-weight:500;">{{ note.praticien.prenom }} {{ note.praticien.nom }}</span>
-          <span style="font-size:11px;color:var(--muted);margin-left:auto;">{{ note.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto;">{{ note.created_at | localtime }}</span>
           {% if note.praticien_id == current_user.id or current_user.role == 'admin' %}
           <form method="POST" action="{{ url_for('note_patient_supprimer', note_id=note.id) }}"
                 style="margin:0;" onsubmit="return confirm('Supprimer cette note ?')">

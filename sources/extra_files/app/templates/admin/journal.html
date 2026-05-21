@@ -38,7 +38,7 @@
           {% for e in entrees %}
           <tr style="border-bottom:1px solid var(--border);">
             <td style="padding:7px 12px;color:var(--muted);white-space:nowrap;">
-              {{ e.created_at.strftime('%d/%m/%Y %H:%M') }}
+              {{ e.created_at | localtime }}
             </td>
             <td style="padding:7px 12px;white-space:nowrap;">
               {{ e.praticien.prenom }} {{ e.praticien.nom }}
