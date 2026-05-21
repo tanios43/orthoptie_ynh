@@ -94,6 +94,18 @@ def inject_categories():
     return {'CATEGORIES': get_categories(), 'get_categories': get_categories}
 
 
+@app.context_processor
+def inject_messages_count():
+    if current_user.is_authenticated:
+        try:
+            count = Message.query.filter_by(
+                destinataire_id=current_user.id, lu=False).count()
+            return {'messages_non_lus': count}
+        except Exception:
+            pass
+    return {'messages_non_lus': 0}
+
+
 @app.template_filter('mdhtml')
 def md_to_contenteditable(text):
     """Convertit le Markdown en HTML compatible contenteditable (format natif Chrome)."""
@@ -229,6 +241,15 @@ def _md_runs(text, font='Verdana', size=20):
     t = re.sub(r'<u>(.+?)</u>',  r'<u>\1</u>', t)
     t = t.replace('\n', '<br>')
     return t
+
+
+@app.template_filter('notes_patient_list')
+def notes_patient_list_filter(patient_id):
+    try:
+        return NotePatient.query.filter_by(patient_id=patient_id)\
+            .order_by(NotePatient.created_at.desc()).all()
+    except Exception:
+        return []
 
 
 @app.template_filter('suivi_vb_list')
@@ -546,6 +567,33 @@ class SeanceAmblyopie(db.Model):
     ese         = db.Column(db.String(50), default='')
     notes       = db.Column(db.Text, default='')
 
+    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+
+
+class Message(db.Model):
+    """Message direct entre praticiens."""
+    __tablename__ = 'message'
+    id           = db.Column(db.Integer, primary_key=True)
+    expediteur_id= db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    destinataire_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    contenu      = db.Column(db.Text, nullable=False)
+    lu           = db.Column(db.Boolean, default=False)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    expediteur   = db.relationship('Praticien', foreign_keys=[expediteur_id])
+    destinataire = db.relationship('Praticien', foreign_keys=[destinataire_id])
+
+
+class NotePatient(db.Model):
+    """Note partagée sur un patient, visible par tous les praticiens."""
+    __tablename__ = 'note_patient'
+    id           = db.Column(db.Integer, primary_key=True)
+    patient_id   = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    contenu      = db.Column(db.Text, nullable=False)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    patient   = db.relationship('Patient',   foreign_keys=[patient_id])
     praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
 
 
@@ -1559,10 +1607,143 @@ def suivi_vb_generer(suivi_id):
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 
-@app.route('/admin/categories')
+@app.route('/messages')
 @login_required
-@admin_required
-def admin_categories():
+def messages_liste():
+    """Liste des conversations du praticien connecté."""
+    # Trouver tous les praticiens avec qui on a échangé
+    sent = db.session.query(Message.destinataire_id).filter_by(
+        expediteur_id=current_user.id)
+    received = db.session.query(Message.expediteur_id).filter_by(
+        destinataire_id=current_user.id)
+    ids = {r[0] for r in sent} | {r[0] for r in received}
+    praticiens_conv = Praticien.query.filter(
+        Praticien.id.in_(ids), Praticien.id != current_user.id
+    ).order_by(Praticien.nom).all()
+
+    # Dernier message + non lus par conversation
+    convs = []
+    for p in praticiens_conv:
+        dernier = Message.query.filter(
+            db.or_(
+                db.and_(Message.expediteur_id==current_user.id, Message.destinataire_id==p.id),
+                db.and_(Message.expediteur_id==p.id, Message.destinataire_id==current_user.id)
+            )
+        ).order_by(Message.created_at.desc()).first()
+        non_lus = Message.query.filter_by(
+            expediteur_id=p.id, destinataire_id=current_user.id, lu=False).count()
+        convs.append({'praticien': p, 'dernier': dernier, 'non_lus': non_lus})
+    convs.sort(key=lambda x: x['dernier'].created_at if x['dernier'] else datetime.min, reverse=True)
+
+    praticiens_all = Praticien.query.filter(
+        Praticien.id != current_user.id, Praticien.actif == True
+    ).order_by(Praticien.nom).all()
+
+    return render_template('messages/liste.html', convs=convs,
+                           praticiens_all=praticiens_all)
+
+
+@app.route('/messages/<int:praticien_id>', methods=['GET', 'POST'])
+@login_required
+def messages_conversation(praticien_id):
+    """Conversation avec un praticien."""
+    autre = Praticien.query.get_or_404(praticien_id)
+    if request.method == 'POST':
+        contenu = request.form.get('contenu', '').strip()
+        if contenu:
+            db.session.add(Message(
+                expediteur_id=current_user.id,
+                destinataire_id=praticien_id,
+                contenu=contenu
+            ))
+            db.session.commit()
+        return redirect(url_for('messages_conversation', praticien_id=praticien_id))
+    # Marquer comme lus
+    Message.query.filter_by(
+        expediteur_id=praticien_id, destinataire_id=current_user.id, lu=False
+    ).update({'lu': True})
+    db.session.commit()
+    msgs = Message.query.filter(
+        db.or_(
+            db.and_(Message.expediteur_id==current_user.id, Message.destinataire_id==praticien_id),
+            db.and_(Message.expediteur_id==praticien_id, Message.destinataire_id==current_user.id)
+        )
+    ).order_by(Message.created_at.asc()).all()
+
+    praticiens_all = Praticien.query.filter(
+        Praticien.id != current_user.id, Praticien.actif == True
+    ).order_by(Praticien.nom).all()
+
+    convs = _get_convs()
+    return render_template('messages/conversation.html', msgs=msgs, autre=autre,
+                           praticiens_all=praticiens_all, convs=convs)
+
+
+def _get_convs():
+    sent = db.session.query(Message.destinataire_id).filter_by(expediteur_id=current_user.id)
+    received = db.session.query(Message.expediteur_id).filter_by(destinataire_id=current_user.id)
+    ids = {r[0] for r in sent} | {r[0] for r in received}
+    praticiens_conv = Praticien.query.filter(
+        Praticien.id.in_(ids), Praticien.id != current_user.id).all()
+    convs = []
+    for p in praticiens_conv:
+        dernier = Message.query.filter(
+            db.or_(
+                db.and_(Message.expediteur_id==current_user.id, Message.destinataire_id==p.id),
+                db.and_(Message.expediteur_id==p.id, Message.destinataire_id==current_user.id)
+            )
+        ).order_by(Message.created_at.desc()).first()
+        non_lus = Message.query.filter_by(
+            expediteur_id=p.id, destinataire_id=current_user.id, lu=False).count()
+        convs.append({'praticien': p, 'dernier': dernier, 'non_lus': non_lus})
+    convs.sort(key=lambda x: x['dernier'].created_at if x['dernier'] else datetime.min, reverse=True)
+    return convs
+
+
+@app.route('/messages/nouveau', methods=['POST'])
+@login_required
+def message_nouveau():
+    """Démarrer une nouvelle conversation."""
+    dest_id = request.form.get('destinataire_id', type=int)
+    contenu = request.form.get('contenu', '').strip()
+    if dest_id and contenu:
+        db.session.add(Message(
+            expediteur_id=current_user.id,
+            destinataire_id=dest_id,
+            contenu=contenu
+        ))
+        db.session.commit()
+    return redirect(url_for('messages_conversation', praticien_id=dest_id))
+
+
+@app.route('/notes-patient/<int:patient_id>', methods=['POST'])
+@login_required
+def note_patient_ajouter(patient_id):
+    """Ajouter une note partagée sur un patient."""
+    contenu = request.form.get('contenu', '').strip()
+    if contenu:
+        db.session.add(NotePatient(
+            patient_id=patient_id,
+            praticien_id=current_user.id,
+            contenu=contenu
+        ))
+        db.session.commit()
+    redirect_to = request.form.get('redirect', url_for('patient_detail', patient_id=patient_id))
+    return redirect(redirect_to)
+
+
+@app.route('/notes-patient/<int:note_id>/supprimer', methods=['POST'])
+@login_required
+def note_patient_supprimer(note_id):
+    note = NotePatient.query.get_or_404(note_id)
+    patient_id = note.patient_id
+    if note.praticien_id == current_user.id or current_user.role == 'admin':
+        db.session.delete(note)
+        db.session.commit()
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
+
     cats_builtin = {k: v for k, v in CATEGORIES_BUILTIN.items() if k}
     cats_custom = CategorieSection.query.order_by(CategorieSection.ordre).all()
     return render_template('admin/categories.html',

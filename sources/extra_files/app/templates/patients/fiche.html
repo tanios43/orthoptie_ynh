@@ -390,6 +390,43 @@
       {% endif %}
 
 
+  {# Notes partagées #}
+  {% set notes = patient.id | notes_patient_list %}
+  <div class="card" style="margin-top:14px;overflow:hidden;">
+    <div class="card-header" style="background:#EEEDFE22;">
+      <h2>Notes partagées</h2>
+      {% if notes %}<span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ notes|length }} note{{ 's' if notes|length > 1 }}</span>{% endif %}
+    </div>
+    <div class="card-body" style="padding:12px 16px;">
+      {% for note in notes %}
+      <div style="background:var(--bg);border-radius:7px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #7F77DD;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#EEEDFE;color:#3C3489;
+                      display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;">
+            {{ note.praticien.prenom[0] }}{{ note.praticien.nom[0] }}
+          </div>
+          <span style="font-size:12px;font-weight:500;">{{ note.praticien.prenom }} {{ note.praticien.nom }}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto;">{{ note.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+          {% if note.praticien_id == current_user.id or current_user.role == 'admin' %}
+          <form method="POST" action="{{ url_for('note_patient_supprimer', note_id=note.id) }}"
+                style="margin:0;" onsubmit="return confirm('Supprimer cette note ?')">
+            <button type="submit" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 4px;">✕</button>
+          </form>
+          {% endif %}
+        </div>
+        <div style="font-size:13px;">{{ note.contenu }}</div>
+      </div>
+      {% endfor %}
+      <form method="POST" action="{{ url_for('note_patient_ajouter', patient_id=patient.id) }}"
+            style="display:flex;gap:8px;margin-top:8px;">
+        <input type="hidden" name="redirect" value="{{ request.url }}">
+        <input type="text" name="contenu" placeholder="Ajouter une note partagée…"
+               style="flex:1;font-size:13px;" required>
+        <button type="submit" class="btn btn-secondary btn-sm">Ajouter</button>
+      </form>
+    </div>
+  </div>
+
 {# ── MODALE SUPPRESSION SUIVI VB ── #}
 <div id="modal-suppression-vb" style="
   display:none; position:fixed; inset:0; z-index:1000;

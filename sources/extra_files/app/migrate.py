@@ -31,12 +31,23 @@ if _db_path:
         "ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''",
         "ALTER TABLE section_def ADD COLUMN avec_observations BOOLEAN DEFAULT 1",
         "ALTER TABLE section_def ADD COLUMN obs_defaut TEXT DEFAULT ''",
-        """CREATE TABLE IF NOT EXISTS suivi_vb (
+        """CREATE TABLE IF NOT EXISTS message (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            expediteur_id INTEGER NOT NULL REFERENCES praticien(id),
+            destinataire_id INTEGER NOT NULL REFERENCES praticien(id),
+            contenu TEXT NOT NULL,
+            lu BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS note_patient (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             patient_id INTEGER NOT NULL REFERENCES patient(id),
             praticien_id INTEGER NOT NULL REFERENCES praticien(id),
-            cabinet_id INTEGER REFERENCES cabinet(id),
-            date_debut DATE NOT NULL,
+            contenu TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS suivi_vb (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             notes TEXT DEFAULT '',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
