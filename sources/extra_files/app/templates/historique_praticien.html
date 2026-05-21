@@ -8,7 +8,7 @@
   <div class="card">
     <div class="card-header">
       <h2>Derniers dossiers consultés</h2>
-      <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ entrees|length }} patient{{ 's' if entrees|length > 1 }}</span>
+      <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ entrees|length }} dernier{{ 's' if entrees|length > 1 }} dossier{{ 's' if entrees|length > 1 }}</span>
     </div>
     <div class="card-body" style="padding:0;">
       {% for patient, derniere_visite in entrees %}

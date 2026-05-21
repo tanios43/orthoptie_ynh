@@ -1795,7 +1795,7 @@ def mon_historique():
     entrees = db.session.query(Patient, sous_q.c.derniere_visite)\
         .join(sous_q, Patient.id == sous_q.c.patient_id)\
         .order_by(sous_q.c.derniere_visite.desc())\
-        .limit(50).all()
+        .limit(20).all()
 
     return render_template('historique_praticien.html', entrees=entrees)
 
