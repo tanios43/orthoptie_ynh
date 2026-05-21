@@ -318,7 +318,7 @@ def section_style(section_type, categorie=''):
     cat = categorie or BUILTIN_CATEGORIES.get(section_type, '')
     return get_categories().get(cat, CATEGORIES_BUILTIN[''])
 app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
-app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(minutes=30)
+app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(hours=24)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 # ── Configuration WOPI / Collabora ──────────────────────────────────────────

@@ -674,81 +674,12 @@ document.addEventListener('submit', function(e) {
 <script>
 // Ping toutes les 4 minutes pour maintenir la session active
 const SESSION_PING_INTERVAL = 4 * 60 * 1000;
-const SESSION_TIMEOUT = 30 * 60 * 1000;
-let lastActivity = Date.now();
 let pingTimer = setInterval(sendPing, SESSION_PING_INTERVAL);
 
-function autoLogout() {
-  // Sauvegarder si on est sur une page de bilan/suivi avant de déconnecter
-  const formIds = ['form-bilan', 'form-suivi', 'form-suivi-vb'];
-  let saved = false;
-  for (const fid of formIds) {
-    const form = document.getElementById(fid);
-    if (form) {
-      // Sync WYSIWYG
-      if (typeof syncAllWysiwyg === 'function') syncAllWysiwyg();
-      document.querySelectorAll('.table-wysiwyg[contenteditable], .wysiwyg-field[contenteditable]').forEach(div => {
-        const hidden = document.getElementById(div.id + '_hidden');
-        if (hidden && typeof htmlToMd === 'function') hidden.value = htmlToMd(div.innerHTML);
-      });
-      // Ajouter un champ action=save si besoin
-      let actionInput = form.querySelector('input[name="action"]');
-      if (!actionInput) {
-        actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        form.appendChild(actionInput);
-      }
-      actionInput.value = 'save';
-      // Soumettre le form puis rediriger
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        fetch(form.action || window.location.href, {
-          method: 'POST',
-          body: new FormData(form),
-          credentials: 'include'
-        }).finally(() => {
-          window.location.href = "{{ url_for('logout') }}";
-        });
-      }, {once: true});
-      form.requestSubmit ? form.requestSubmit() : form.submit();
-      saved = true;
-      break;
-    }
-  }
-  if (!saved) {
-    window.location.href = "{{ url_for('logout') }}";
-  }
-}
-
 function sendPing() {
-  if (Date.now() - lastActivity > SESSION_TIMEOUT) {
-    clearInterval(pingTimer);
-    autoLogout();
-    return;
-  }
   fetch("{{ url_for('session_ping') }}", {method:'POST', credentials:'include',
     headers:{'X-CSRFToken': ''}}).catch(() => {});
 }
-
-// Réinitialiser le timer d'activité sur interactions
-['click','keydown','mousemove','touchstart','scroll'].forEach(evt =>
-  document.addEventListener(evt, () => { lastActivity = Date.now(); }, {passive: true})
-);
-
-// Déconnexion si toutes les fenêtres sont fermées (via beacon)
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    // Page masquée (minimisée ou onglet changé) — on ne déconnecte pas
-    // mais on note le moment
-    sessionStorage.setItem('lastHidden', Date.now());
-  } else {
-    // Page redevient visible
-    const lastHidden = parseInt(sessionStorage.getItem('lastHidden') || '0');
-    if (lastHidden && Date.now() - lastHidden > SESSION_TIMEOUT) {
-      autoLogout();
-    }
-});
 
 // ── Polling badge messages non lus ──────────────────────────────────
 (function() {
