@@ -152,7 +152,7 @@ def localhour_filter(dt):
         return dt.strftime('%d/%m %H:%M')
 
 
-
+@app.template_filter('md')
 def md_to_html(text):
     """Convertit le Markdown simple en HTML pour l'affichage dans contenteditable."""
     import re
