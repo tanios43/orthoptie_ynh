@@ -95,6 +95,8 @@
       {%- endif -%}
     {%- endmacro -%}
     {%- macro axe(val) -%}{%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}{%- endmacro -%}
+    {%- macro sph_f(val) -%}{%- if val is none or val == '' -%}—{%- elif val | float >= 0 -%}+{{ '%.2f' | format(val | float) }}{%- else -%}{{ '%.2f' | format(val | float) }}{%- endif -%}{%- endmacro -%}
+    {%- macro axe_f(val) -%}{%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}{%- endmacro -%}
 
     {% for c in autres_consultations %}
     <div style="border-top:1px solid var(--border);">
