@@ -26,6 +26,14 @@
   <a href="{{ url_for('suivi_vb_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi VB</a>
 {% endblock %}
 
+{%- macro sph_f(val) -%}
+  {%- if val is none or val == '' -%}—
+  {%- elif val | float >= 0 -%}+{{ '%.2f' | format(val | float) }}
+  {%- else -%}{{ '%.2f' | format(val | float) }}
+  {%- endif -%}
+{%- endmacro -%}
+{%- macro axe_f(val) -%}{%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}{%- endmacro -%}
+
 {% block content %}
 
 {# Notes partagées — en haut, pleine largeur, repliable #}
@@ -278,6 +286,48 @@
                     {{ sec.observations }}
                   </div>
                   {% endif %}
+                  {% if sec.type in ['correction_portee','refraction_obj','refraction_subj'] %}
+                  <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                    <thead>
+                      <tr>
+                        <th style="padding:2px 4px;"></th>
+                        <th colspan="3" style="text-align:center;padding:2px 4px;color:#185FA5;font-weight:600;">OD</th>
+                        <th colspan="3" style="text-align:center;padding:2px 4px;color:#A32D2D;font-weight:600;">OG</th>
+                      </tr>
+                      <tr style="color:var(--muted);font-size:10px;">
+                        <th></th><th style="padding:1px 4px;">Sph.</th><th>Cyl.</th><th>Axe</th>
+                        <th style="padding:1px 4px;">Sph.</th><th>Cyl.</th><th>Axe</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">
+                          {% if sec.type == 'correction_portee' %}Portée{% elif sec.type == 'refraction_obj' %}Obj.{% else %}Subj.{% endif %}
+                        </td>
+                        <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('od_sph')) }}</td>
+                        <td style="padding:3px 4px;font-family:monospace;">{{ d.get('od_cyl','—') }}</td>
+                        <td style="padding:3px 4px;">{{ axe_f(d.get('od_axe')) }}</td>
+                        <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('og_sph')) }}</td>
+                        <td style="padding:3px 4px;font-family:monospace;">{{ d.get('og_cyl','—') }}</td>
+                        <td style="padding:3px 4px;">{{ axe_f(d.get('og_axe')) }}</td>
+                      </tr>
+                      {% if d.get('od_add') or d.get('og_add') %}
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">Add.</td>
+                        <td colspan="3" style="padding:3px 4px;">{{ d.get('od_add','—') }}</td>
+                        <td colspan="3" style="padding:3px 4px;">{{ d.get('og_add','—') }}</td>
+                      </tr>
+                      {% endif %}
+                      {% if sec.type == 'refraction_subj' and (d.get('od_av_loin') or d.get('og_av_loin')) %}
+                      <tr style="border-top:0.5px dashed var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">AV loin</td>
+                        <td colspan="3" style="padding:3px 4px;">{{ d.get('od_av_loin','—') }}</td>
+                        <td colspan="3" style="padding:3px 4px;">{{ d.get('og_av_loin','—') }}</td>
+                      </tr>
+                      {% endif %}
+                    </tbody>
+                  </table>
+                  {% else %}
                   {% set sdef = sections_def.get(sec.type, {}) %}
                   {% if sdef %}
                   {% set ns = namespace(has_data=false) %}
@@ -292,6 +342,7 @@
                   {% endfor %}
                   {% if not ns.has_data %}
                   <div style="font-size:11px;color:var(--muted);font-style:italic;">—</div>
+                  {% endif %}
                   {% endif %}
                   {% endif %}
                   {# Documents WOPI #}
