@@ -88,6 +88,7 @@
           {{ msg.created_at.strftime('%d/%m %H:%M') }}
         </div>
       </div>
+      {% endif %}
       {% endfor %}
       {% if not msgs %}
       <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px 0;">
