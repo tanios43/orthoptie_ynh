@@ -337,6 +337,49 @@
                     </tbody>
                   </table>
 
+                  {% elif sec.type == 'ordonnance_lunettes' %}
+                  <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                    <thead>
+                      <tr>
+                        <th style="padding:2px 4px;"></th>
+                        <th style="text-align:center;padding:2px 4px;color:#185FA5;font-weight:600;">OD</th>
+                        <th style="text-align:center;padding:2px 4px;color:#A32D2D;font-weight:600;">OG</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% if d.get('lun_vl_od_sph') or d.get('lun_vl_og_sph') %}
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">VL Sph.</td>
+                        <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('lun_vl_od_sph')) }}</td>
+                        <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('lun_vl_og_sph')) }}</td>
+                      </tr>
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">VL Cyl./Axe</td>
+                        <td style="padding:3px 4px;font-family:monospace;">{{ d.get('lun_vl_od_cyl','—') }} {{ axe_f(d.get('lun_vl_od_axe')) }}</td>
+                        <td style="padding:3px 4px;font-family:monospace;">{{ d.get('lun_vl_og_cyl','—') }} {{ axe_f(d.get('lun_vl_og_axe')) }}</td>
+                      </tr>
+                      {% endif %}
+                      {% if d.get('lun_vp_od_add') or d.get('lun_vp_og_add') %}
+                      <tr style="border-top:0.5px dashed var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;">VP Add.</td>
+                        <td style="padding:3px 4px;">{{ d.get('lun_vp_od_add','—') }}</td>
+                        <td style="padding:3px 4px;">{{ d.get('lun_vp_og_add','—') }}</td>
+                      </tr>
+                      {% endif %}
+                      {% if d.get('lun_ep_vl') %}
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td style="padding:3px 4px;color:var(--muted);font-size:10px;" colspan="2">EP VL : {{ d.get('lun_ep_vl') }} mm</td>
+                        {% if d.get('lun_ep_vp') %}<td style="padding:3px 4px;color:var(--muted);font-size:10px;">EP VP : {{ d.get('lun_ep_vp') }} mm</td>{% else %}<td></td>{% endif %}
+                      </tr>
+                      {% endif %}
+                      {% if d.get('lun_remarques') %}
+                      <tr style="border-top:0.5px solid var(--border);">
+                        <td colspan="3" style="padding:3px 4px;font-size:11px;font-style:italic;color:var(--muted);">{{ d.get('lun_remarques') | md | safe }}</td>
+                      </tr>
+                      {% endif %}
+                    </tbody>
+                  </table>
+
                   {% elif sec.type in ['acuite','swaine'] %}
                   <table style="width:100%;border-collapse:collapse;font-size:11px;">
                     <thead>
