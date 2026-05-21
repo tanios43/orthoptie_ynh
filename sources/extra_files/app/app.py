@@ -1800,7 +1800,9 @@ def mon_historique():
     return render_template('historique_praticien.html', entrees=entrees)
 
 
-
+@app.route('/recherche')
+@login_required
+def recherche():
     q = request.args.get('q', '').strip(); patients = []
     if q:
         dn = None
