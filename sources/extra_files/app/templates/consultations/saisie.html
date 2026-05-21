@@ -260,7 +260,7 @@
               <div style="display:flex;justify-content:space-between;padding:2px 0;
                           font-size:11px;border-bottom:1px solid var(--border);">
                 <span style="color:var(--muted);">{{ champ.label }}</span>
-                <span style="font-weight:500;text-align:right;max-width:55%;">{{ d.get(champ.name) }}</span>
+                <span style="font-weight:500;text-align:right;max-width:55%;">{{ d.get(champ.name) | md | safe }}</span>
               </div>
               {% endif %}
             {% endfor %}
@@ -1347,7 +1347,7 @@ function afficherHistoriqueSection(data, typeKey, sectionIdx) {
           <span style="color:var(--muted);">${c.label}</span>
           <span style="font-weight:500;text-align:right;max-width:55%;
                        font-family:${c.type==='sph'||c.type==='number'?'monospace':'inherit'}">
-            ${d[c.name]}
+            ${mdToHtml(String(d[c.name] || ''))}
           </span>
         </div>`).join('');
 
