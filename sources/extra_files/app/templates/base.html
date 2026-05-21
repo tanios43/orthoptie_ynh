@@ -386,6 +386,10 @@
        class="nav-item {% if request.endpoint == 'recherche' %}active{% endif %}">
       <span class="icon">⌕</span> Recherche
     </a>
+    <a href="{{ url_for('mon_historique') }}"
+       class="nav-item {% if request.endpoint == 'mon_historique' %}active{% endif %}">
+      <span class="icon">🕐</span> Mon historique
+    </a>
 
     <div class="nav-section"><span>Actions</span></div>
     <a href="{{ url_for('patient_nouveau') }}"

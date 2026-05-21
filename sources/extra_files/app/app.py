@@ -1777,9 +1777,30 @@ def admin_journal():
                            praticiens=praticiens, praticien_filter=praticien_filter)
 
 
-@app.route('/recherche')
+@app.route('/mon-historique')
 @login_required
-def recherche():
+def mon_historique():
+    """Historique des dossiers patients consultés par le praticien connecté."""
+    # Derniers accès uniques par patient, triés par date décroissante
+    sous_q = db.session.query(
+        JournalAcces.patient_id,
+        db.func.max(JournalAcces.created_at).label('derniere_visite')
+    ).filter(
+        JournalAcces.praticien_id == current_user.id,
+        JournalAcces.patient_id.isnot(None),
+        JournalAcces.action.in_(['patient_detail','consultation_detail',
+                                  'impression_dossier','lecture_suivi_amblyopie','lecture_suivi_vb'])
+    ).group_by(JournalAcces.patient_id).subquery()
+
+    entrees = db.session.query(Patient, sous_q.c.derniere_visite)\
+        .join(sous_q, Patient.id == sous_q.c.patient_id)\
+        .order_by(sous_q.c.derniere_visite.desc())\
+        .limit(50).all()
+
+    return render_template('historique_praticien.html', entrees=entrees)
+
+
+
     q = request.args.get('q', '').strip(); patients = []
     if q:
         dn = None
