@@ -1644,7 +1644,9 @@ def api_messages_count():
     return {'count': count}
 
 
-
+@app.route('/messages')
+@login_required
+def messages_liste():
     """Liste des conversations du praticien connecté."""
     # Trouver tous les praticiens avec qui on a échangé
     sent = db.session.query(Message.destinataire_id).filter_by(
