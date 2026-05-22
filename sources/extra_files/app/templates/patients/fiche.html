@@ -460,54 +460,53 @@
         {% elif entry.type == 'suivi' %}
         {# ── SUIVI AMBLYOPIE ── #}
         <div style="border-bottom:1px solid var(--border);">
-          <a href="{{ url_for('suivi_amblyopie_detail', suivi_id=c.id) }}"
-             style="padding:14px 20px;display:flex;align-items:center;gap:12px;
-                    text-decoration:none;color:inherit;transition:background .15s;flex:1;"
-             onmouseover="this.parentElement.style.background='var(--bg)'"
-             onmouseout="this.parentElement.style.background=''">
-            {# Date dernière séance #}
-            <div style="text-align:center;min-width:44px;flex-shrink:0;">
-              <div style="font-size:18px;font-weight:600;color:#085041;line-height:1;">
-                {{ c.derniere_seance_date.strftime('%d') }}
+          <div style="display:flex;align-items:center;">
+            <a href="{{ url_for('suivi_amblyopie_detail', suivi_id=c.id) }}"
+               style="padding:14px 20px;display:flex;align-items:center;gap:12px;
+                      text-decoration:none;color:inherit;transition:background .15s;flex:1;"
+               onmouseover="this.parentElement.style.background='var(--bg)'"
+               onmouseout="this.parentElement.style.background=''">
+              <div style="text-align:center;min-width:44px;flex-shrink:0;">
+                <div style="font-size:18px;font-weight:600;color:#085041;line-height:1;">
+                  {{ c.derniere_seance_date.strftime('%d') }}
+                </div>
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
+                  {{ c.derniere_seance_date.strftime('%b %Y') }}
+                </div>
               </div>
-              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
-                {{ c.derniere_seance_date.strftime('%b %Y') }}
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:14px;font-weight:500;">Suivi amblyopie</span>
+                  <span style="background:#E1F5EE;color:#085041;border-radius:10px;
+                               font-size:11px;padding:1px 8px;font-weight:500;">
+                    👁 {{ c.seances|length }} séances
+                  </span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+                  {% if c.traitement %}
+                  <span style="font-size:11px;color:var(--muted);">{{ c.traitement }}</span>
+                  {% endif %}
+                  {% set filled = c.seances|selectattr('av_od')|list|length %}
+                  {% if filled %}
+                  <span style="font-size:11px;color:#085041;font-weight:500;">
+                    {{ filled }} séance{{ 's' if filled > 1 }} renseignée{{ 's' if filled > 1 }}
+                  </span>
+                  {% endif %}
+                  {% if patient.date_naissance %}
+                  <span style="font-size:11px;color:var(--accent);font-weight:500;">
+                    {{ age_a_la_date(patient.date_naissance, c.date_bilan) }}
+                  </span>
+                  {% endif %}
+                </div>
               </div>
+              <i class="ti ti-chevron-right" style="color:var(--muted);flex-shrink:0;"></i>
+            </a>
+            <div style="padding:0 12px;" onclick="event.stopPropagation()">
+              <button type="button"
+                      onclick="confirmerSuppressionSuivi({{ c.id }}, '{{ c.date_bilan.strftime('%d/%m/%Y') }}', '{{ patient.prenom }} {{ patient.nom }}')"
+                      class="btn btn-secondary btn-sm"
+                      style="color:#e53e3e;border-color:#e53e3e;">🗑</button>
             </div>
-            <div style="flex:1;min-width:0;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:14px;font-weight:500;">Suivi amblyopie</span>
-                <span style="background:#E1F5EE;color:#085041;border-radius:10px;
-                             font-size:11px;padding:1px 8px;font-weight:500;">
-                  👁 {{ c.seances|length }} séances
-                </span>
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
-                {% if c.traitement %}
-                <span style="font-size:11px;color:var(--muted);">{{ c.traitement }}</span>
-                {% endif %}
-                {% set filled = c.seances|selectattr('av_od')|list|length %}
-                {% if filled %}
-                <span style="font-size:11px;color:#085041;font-weight:500;">
-                  {{ filled }} séance{{ 's' if filled > 1 }} renseignée{{ 's' if filled > 1 }}
-                </span>
-                {% endif %}
-                {% if patient.date_naissance %}
-                <span style="font-size:11px;color:var(--accent);font-weight:500;">
-                  {{ age_a_la_date(patient.date_naissance, c.date_bilan) }}
-                </span>
-                {% endif %}
-              </div>
-            </div>
-            <i class="ti ti-chevron-right" style="color:var(--muted);flex-shrink:0;"></i>
-          </a>
-          <div style="padding:0 12px;display:flex;align-items:center;"
-               onclick="event.stopPropagation()">
-            <button type="button"
-                    onclick="confirmerSuppressionSuivi({{ c.id }}, '{{ c.date_bilan.strftime('%d/%m/%Y') }}', '{{ patient.prenom }} {{ patient.nom }}')"
-                    class="btn btn-secondary btn-sm"
-                    style="color:#e53e3e;border-color:#e53e3e;"
-                    title="Supprimer ce suivi">🗑</button>
           </div>
         </div>
         {% elif entry.type == 'suivi_vb' %}
