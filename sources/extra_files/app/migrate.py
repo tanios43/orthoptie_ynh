@@ -399,6 +399,21 @@ with app.app_context():
     except Exception as e:
         print(f"ERREUR  : nettoyage \\r : {e}")
 
+    # Colonnes ajoutées à seance_bv
+    for col_sql in [
+        "ALTER TABLE seance_bv ADD COLUMN av_od TEXT DEFAULT ''",
+        "ALTER TABLE seance_bv ADD COLUMN av_og TEXT DEFAULT ''",
+        "ALTER TABLE seance_bv ADD COLUMN av_notes TEXT DEFAULT ''",
+    ]:
+        try:
+            _cur.execute(col_sql)
+            print(f"OK      : {col_sql[:60]}")
+        except Exception as e:
+            if 'duplicate column' in str(e).lower():
+                pass
+            else:
+                print(f"SKIP    : {e}")
+
     # signature sur praticien
     try:
         with db.engine.connect() as conn:
