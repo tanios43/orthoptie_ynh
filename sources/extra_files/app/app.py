@@ -281,6 +281,15 @@ def notes_patient_list_filter(patient_id):
         return []
 
 
+@app.template_filter('suivi_nv_list')
+def suivi_nv_list_filter(patient_id):
+    try:
+        return SuiviNV.query.filter_by(patient_id=patient_id)\
+            .order_by(SuiviNV.date_debut.desc()).all()
+    except Exception:
+        return []
+
+
 @app.template_filter('suivi_vb_list')
 def suivi_vb_list_filter(patient_id):
     try:
@@ -489,6 +498,50 @@ class FichierSection(db.Model):
     type_fichier    = db.Column(db.String(10))
     titre           = db.Column(db.String(255), default='')
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class SuiviNV(db.Model):
+    """Suivi de rééducation neurovisuelle."""
+    __tablename__ = 'suivi_nv'
+    id            = db.Column(db.Integer, primary_key=True)
+    patient_id    = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    praticien_id  = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    cabinet_id    = db.Column(db.Integer, db.ForeignKey('cabinet.id'), nullable=True)
+    date_debut    = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    notes         = db.Column(db.Text, default='')
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at    = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    patient   = db.relationship('Patient',   foreign_keys=[patient_id])
+    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+    cabinet   = db.relationship('Cabinet',   foreign_keys=[cabinet_id])
+    seances   = db.relationship('SeanceNV', backref='suivi',
+                                order_by='SeanceNV.numero',
+                                cascade='all, delete-orphan')
+
+    @property
+    def derniere_seance_date(self):
+        dates = [s.date_seance for s in self.seances if s.date_seance]
+        return max(dates) if dates else self.date_debut
+
+    @property
+    def date_tri(self):
+        return self.derniere_seance_date
+
+
+class SeanceNV(db.Model):
+    """Séance individuelle de rééducation neurovisuelle."""
+    __tablename__ = 'seance_nv'
+    id           = db.Column(db.Integer, primary_key=True)
+    suivi_id     = db.Column(db.Integer, db.ForeignKey('suivi_nv.id'), nullable=False)
+    numero       = db.Column(db.Integer, nullable=False)
+    date_seance  = db.Column(db.Date, nullable=True)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    vb_acco_omot = db.Column(db.Text, default='')
+    neurovisuel  = db.Column(db.Text, default='')
+    notes        = db.Column(db.Text, default='')
+
+    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
 
 
 class SuiviVB(db.Model):
@@ -1027,6 +1080,7 @@ def patient_detail(patient_id):
     # Mélanger bilans et suivis dans l'ordre chronologique inversé
     suivis_amb = SuiviAmblyopie.query.filter_by(patient_id=patient_id).all()
     suivis_vb  = SuiviVB.query.filter_by(patient_id=patient_id).all()
+    suivis_nv  = SuiviNV.query.filter_by(patient_id=patient_id).all()
     timeline = []
     for c in patient.consultations:
         timeline.append({'type': 'bilan', 'date': c.date_consult, 'obj': c})
@@ -1034,6 +1088,8 @@ def patient_detail(patient_id):
         timeline.append({'type': 'suivi', 'date': s.derniere_seance_date, 'obj': s})
     for s in suivis_vb:
         timeline.append({'type': 'suivi_vb', 'date': s.derniere_seance_date, 'obj': s})
+    for s in suivis_nv:
+        timeline.append({'type': 'suivi_nv', 'date': s.derniere_seance_date, 'obj': s})
     timeline.sort(key=lambda x: x['date'], reverse=True)
     return render_template('patients/fiche.html', patient=patient,
                            sections_def=sections, timeline=timeline)
@@ -1415,6 +1471,217 @@ def suivi_amblyopie_generer(suivi_id):
                     zout.writestr(item, zin.read(item.filename))
 
     nom = f'{p.nom}_{p.prenom}_SuiviAmblyopie_{s.date_bilan.strftime("%Y%m%d")}.docx'
+    from flask import send_file
+    return send_file(new_out, as_attachment=True, download_name=nom,
+                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+
+@app.route('/patient/<int:patient_id>/suivi-nv/nouveau', methods=['GET', 'POST'])
+@login_required
+def suivi_nv_nouveau(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    cabinet = get_current_cabinet()
+    if request.method == 'POST':
+        s = SuiviNV(
+            patient_id  = patient_id,
+            praticien_id= current_user.id,
+            cabinet_id  = cabinet.id if cabinet else None,
+            date_debut  = _parse_date(request.form.get('date_debut')) or datetime.utcnow().date(),
+            notes       = request.form.get('notes','').strip(),
+        )
+        db.session.add(s); db.session.flush()
+        db.session.add(SeanceNV(suivi_id=s.id, numero=1))
+        db.session.commit()
+        flash('Suivi neurovisuel créé.', 'success')
+        return redirect(url_for('suivi_nv_detail', suivi_id=s.id))
+    dernier_bilan = Consultation.query\
+        .filter_by(patient_id=patient_id)\
+        .order_by(Consultation.date_consult.desc()).first()
+    sections, _ = get_sections()
+    return render_template('nv/nouveau.html', patient=patient, cabinet=cabinet,
+                           today=datetime.utcnow().date(),
+                           dernier_bilan=dernier_bilan, sections_def=sections)
+
+
+@app.route('/suivi-nv/<int:suivi_id>', methods=['GET', 'POST'])
+@login_required
+def suivi_nv_detail(suivi_id):
+    s = SuiviNV.query.get_or_404(suivi_id)
+    if request.method == 'POST':
+        action = request.form.get('action', 'save')
+        s.date_debut = _parse_date(request.form.get('date_debut')) or s.date_debut
+        s.notes      = request.form.get('notes','').strip()
+        s.updated_at = datetime.utcnow()
+        for seance in s.seances:
+            pfx = f'seance_{seance.id}_'
+            seance.date_seance  = _parse_date(request.form.get(pfx+'date'))
+            seance.vb_acco_omot = request.form.get(pfx+'vb_acco_omot','').strip()
+            seance.neurovisuel  = request.form.get(pfx+'neurovisuel','').strip()
+            seance.notes        = request.form.get(pfx+'notes','').strip()
+            prat_id = request.form.get(pfx+'praticien_id','').strip()
+            seance.praticien_id = int(prat_id) if prat_id else None
+        if action == 'ajouter_seance':
+            next_num = max((se.numero for se in s.seances), default=0) + 1
+            db.session.add(SeanceNV(suivi_id=s.id, numero=next_num))
+        db.session.commit()
+        flash('Suivi enregistré.', 'success')
+        if action == 'generer':
+            return redirect(url_for('suivi_nv_generer', suivi_id=suivi_id))
+        return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id))
+    log_acces('lecture_suivi_nv', patient_id=s.patient_id)
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
+    dernier_bilan = Consultation.query\
+        .filter_by(patient_id=s.patient_id)\
+        .order_by(Consultation.date_consult.desc()).first()
+    sections, _ = get_sections()
+    return render_template('nv/detail.html', suivi=s, praticiens=praticiens,
+                           dernier_bilan=dernier_bilan, sections_def=sections)
+
+
+@app.route('/suivi-nv/<int:suivi_id>/supprimer', methods=['POST'])
+@login_required
+def suivi_nv_supprimer(suivi_id):
+    s = SuiviNV.query.get_or_404(suivi_id)
+    patient_id = s.patient_id
+    db.session.delete(s); db.session.commit()
+    flash('Suivi neurovisuel supprimé.', 'success')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
+@app.route('/suivi-nv/<int:suivi_id>/generer')
+@login_required
+def suivi_nv_generer(suivi_id):
+    """Génère le document Word du suivi neurovisuel."""
+    import zipfile, re as _re, tempfile, os as _os
+    s   = SuiviNV.query.get_or_404(suivi_id)
+    p   = s.patient
+    prat= s.praticien
+    cab = s.cabinet
+    pc  = None
+    if cab:
+        pc = PraticienCabinet.query.filter_by(praticien_id=prat.id, cabinet_id=cab.id).first()
+
+    esc = lambda x: (x or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+    entete_path = _os.path.join(app.root_path, 'entete.docx')
+    tmpdir = tempfile.mkdtemp()
+    with zipfile.ZipFile(entete_path, 'r') as z:
+        doc_xml = z.read('word/document.xml').decode('utf-8')
+
+    cab_rue     = (cab.rue or '') if cab else ''
+    cab_cp_comm = f"{(cab.code_postal or '')} {(cab.commune or '')}".strip() if cab else ''
+    cab_commune = (cab.commune or 'Yssingeaux') if cab else 'Yssingeaux'
+    cab_tel     = (cab.telephone or '') if cab else ''
+    cab_email   = (cab.email or '') if cab else ''
+    adeli       = (pc.adeli if pc else '') or ''
+    prat_nom    = f"{prat.prenom} {prat.nom}"
+    prat_rpps   = prat.rpps or ''
+    prat_titre  = prat.titre or 'Orthoptiste'
+
+    def sub(xml, old, new): return xml.replace(old, esc(new)) if old in xml else xml
+    doc_xml = sub(doc_xml, '130, Boulevard de la Paix', cab_rue)
+    doc_xml = sub(doc_xml, '43200 Yssingeaux', cab_cp_comm)
+    doc_xml = sub(doc_xml, '04 71 59 01 38', cab_tel)
+    doc_xml = sub(doc_xml, 'orthoptistes-yssingeaux@outlook.fr', cab_email)
+    doc_xml = sub(doc_xml, 'ADELI\xa0: 439287145', f'ADELI : {adeli}' if adeli else '')
+    doc_xml = sub(doc_xml, 'RPPS\xa0: 10010253291', f'RPPS : {prat_rpps}' if prat_rpps else '')
+    doc_xml = sub(doc_xml, ' Cyprien Nesme', f' {prat_nom}')
+    doc_xml = sub(doc_xml, 'ORTHOPTISTE', prat_titre)
+    doc_xml = sub(doc_xml, 'Prise de rendez-vous sur Doctolib', '')
+    doc_xml = doc_xml.replace(
+        'A\xa0Yssingeaux, le </w:t></w:r><w:bookmarkEnd w:id="0"/>',
+        f'A\xa0{esc(cab_commune)}, le {s.date_debut.strftime("%d/%m/%Y")}</w:t></w:r><w:bookmarkEnd w:id="0"/>'
+    )
+    pat_nom = f'{p.prenom} {p.nom}'
+    pat_ddn = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
+    doc_xml = _re.sub(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Nom"/>.*?<w:sdtContent>.*?</w:sdtContent></w:sdt>',
+        f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/><w:sz w:val="20"/></w:rPr><w:t>{esc(pat_nom)}</w:t></w:r>',
+        doc_xml, flags=_re.DOTALL)
+    doc_xml = _re.sub(r'<w:sdt><w:sdtPr><w:alias w:val="Pr[eé]nom"/>.*?</w:sdt>', '', doc_xml, flags=_re.DOTALL)
+    doc_xml = doc_xml.replace('DDN : </w:t></w:r>', f'DDN : {esc(pat_ddn)}</w:t></w:r>')
+    doc_xml = _re.sub(r'<w:sdt><w:sdtPr><w:alias w:val="Commentaires ".*?<w:sdtContent>.*?</w:sdtContent></w:sdt>', '<w:r><w:t></w:t></w:r>', doc_xml, flags=_re.DOTALL)
+    doc_xml = _re.sub(r'<w:tab/><w:t xml:space="preserve">Âge\s*:\s*</w:t>.*?<w:t xml:space="preserve">Classe\s*:\s*</w:t>', '', doc_xml, flags=_re.DOTALL)
+    doc_xml = _re.sub(r'<w:p[^>]*>(?:(?!</w:p>).)*?[Mm]édecin(?:(?!</w:p>).)*?</w:p>', '', doc_xml, flags=_re.DOTALL)
+    doc_xml = doc_xml.replace('<w:t>BILAN ORTHOPTIQUE</w:t>', '<w:t>RÉÉDUCATION NEUROVISUELLE</w:t>')
+
+    def para(txt, bold=False, size=20, before=0, after=80):
+        b = '<w:b/>' if bold else ''
+        return (f'<w:p><w:pPr><w:spacing w:before="{before}" w:after="{after}"/></w:pPr>'
+                f'<w:r><w:rPr>{b}<w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                f'<w:sz w:val="{size}"/></w:rPr>'
+                f'<w:t xml:space="preserve">{esc(txt)}</w:t></w:r></w:p>')
+
+    def tbl_cell(txt, bold=False, bg=None, w=1000):
+        b = '<w:b/>' if bold else ''
+        shd = f'<w:shd w:val="clear" w:color="auto" w:fill="{bg}"/>' if bg else ''
+        lines = str(txt).split('\n')
+        paras = ''
+        for i, line in enumerate(lines):
+            br = '<w:br/>' if i < len(lines)-1 else ''
+            paras += (f'<w:r><w:rPr>{b}<w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                      f'<w:sz w:val="18"/></w:rPr>'
+                      f'<w:t xml:space="preserve">{esc(line)}</w:t>{br}</w:r>')
+        return (f'<w:tc><w:tcPr><w:tcW w:w="{w}" w:type="dxa"/>{shd}'
+                f'<w:tcMar><w:top w:w="60"/><w:bottom w:w="60"/><w:left w:w="80"/><w:right w:w="80"/></w:tcMar>'
+                f'</w:tcPr><w:p>{paras}</w:p></w:tc>')
+
+    body = []
+    body.append(para(f'Début rééducation : {s.date_debut.strftime("%d/%m/%Y")}', bold=True, before=240))
+    if s.notes:
+        body.append(para(f'Notes : {s.notes}'))
+
+    HDR_BG = 'DAE9F7'
+    col_w = [400, 900, 1600, 1600, 1300]
+    hdr = ''.join([
+        tbl_cell('#',              bold=True, bg=HDR_BG, w=col_w[0]),
+        tbl_cell('Date',           bold=True, bg=HDR_BG, w=col_w[1]),
+        tbl_cell('VB-ACCO-OMOT',  bold=True, bg=HDR_BG, w=col_w[2]),
+        tbl_cell('Neurovisuel',    bold=True, bg=HDR_BG, w=col_w[3]),
+        tbl_cell('Notes',          bold=True, bg=HDR_BG, w=col_w[4]),
+    ])
+    rows = f'<w:tr>{hdr}</w:tr>'
+    for seance in s.seances:
+        date_str = seance.date_seance.strftime('%d/%m/%Y') if seance.date_seance else ''
+        if seance.praticien:
+            date_str += f'\n{seance.praticien.prenom} {seance.praticien.nom}'
+        row_bg = 'F4F8FD' if seance.numero % 2 == 0 else None
+        cells = ''.join([
+            tbl_cell(str(seance.numero), bold=True, bg=row_bg, w=col_w[0]),
+            tbl_cell(date_str,           bg=row_bg, w=col_w[1]),
+            tbl_cell(seance.vb_acco_omot or '', bg=row_bg, w=col_w[2]),
+            tbl_cell(seance.neurovisuel  or '', bg=row_bg, w=col_w[3]),
+            tbl_cell(seance.notes        or '', bg=row_bg, w=col_w[4]),
+        ])
+        rows += f'<w:tr>{cells}</w:tr>'
+
+    total_w = sum(col_w)
+    gridcols = ''.join(f'<w:gridCol w:w="{w}"/>' for w in col_w)
+    table = (f'<w:tbl>'
+             f'<w:tblPr><w:tblW w:w="{total_w}" w:type="dxa"/>'
+             f'<w:tblBorders>'
+             f'<w:top w:val="single" w:sz="4" w:color="4472C4"/>'
+             f'<w:left w:val="single" w:sz="4" w:color="4472C4"/>'
+             f'<w:bottom w:val="single" w:sz="4" w:color="4472C4"/>'
+             f'<w:right w:val="single" w:sz="4" w:color="4472C4"/>'
+             f'<w:insideH w:val="single" w:sz="4" w:color="DAE9F7"/>'
+             f'<w:insideV w:val="single" w:sz="4" w:color="DAE9F7"/>'
+             f'</w:tblBorders></w:tblPr>'
+             f'<w:tblGrid>{gridcols}</w:tblGrid>'
+             f'{rows}</w:tbl>')
+    body.append(f'<w:p><w:pPr><w:spacing w:before="240"/></w:pPr></w:p>')
+    body.append(table)
+
+    doc_xml = doc_xml.replace('</w:body>', '\n'.join(body) + '</w:body>')
+    new_out = _os.path.join(tmpdir, 'suivi_nv.docx')
+    with zipfile.ZipFile(entete_path, 'r') as zin:
+        with zipfile.ZipFile(new_out, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                if item.filename == 'word/document.xml':
+                    zout.writestr(item, doc_xml.encode('utf-8'))
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+
+    nom = f'{p.nom}_{p.prenom}_SuiviNV_{s.date_debut.strftime("%Y%m%d")}.docx'
     from flask import send_file
     return send_file(new_out, as_attachment=True, download_name=nom,
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')

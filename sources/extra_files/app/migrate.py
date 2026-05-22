@@ -31,6 +31,26 @@ if _db_path:
         "ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''",
         "ALTER TABLE section_def ADD COLUMN avec_observations BOOLEAN DEFAULT 1",
         "ALTER TABLE section_def ADD COLUMN obs_defaut TEXT DEFAULT ''",
+        """CREATE TABLE IF NOT EXISTS suivi_nv (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL REFERENCES patient(id),
+            praticien_id INTEGER NOT NULL REFERENCES praticien(id),
+            cabinet_id INTEGER REFERENCES cabinet(id),
+            date_debut DATE NOT NULL,
+            notes TEXT DEFAULT '',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS seance_nv (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            suivi_id INTEGER NOT NULL REFERENCES suivi_nv(id),
+            numero INTEGER NOT NULL,
+            date_seance DATE,
+            praticien_id INTEGER REFERENCES praticien(id),
+            vb_acco_omot TEXT DEFAULT '',
+            neurovisuel TEXT DEFAULT '',
+            notes TEXT DEFAULT ''
+        )""",
         """CREATE TABLE IF NOT EXISTS message (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             expediteur_id INTEGER NOT NULL REFERENCES praticien(id),
@@ -48,6 +68,10 @@ if _db_path:
         )""",
         """CREATE TABLE IF NOT EXISTS suivi_vb (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL REFERENCES patient(id),
+            praticien_id INTEGER NOT NULL REFERENCES praticien(id),
+            cabinet_id INTEGER REFERENCES cabinet(id),
+            date_debut DATE NOT NULL,
             notes TEXT DEFAULT '',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
