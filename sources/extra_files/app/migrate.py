@@ -163,6 +163,9 @@ if _db_path:
         "ALTER TABLE seance_amblyopie ADD COLUMN av_notes TEXT DEFAULT ''",
         "ALTER TABLE seance_amblyopie ADD COLUMN praticien_id INTEGER REFERENCES praticien(id)",
         "ALTER TABLE wopi_session ADD COLUMN section_ordre INTEGER DEFAULT 0",
+        "ALTER TABLE seance_bv ADD COLUMN av_od TEXT DEFAULT ''",
+        "ALTER TABLE seance_bv ADD COLUMN av_og TEXT DEFAULT ''",
+        "ALTER TABLE seance_bv ADD COLUMN av_notes TEXT DEFAULT ''",
     ]
     for sql in _pre_migrations:
         try:
@@ -398,21 +401,6 @@ with app.app_context():
         print(f"OK      : nettoyé {len(rows)} section_bilan avec \\r")
     except Exception as e:
         print(f"ERREUR  : nettoyage \\r : {e}")
-
-    # Colonnes ajoutées à seance_bv
-    for col_sql in [
-        "ALTER TABLE seance_bv ADD COLUMN av_od TEXT DEFAULT ''",
-        "ALTER TABLE seance_bv ADD COLUMN av_og TEXT DEFAULT ''",
-        "ALTER TABLE seance_bv ADD COLUMN av_notes TEXT DEFAULT ''",
-    ]:
-        try:
-            _cur.execute(col_sql)
-            print(f"OK      : {col_sql[:60]}")
-        except Exception as e:
-            if 'duplicate column' in str(e).lower():
-                pass
-            else:
-                print(f"SKIP    : {e}")
 
     # signature sur praticien
     try:
