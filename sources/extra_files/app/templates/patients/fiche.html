@@ -22,10 +22,48 @@
   <a href="{{ url_for('patient_modifier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">✎ Modifier</a>
   <a href="{{ url_for('patient_dossier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm" target="_blank">🖨 Imprimer le dossier</a>
   <a href="{{ url_for('consultation_nouvelle', patient_id=patient.id) }}" class="btn btn-primary btn-sm">+ Nouveau bilan</a>
-  <a href="{{ url_for('suivi_amblyopie_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi amblyopie</a>
-  <a href="{{ url_for('suivi_vb_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi VB</a>
-  <a href="{{ url_for('suivi_nv_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi NV</a>
-  <a href="{{ url_for('suivi_bv_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi BV</a>
+  <div style="position:relative;display:inline-block;">
+    <button onclick="toggleSuiviMenu()" class="btn btn-secondary btn-sm"
+            style="display:flex;align-items:center;gap:4px;">
+      + Nouveau suivi <span style="font-size:10px;">▼</span>
+    </button>
+    <div id="suivi-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;
+         background:white;border:1px solid var(--border);border-radius:8px;
+         box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:200px;z-index:200;overflow:hidden;">
+      <a href="{{ url_for('suivi_amblyopie_nouveau', patient_id=patient.id) }}"
+         style="display:block;padding:9px 16px;font-size:13px;text-decoration:none;color:inherit;
+                transition:background .1s;" onmouseover="this.style.background='var(--bg)'"
+         onmouseout="this.style.background=''">👁 Suivi amblyopie</a>
+      <a href="{{ url_for('suivi_vb_nouveau', patient_id=patient.id) }}"
+         style="display:block;padding:9px 16px;font-size:13px;text-decoration:none;color:inherit;
+                border-top:0.5px solid var(--border);transition:background .1s;"
+         onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+        👓 Suivi VB</a>
+      <a href="{{ url_for('suivi_nv_nouveau', patient_id=patient.id) }}"
+         style="display:block;padding:9px 16px;font-size:13px;text-decoration:none;color:inherit;
+                border-top:0.5px solid var(--border);transition:background .1s;"
+         onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+        🧠 Suivi neurovisuel</a>
+      <a href="{{ url_for('suivi_bv_nouveau', patient_id=patient.id) }}"
+         style="display:block;padding:9px 16px;font-size:13px;text-decoration:none;color:inherit;
+                border-top:0.5px solid var(--border);transition:background .1s;"
+         onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+        🔍 Suivi basse vision</a>
+    </div>
+  </div>
+  <script>
+  function toggleSuiviMenu() {
+    const m = document.getElementById('suivi-menu');
+    m.style.display = m.style.display === 'none' ? 'block' : 'none';
+  }
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('[onclick="toggleSuiviMenu()"]') &&
+        !e.target.closest('#suivi-menu')) {
+      const m = document.getElementById('suivi-menu');
+      if (m) m.style.display = 'none';
+    }
+  });
+  </script>
 {% endblock %}
 
 {%- macro sph_f(val) -%}
