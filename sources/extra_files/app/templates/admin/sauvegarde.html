@@ -78,5 +78,21 @@
     </div>
   </div>
 
+  <div class="card" style="margin-top:16px;">
+    <div class="card-header"><h2>🧹 Nettoyage des fichiers</h2></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+        Supprime les fichiers WOPI temporaires (plus de 24h) et les fichiers de sections
+        qui ne sont plus référencés en base de données.
+      </p>
+      <form method="POST" action="{{ url_for('admin_nettoyage_fichiers') }}">
+        <button type="submit" class="btn btn-secondary"
+                onclick="return confirm('Lancer le nettoyage ?')">
+          🧹 Nettoyer les fichiers orphelins
+        </button>
+      </form>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

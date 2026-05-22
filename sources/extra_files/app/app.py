@@ -1780,6 +1780,42 @@ def note_patient_supprimer(note_id):
     return redirect(url_for('patient_detail', patient_id=patient_id))
 
 
+@app.route('/admin/nettoyage-fichiers', methods=['POST'])
+@login_required
+@admin_required
+def admin_nettoyage_fichiers():
+    """Supprime les fichiers WOPI temporaires et les fichiers sections orphelins."""
+    import os, glob
+    stats = {'wopi': 0, 'orphelins': 0}
+
+    # 1. Nettoyer les fichiers WOPI temporaires de plus de 24h
+    wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
+    if os.path.exists(wopi_dir):
+        for f in glob.glob(os.path.join(wopi_dir, '*.docx')):
+            try:
+                age = datetime.utcnow().timestamp() - os.path.getmtime(f)
+                if age > 86400:  # > 24h
+                    os.remove(f)
+                    stats['wopi'] += 1
+            except Exception:
+                pass
+
+    # 2. Nettoyer les fichiers sections orphelins (pas en base)
+    sections_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'sections')
+    if os.path.exists(sections_dir):
+        in_db = {r[0] for r in db.session.query(FichierSection.nom_stocke).all()}
+        for f in glob.glob(os.path.join(sections_dir, '**', '*.docx'), recursive=True):
+            if os.path.basename(f) not in in_db:
+                try:
+                    os.remove(f)
+                    stats['orphelins'] += 1
+                except Exception:
+                    pass
+
+    flash(f"Nettoyage : {stats['wopi']} fichiers WOPI + {stats['orphelins']} orphelins supprimés.", 'success')
+    return redirect(url_for('admin_sauvegarde'))
+
+
 @app.route('/admin/categories')
 @login_required
 @admin_required
