@@ -546,6 +546,9 @@ class SeanceBV(db.Model):
     date_seance  = db.Column(db.Date, nullable=True)
     praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
     acuite       = db.Column(db.Text, default='')
+    av_od        = db.Column(db.String(20), default='')
+    av_og        = db.Column(db.String(20), default='')
+    av_notes     = db.Column(db.Text, default='')
     exercices    = db.Column(db.Text, default='')
     notes        = db.Column(db.Text, default='')
 
@@ -1569,7 +1572,9 @@ def suivi_bv_detail(suivi_id):
         for seance in s.seances:
             pfx = f'seance_{seance.id}_'
             seance.date_seance  = _parse_date(request.form.get(pfx+'date'))
-            seance.acuite       = request.form.get(pfx+'acuite','').strip()
+            seance.av_od        = request.form.get(pfx+'av_od','').strip()
+            seance.av_og        = request.form.get(pfx+'av_og','').strip()
+            seance.av_notes     = request.form.get(pfx+'av_notes','').strip()
             seance.exercices    = request.form.get(pfx+'exercices','').strip()
             seance.notes        = request.form.get(pfx+'notes','').strip()
             prat_id = request.form.get(pfx+'praticien_id','').strip()

@@ -47,7 +47,9 @@ if _db_path:
             numero INTEGER NOT NULL,
             date_seance DATE,
             praticien_id INTEGER REFERENCES praticien(id),
-            acuite TEXT DEFAULT '',
+            av_od TEXT DEFAULT '',
+            av_og TEXT DEFAULT '',
+            av_notes TEXT DEFAULT '',
             exercices TEXT DEFAULT '',
             notes TEXT DEFAULT ''
         )""",

@@ -232,8 +232,9 @@
           <col style="width:32px;">
           <col style="width:115px;">
           <col style="width:140px;">
-          <col style="width:28%;">
-          <col style="width:28%;">
+          <col style="width:80px;">
+          <col style="width:80px;">
+          <col style="width:22%;">
           <col>
         </colgroup>
         <thead>
@@ -241,7 +242,13 @@
             <th style="padding:7px 8px;text-align:center;color:#7A3E00;font-size:12px;font-weight:600;border-bottom:1px solid #E8C07044;">#</th>
             <th style="padding:7px 8px;color:#7A3E00;font-size:12px;font-weight:600;border-bottom:1px solid #E8C07044;">Date</th>
             <th style="padding:7px 8px;color:#7A3E00;font-size:12px;font-weight:600;border-bottom:1px solid #E8C07044;">Praticien</th>
-            <th style="padding:7px 8px;color:#7A3E00;font-size:12px;font-weight:600;border-bottom:1px solid #E8C07044;">Acuité OD/OG</th>
+            <th colspan="2" style="padding:7px 8px;text-align:center;color:#7A3E00;font-size:12px;font-weight:600;border-bottom:1px solid #E8C07044;">
+              Acuité visuelle
+              <div style="display:flex;gap:4px;justify-content:center;font-size:10px;font-weight:400;margin-top:2px;">
+                <span style="flex:1;text-align:center;">OD</span>
+                <span style="flex:1;text-align:center;">OG</span>
+              </div>
+            </th>
             <th style="padding:7px 8px;color:#7A3E00;font-size:12px;font-weight:600;border-bottom:1px solid #E8C07044;">Exercices</th>
             <th style="padding:7px 8px;color:#7A3E00;font-size:12px;font-weight:600;border-bottom:1px solid #E8C07044;">Notes</th>
           </tr>
@@ -268,15 +275,25 @@
                 {% endfor %}
               </select>
             </td>
-            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <div id="wy-bv-{{seance.id}}-acuite"
+            <td colspan="2" style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <div style="display:flex;gap:4px;margin-bottom:3px;">
+                <input type="text" name="seance_{{ seance.id }}_av_od"
+                       value="{{ seance.av_od or '' }}"
+                       placeholder="OD"
+                       style="font-size:13px;padding:4px 6px;flex:1;text-align:center;color:#185FA5;font-weight:500;border-radius:5px;border:1px solid var(--border);">
+                <input type="text" name="seance_{{ seance.id }}_av_og"
+                       value="{{ seance.av_og or '' }}"
+                       placeholder="OG"
+                       style="font-size:13px;padding:4px 6px;flex:1;text-align:center;color:#A32D2D;font-weight:500;border-radius:5px;border:1px solid var(--border);">
+              </div>
+              <div id="wy-bv-{{seance.id}}-av_notes"
      contenteditable="true"
      class="table-wysiwyg"
-     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
-  {{- (seance.acuite or "") | mdhtml | safe -}}
+     style="font-size:12px;padding:3px 5px;width:100%;min-height:24px;color:var(--muted);border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+  {{- (seance.av_notes or "") | mdhtml | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_acuite" id="wy-bv-{{seance.id}}-acuite_hidden" form="form-suivi-bv"
-       value="{{ seance.acuite or '' }}">
+<input type="hidden" name="seance_{{seance.id}}_av_notes" id="wy-bv-{{seance.id}}-av_notes_hidden" form="form-suivi-bv"
+       value="{{ seance.av_notes or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
               <div id="wy-bv-{{seance.id}}-exercices"
