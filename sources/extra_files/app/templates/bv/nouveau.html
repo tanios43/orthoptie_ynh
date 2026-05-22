@@ -1,0 +1,233 @@
+{%- macro sph_f(val) -%}{%- if val is none or val == '' -%}—{%- elif val | float >= 0 -%}+{{ '%.2f' | format(val | float) }}{%- else -%}{{ '%.2f' | format(val | float) }}{%- endif -%}{%- endmacro -%}
+{%- macro axe_f(val) -%}{%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}{%- endmacro -%}
+
+{% extends "base.html" %}
+{% block title %}Nouveau suivi basse vision — {{ patient.prenom }} {{ patient.nom }}{% endblock %}
+{% block page_title %}Nouveau suivi rééducation basse vision{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">← {{ patient.prenom }} {{ patient.nom }}</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;">
+
+  {# Dernier bilan dépliable #}
+  {% if dernier_bilan %}
+  <div class="card" style="margin-bottom:16px;overflow:hidden;">
+    <div class="card-header" style="cursor:pointer;display:flex;align-items:center;gap:8px;"
+         onclick="toggle('last-bilan')">
+      <span style="font-size:13px;font-weight:500;flex:1;">
+        Dernier bilan — {{ dernier_bilan.date_consult.strftime('%d/%m/%Y') }}
+        {% if patient.date_naissance %}
+        <span style="font-size:12px;color:var(--muted);font-weight:400;margin-left:6px;">
+          {{ age_a_la_date(patient.date_naissance, dernier_bilan.date_consult) }}
+        </span>
+        {% endif %}
+      </span>
+      <span id="ico-last-bilan" style="font-size:11px;opacity:.6;">▶</span>
+    </div>
+    <div id="sec-last-bilan" style="display:none;padding:12px 16px;border-top:1px solid var(--border);">
+      {% if dernier_bilan.sections %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;">
+        {% for sec in dernier_bilan.sections %}
+        {% set d = sec.get_donnees() %}
+        {% set col = section_style(sec.type, sec.categorie) %}
+        <div style="border-radius:7px;overflow:hidden;border:0.5px solid {{ col.color }}22;">
+          <div style="padding:4px 10px;background:{{ col.bg }};color:{{ col.color }};
+                      font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">
+            {{ sec.label }}
+          </div>
+          <div style="padding:7px 10px;background:white;">
+            {% if sec.observations %}
+            <div style="font-size:11px;color:var(--muted);font-style:italic;margin-bottom:4px;">{{ sec.observations }}</div>
+            {% endif %}
+
+            {% if sec.type in ['correction_portee','refraction_obj','refraction_subj'] %}
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead>
+                <tr>
+                  <th style="padding:2px 4px;"></th>
+                  <th colspan="3" style="text-align:center;padding:2px 4px;color:#185FA5;font-weight:600;">OD</th>
+                  <th colspan="3" style="text-align:center;padding:2px 4px;color:#A32D2D;font-weight:600;">OG</th>
+                </tr>
+                <tr style="color:var(--muted);font-size:10px;">
+                  <th></th><th style="padding:1px 4px;">Sph.</th><th>Cyl.</th><th>Axe</th>
+                  <th style="padding:1px 4px;">Sph.</th><th>Cyl.</th><th>Axe</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">
+                    {% if sec.type == 'correction_portee' %}Portée{% elif sec.type == 'refraction_obj' %}Obj.{% else %}Subj.{% endif %}
+                  </td>
+                  <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('od_sph')) }}</td>
+                  <td style="padding:3px 4px;font-family:monospace;">{{ d.get('od_cyl','—') }}</td>
+                  <td style="padding:3px 4px;">{{ axe_f(d.get('od_axe')) }}</td>
+                  <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('og_sph')) }}</td>
+                  <td style="padding:3px 4px;font-family:monospace;">{{ d.get('og_cyl','—') }}</td>
+                  <td style="padding:3px 4px;">{{ axe_f(d.get('og_axe')) }}</td>
+                </tr>
+                {% if d.get('od_add') or d.get('og_add') %}
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">Add.</td>
+                  <td colspan="3" style="padding:3px 4px;">{{ d.get('od_add','—') }}</td>
+                  <td colspan="3" style="padding:3px 4px;">{{ d.get('og_add','—') }}</td>
+                </tr>
+                {% endif %}
+                {% if sec.type == 'refraction_subj' %}
+                {% if d.get('od_av_loin') or d.get('og_av_loin') %}
+                <tr style="border-top:0.5px dashed var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">AV loin</td>
+                  <td colspan="3" style="padding:3px 4px;">{{ d.get('od_av_loin','—') }}</td>
+                  <td colspan="3" style="padding:3px 4px;">{{ d.get('og_av_loin','—') }}</td>
+                </tr>
+                {% endif %}
+                {% if d.get('od_av_pres') or d.get('og_av_pres') %}
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">AV près</td>
+                  <td colspan="3" style="padding:3px 4px;">{{ d.get('od_av_pres','—') }}</td>
+                  <td colspan="3" style="padding:3px 4px;">{{ d.get('og_av_pres','—') }}</td>
+                </tr>
+                {% endif %}
+                {% endif %}
+              </tbody>
+            </table>
+
+            {% elif sec.type == 'ordonnance_lunettes' %}
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead>
+                <tr>
+                  <th style="padding:2px 4px;"></th>
+                  <th style="text-align:center;padding:2px 4px;color:#185FA5;font-weight:600;">OD</th>
+                  <th style="text-align:center;padding:2px 4px;color:#A32D2D;font-weight:600;">OG</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if d.get('lun_vl_od_sph') or d.get('lun_vl_og_sph') %}
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">VL Sph.</td>
+                  <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('lun_vl_od_sph')) }}</td>
+                  <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('lun_vl_og_sph')) }}</td>
+                </tr>
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">VL Cyl./Axe</td>
+                  <td style="padding:3px 4px;font-family:monospace;">{{ d.get('lun_vl_od_cyl','—') }} {{ axe_f(d.get('lun_vl_od_axe')) }}</td>
+                  <td style="padding:3px 4px;font-family:monospace;">{{ d.get('lun_vl_og_cyl','—') }} {{ axe_f(d.get('lun_vl_og_axe')) }}</td>
+                </tr>
+                {% endif %}
+                {% if d.get('lun_vp_od_add') or d.get('lun_vp_og_add') %}
+                <tr style="border-top:0.5px dashed var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">VP Add.</td>
+                  <td style="padding:3px 4px;">{{ d.get('lun_vp_od_add','—') }}</td>
+                  <td style="padding:3px 4px;">{{ d.get('lun_vp_og_add','—') }}</td>
+                </tr>
+                {% endif %}
+                {% if d.get('lun_ep_vl') %}
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;" colspan="2">EP VL : {{ d.get('lun_ep_vl') }} mm</td>
+                  {% if d.get('lun_ep_vp') %}<td style="padding:3px 4px;color:var(--muted);font-size:10px;">EP VP : {{ d.get('lun_ep_vp') }} mm</td>{% else %}<td></td>{% endif %}
+                </tr>
+                {% endif %}
+                {% if d.get('lun_remarques') %}
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td colspan="3" style="padding:3px 4px;font-size:11px;font-style:italic;color:var(--muted);">{{ d.get('lun_remarques') | md | safe }}</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+
+            {% elif sec.type in ['acuite','swaine'] %}
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead>
+                <tr>
+                  <th style="padding:2px 4px;"></th>
+                  <th style="text-align:center;padding:2px 4px;color:#185FA5;font-weight:600;">OD</th>
+                  <th style="text-align:center;padding:2px 4px;color:#A32D2D;font-weight:600;">OG</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if sec.type == 'acuite' %}
+                {% if d.get('av_bino') %}<tr style="border-top:0.5px solid var(--border);"><td style="padding:3px 4px;color:var(--muted);font-size:10px;">Bino</td><td colspan="2" style="padding:3px 4px;">{{ d.get('av_bino') }}</td></tr>{% endif %}
+                {% if d.get('av_correction') %}<tr style="border-top:0.5px solid var(--border);"><td style="padding:3px 4px;color:var(--muted);font-size:10px;">Correction</td><td colspan="2" style="padding:3px 4px;">{{ d.get('av_correction') }}</td></tr>{% endif %}
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">Loin</td>
+                  <td style="padding:3px 4px;">{{ d.get('av_od_loin','—') }}</td>
+                  <td style="padding:3px 4px;">{{ d.get('av_og_loin','—') }}</td>
+                </tr>
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">Près</td>
+                  <td style="padding:3px 4px;">{{ d.get('av_od_pres','—') }}</td>
+                  <td style="padding:3px 4px;">{{ d.get('av_og_pres','—') }}</td>
+                </tr>
+                {% else %}
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">/10</td>
+                  <td style="padding:3px 4px;">{{ d.get('swaine_od','—') }}</td>
+                  <td style="padding:3px 4px;">{{ d.get('swaine_og','—') }}</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+            {% else %}
+            {% set sdef = sections_def.get(sec.type, {}) %}
+            {% if sdef %}{% set ns = namespace(has_data=false) %}
+            {% for champ in sdef.champs %}
+              {% if champ.type != 'fichier' and d.get(champ.name) %}{% set ns.has_data = true %}
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:0.5px solid var(--border);">
+                <span style="color:var(--muted);">{{ champ.label }}</span>
+                <span style="font-weight:500;">{{ d[champ.name] | md | safe }}</span>
+              </div>
+              {% endif %}
+            {% endfor %}
+            {% if not ns.has_data %}<div style="font-size:11px;color:var(--muted);font-style:italic;">—</div>{% endif %}
+            {% endif %}
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="font-size:13px;color:var(--muted);text-align:center;padding:12px;">Bilan vide.</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="POST">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header" style="background:#FEF3E2;color:#7A3E00;">
+        <h2 style="color:#7A3E00;">Informations du suivi</h2>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="field-group">
+            <label class="field-label">Date de début</label>
+            <input type="date" name="date_debut" value="{{ today.strftime('%Y-%m-%d') }}" required>
+          </div>
+          <div class="field-group" style="grid-column:1/-1;">
+            <label class="field-label">Notes</label>
+            <textarea name="notes" class="auto-resize" style="min-height:52px;resize:none;overflow:hidden;"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-primary">Créer le suivi</button>
+      <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function toggle(id) {
+  const body = document.getElementById('sec-' + id);
+  const icon = document.getElementById('ico-' + id);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  icon.textContent = open ? '▶' : '▼';
+}
+function autoResize(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+document.querySelectorAll('.auto-resize').forEach(el => { autoResize(el); el.addEventListener('input',()=>autoResize(el)); });
+</script>
+{% endblock %}

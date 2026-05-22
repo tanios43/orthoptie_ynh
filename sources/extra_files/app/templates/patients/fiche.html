@@ -25,6 +25,7 @@
   <a href="{{ url_for('suivi_amblyopie_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi amblyopie</a>
   <a href="{{ url_for('suivi_vb_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi VB</a>
   <a href="{{ url_for('suivi_nv_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi NV</a>
+  <a href="{{ url_for('suivi_bv_nouveau', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">+ Suivi BV</a>
 {% endblock %}
 
 {%- macro sph_f(val) -%}
@@ -559,6 +560,48 @@
           </div>
         </div>
 
+        {% elif entry.type == 'suivi_bv_reeds' %}
+        {# ── SUIVI BASSE VISION ── #}
+        <div style="border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;">
+            <a href="{{ url_for('suivi_bv_detail', suivi_id=c.id) }}"
+               style="padding:14px 20px;display:flex;align-items:center;gap:12px;
+                      text-decoration:none;color:inherit;transition:background .15s;flex:1;"
+               onmouseover="this.parentElement.style.background='var(--bg)'"
+               onmouseout="this.parentElement.style.background=''">
+              <div style="text-align:center;min-width:44px;flex-shrink:0;">
+                <div style="font-size:18px;font-weight:600;color:#7A3E00;line-height:1;">
+                  {{ c.derniere_seance_date.strftime('%d') }}
+                </div>
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
+                  {{ c.derniere_seance_date.strftime('%b %Y') }}
+                </div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:14px;font-weight:500;">Rééducation Basse Vision</span>
+                  <span style="background:#FEF3E2;color:#7A3E00;border-radius:10px;
+                               font-size:11px;padding:1px 8px;font-weight:500;">
+                    👁 {{ c.seances|length }} séances
+                  </span>
+                </div>
+                {% if patient.date_naissance %}
+                <span style="font-size:11px;color:var(--accent);font-weight:500;">
+                  {{ age_a_la_date(patient.date_naissance, c.date_debut) }}
+                </span>
+                {% endif %}
+              </div>
+              <i class="ti ti-chevron-right" style="color:var(--muted);flex-shrink:0;"></i>
+            </a>
+            <div style="padding:0 12px;" onclick="event.stopPropagation()">
+              <button type="button"
+                      onclick="confirmerSuppressionBV({{ c.id }}, '{{ c.date_debut.strftime('%d/%m/%Y') }}', '{{ patient.prenom }} {{ patient.nom }}')"
+                      class="btn btn-secondary btn-sm"
+                      style="color:#e53e3e;border-color:#e53e3e;">🗑</button>
+            </div>
+          </div>
+        </div>
+
         {% elif entry.type == 'suivi_nv' %}
         {# ── SUIVI NEUROVISUEL ── #}
         <div style="border-bottom:1px solid var(--border);">
@@ -622,6 +665,33 @@
       </div>
       {% endif %}
 
+
+{# ── MODALE SUPPRESSION SUIVI BV ── #}
+<div id="modal-suppression-bv-reeds" style="display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.18);
+              padding:28px 28px 24px;max-width:440px;width:90%;margin:20px;">
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--danger-lt);
+                  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">⚠️</div>
+      <div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Supprimer ce suivi Basse Vision ?</div>
+        <div id="modal-bv-reeds-desc" style="font-size:14px;color:var(--muted);line-height:1.5;"></div>
+      </div>
+    </div>
+    <div style="background:var(--danger-lt);border:1px solid #F5C6C2;border-radius:7px;padding:10px 14px;margin-bottom:20px;">
+      <div style="font-size:13px;color:var(--danger);font-weight:500;">⚠ Action irréversible</div>
+      <div style="font-size:13px;color:var(--danger);">Toutes les séances seront définitivement effacées.</div>
+    </div>
+    <form id="form-suppression-bv-reeds" method="POST" action="">
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('modal-suppression-bv-reeds').style.display='none'">Annuler</button>
+        <button type="submit" style="background:#e53e3e;color:white;border:none;border-radius:6px;padding:7px 16px;cursor:pointer;font-weight:500;">Supprimer</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 {# ── MODALE SUPPRESSION SUIVI NV ── #}
 <div id="modal-suppression-nv" style="
@@ -776,6 +846,16 @@ function toggleBilan(id) {
   body.style.display = open ? 'none' : 'block';
   if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
 }
+
+function confirmerSuppressionBV(id, date, patient) {
+  document.getElementById('modal-bv-reeds-desc').textContent =
+    'Suivi BV débuté le ' + date + ' pour ' + patient + '.';
+  document.getElementById('form-suppression-bv-reeds').action = '/suivi-bv/' + id + '/supprimer';
+  document.getElementById('modal-suppression-bv-reeds').style.display = 'flex';
+}
+document.getElementById('modal-suppression-bv-reeds').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
 
 function confirmerSuppressionNV(id, date, patient) {
   document.getElementById('modal-nv-desc').textContent =

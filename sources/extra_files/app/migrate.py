@@ -31,6 +31,26 @@ if _db_path:
         "ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''",
         "ALTER TABLE section_def ADD COLUMN avec_observations BOOLEAN DEFAULT 1",
         "ALTER TABLE section_def ADD COLUMN obs_defaut TEXT DEFAULT ''",
+        """CREATE TABLE IF NOT EXISTS suivi_bv (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL REFERENCES patient(id),
+            praticien_id INTEGER NOT NULL REFERENCES praticien(id),
+            cabinet_id INTEGER REFERENCES cabinet(id),
+            date_debut DATE NOT NULL,
+            notes TEXT DEFAULT '',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS seance_bv (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            suivi_id INTEGER NOT NULL REFERENCES suivi_bv(id),
+            numero INTEGER NOT NULL,
+            date_seance DATE,
+            praticien_id INTEGER REFERENCES praticien(id),
+            acuite TEXT DEFAULT '',
+            exercices TEXT DEFAULT '',
+            notes TEXT DEFAULT ''
+        )""",
         """CREATE TABLE IF NOT EXISTS suivi_nv (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             patient_id INTEGER NOT NULL REFERENCES patient(id),
