@@ -4427,44 +4427,58 @@ def wopi_file_contents(token):
         if not data:
             return '', 200
 
-        with open(sess.chemin_fichier, 'wb') as f:
-            f.write(data)
+        # Écrire directement sur le fichier original si possible
+        folder = os.path.join(app.config['UPLOAD_FOLDER'],
+                              'sections', str(sess.consultation_id))
+        os.makedirs(folder, exist_ok=True)
 
         c = Consultation.query.get(sess.consultation_id)
         if c:
-            # Toujours résoudre section_ordre depuis section_type au moment de la sauvegarde
-            # (l'ordre peut avoir changé depuis la création de la session)
-            section = next((s for s in c.sections
-                            if s.type == sess.section_type), None)
-            if section:
-                section_ordre = section.ordre
-            elif sess.section_ordre:
-                section_ordre = sess.section_ordre
-            else:
-                section_ordre = 0
-
-            folder = os.path.join(app.config['UPLOAD_FOLDER'],
-                                  'sections', str(sess.consultation_id))
-            os.makedirs(folder, exist_ok=True)
-            nom_stocke = f"{uuid.uuid4().hex}.docx"
-            dest = os.path.join(folder, nom_stocke)
-            shutil.copy2(sess.chemin_fichier, dest)
-
+            # Chercher le FichierSection existant lié à cette session
+            # 1. Par nom de fichier original (chemin de la session)
+            orig_basename = os.path.basename(sess.chemin_fichier)
             existing = FichierSection.query.filter_by(
                 consultation_id=sess.consultation_id,
-                section_ordre=section_ordre,
-                champ_name='wopi_doc',
-                titre=sess.nom_fichier
+                nom_stocke=orig_basename
             ).first()
-            if existing:
-                old_path = os.path.join(folder, existing.nom_stocke)
-                if os.path.exists(old_path):
-                    os.remove(old_path)
-                existing.nom_stocke    = nom_stocke
-                existing.section_ordre = section_ordre
-                existing.section_type  = sess.section_type or ''
-                existing.created_at    = datetime.utcnow()
+
+            # 2. Si pas trouvé, chercher par titre + section_ordre
+            if not existing:
+                section = next((s for s in c.sections
+                                if s.type == sess.section_type), None)
+                section_ordre = section.ordre if section else (sess.section_ordre or 0)
+                existing = FichierSection.query.filter_by(
+                    consultation_id=sess.consultation_id,
+                    section_ordre=section_ordre,
+                    champ_name='wopi_doc',
+                    titre=sess.nom_fichier
+                ).first()
             else:
+                section = next((s for s in c.sections
+                                if s.type == (existing.section_type or sess.section_type)), None)
+                section_ordre = section.ordre if section else (existing.section_ordre or sess.section_ordre or 0)
+
+            if existing:
+                # Mettre à jour le fichier existant en place
+                dest = os.path.join(folder, existing.nom_stocke)
+                with open(dest, 'wb') as fh:
+                    fh.write(data)
+                existing.section_ordre = section_ordre
+                existing.created_at    = datetime.utcnow()
+                # Mettre à jour le chemin dans la session pour les prochaines sauvegardes
+                sess.chemin_fichier = dest
+                db.session.commit()
+                app.logger.info(f"WOPI: fichier existant mis à jour {existing.nom_stocke}")
+            else:
+                # Nouveau fichier
+                nom_stocke = f"{uuid.uuid4().hex}.docx"
+                dest = os.path.join(folder, nom_stocke)
+                with open(dest, 'wb') as fh:
+                    fh.write(data)
+                # Résoudre section_ordre
+                section = next((s for s in c.sections
+                                if s.type == sess.section_type), None)
+                section_ordre = section.ordre if section else (sess.section_ordre or 0)
                 db.session.add(FichierSection(
                     consultation_id = sess.consultation_id,
                     section_ordre   = section_ordre,
@@ -4475,8 +4489,9 @@ def wopi_file_contents(token):
                     type_fichier    = 'word',
                     titre           = sess.nom_fichier,
                 ))
-            db.session.commit()
-            app.logger.info(f"WOPI: fichier sauvegardé {nom_stocke}")
+                sess.chemin_fichier = dest
+                db.session.commit()
+                app.logger.info(f"WOPI: nouveau fichier sauvegardé {nom_stocke}")
 
         return '', 200
 
