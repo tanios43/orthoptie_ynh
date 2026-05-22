@@ -1892,6 +1892,30 @@ document.getElementById('form-bilan')?.addEventListener('submit', function() {
   });
 });
 
+// ── Paste handler pour les champs WYSIWYG de bilan ───────────────────
+document.addEventListener('paste', (e) => {
+  const div = e.target.closest('.wysiwyg-field[contenteditable]');
+  if (!div) return;
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  if (!text) return;
+  const lines = text.split(/\r?\n/);
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  const frag = document.createDocumentFragment();
+  lines.forEach((line, i) => {
+    if (i > 0) frag.appendChild(document.createElement('br'));
+    if (line) frag.appendChild(document.createTextNode(line));
+  });
+  range.insertNode(frag);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  syncWysiwyg(div.id, div.id);
+});
+
 
 function autoResizeTA(el) {
   el.style.height = 'auto';

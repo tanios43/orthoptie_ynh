@@ -642,10 +642,31 @@ function initTableWysiwyg() {
   document.querySelectorAll('.table-wysiwyg').forEach(div => {
     if (div.dataset.wyInit) return;
     div.dataset.wyInit = '1';
-    // Ne pas sync au chargement — le champ hidden est déjà initialisé par Jinja
     div.addEventListener('focus', (e) => showFloatToolbar(div, e));
     div.addEventListener('blur',  (e) => hideFloatToolbar(e));
     div.addEventListener('input', () => {
+      const h = document.getElementById(div.id + '_hidden');
+      if (h) h.value = htmlToMd(div.innerHTML);
+    });
+    // Normaliser le contenu collé : conserver les sauts de ligne
+    div.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      if (!text) return;
+      const lines = text.split(/\r?\n/);
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const frag = document.createDocumentFragment();
+      lines.forEach((line, i) => {
+        if (i > 0) frag.appendChild(document.createElement('br'));
+        if (line) frag.appendChild(document.createTextNode(line));
+      });
+      range.insertNode(frag);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
       const h = document.getElementById(div.id + '_hidden');
       if (h) h.value = htmlToMd(div.innerHTML);
     });
