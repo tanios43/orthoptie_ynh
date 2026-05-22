@@ -232,8 +232,8 @@
           <col style="width:32px;">
           <col style="width:115px;">
           <col style="width:140px;">
-          <col style="width:20%;">
-          <col style="width:25%;">
+          <col style="width:28%;">
+          <col style="width:28%;">
           <col>
         </colgroup>
         <thead>
@@ -241,9 +241,8 @@
             <th style="padding:7px 8px;text-align:center;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">#</th>
             <th style="padding:7px 8px;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">Date</th>
             <th style="padding:7px 8px;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">Praticien</th>
-            <th style="padding:7px 8px;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">Fusion</th>
-            <th style="padding:7px 8px;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">Accommodation</th>
-            <th style="padding:7px 8px;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">Stéréogrammes</th>
+            <th style="padding:7px 8px;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">VB-ACCO-OMOT</th>
+            <th style="padding:7px 8px;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">Neurovisuel</th>
             <th style="padding:7px 8px;color:#1a3a6e;font-size:12px;font-weight:600;border-bottom:1px solid #B0C0E044;">Notes</th>
           </tr>
         </thead>
@@ -276,7 +275,7 @@
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.vb_acco_omot or "") | mdhtml | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_fusion" id="wy-nv-{{seance.id}}-fusion_hidden" form="form-suivi-vb"
+<input type="hidden" name="seance_{{seance.id}}_vb_acco_omot" id="wy-nv-{{seance.id}}-fusion_hidden" form="form-suivi-vb"
        value="{{ seance.vb_acco_omot or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
@@ -286,19 +285,10 @@
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.neurovisuel or "") | mdhtml | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_accommodation" id="wy-nv-{{seance.id}}-accommodation_hidden" form="form-suivi-vb"
+<input type="hidden" name="seance_{{seance.id}}_neurovisuel" id="wy-nv-{{seance.id}}-accommodation_hidden" form="form-suivi-vb"
        value="{{ seance.neurovisuel or '' }}">
             </td>
-            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <div id="wy-nv-{{seance.id}}-stereogrammes"
-     contenteditable="true"
-     class="table-wysiwyg"
-     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
-  {{- (seance.stereogrammes or "") | mdhtml | safe -}}
-</div>
-<input type="hidden" name="seance_{{seance.id}}_stereogrammes" id="wy-nv-{{seance.id}}-stereogrammes_hidden" form="form-suivi-vb"
-       value="{{ seance.stereogrammes or '' }}">
-            </td>
+            
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
               <div id="wy-nv-{{seance.id}}-notes"
      contenteditable="true"
