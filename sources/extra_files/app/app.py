@@ -1134,8 +1134,6 @@ def patient_detail(patient_id):
     suivis_vb  = SuiviVB.query.filter_by(patient_id=patient_id).all()
     suivis_bv  = SuiviBV.query.filter_by(patient_id=patient_id).all()
     suivis_nv  = SuiviNV.query.filter_by(patient_id=patient_id).all()
-    for s in suivis_bv:
-        timeline.append({'type': 'suivi_bv_reeds', 'date': s.derniere_seance_date, 'obj': s})
     timeline = []
     for c in patient.consultations:
         timeline.append({'type': 'bilan', 'date': c.date_consult, 'obj': c})
@@ -1145,6 +1143,8 @@ def patient_detail(patient_id):
         timeline.append({'type': 'suivi_vb', 'date': s.derniere_seance_date, 'obj': s})
     for s in suivis_nv:
         timeline.append({'type': 'suivi_nv', 'date': s.derniere_seance_date, 'obj': s})
+    for s in suivis_bv:
+        timeline.append({'type': 'suivi_bv_reeds', 'date': s.derniere_seance_date, 'obj': s})
     timeline.sort(key=lambda x: x['date'], reverse=True)
     return render_template('patients/fiche.html', patient=patient,
                            sections_def=sections, timeline=timeline)
