@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+{% block title %}Manuel d'utilisation{% endblock %}
+{% block page_title %}📖 Manuel d'utilisation{% endblock %}
+
+{% block content %}
+<style>
+.aide-nav {
+  position: sticky; top: 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.aide-nav a {
+  font-size: 12px; color: var(--muted); text-decoration: none;
+  padding: 4px 10px; border-radius: 5px; transition: all .15s;
+  border-left: 2px solid transparent;
+}
+.aide-nav a:hover, .aide-nav a.active {
+  color: var(--accent); background: var(--accent-lt);
+  border-left-color: var(--accent);
+}
+.aide-nav .nav-group {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--muted); padding: 8px 10px 2px;
+  opacity: .7;
+}
+.aide-section { scroll-margin-top: 20px; margin-bottom: 40px; }
+.aide-section h2 {
+  font-size: 18px; font-weight: 600; margin-bottom: 16px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.aide-section h3 {
+  font-size: 15px; font-weight: 600; margin: 20px 0 10px;
+  color: var(--accent);
+}
+.aide-section p { font-size: 13px; line-height: 1.7; margin-bottom: 10px; color: var(--text); }
+.aide-section ul, .aide-section ol {
+  font-size: 13px; line-height: 1.8; padding-left: 20px;
+  margin-bottom: 10px;
+}
+.tip {
+  background: #E1F5EE; border-left: 3px solid #1D9E75;
+  border-radius: 0 6px 6px 0; padding: 10px 14px;
+  font-size: 13px; margin: 12px 0;
+}
+.warn {
+  background: #FAEEDA; border-left: 3px solid #EF9F27;
+  border-radius: 0 6px 6px 0; padding: 10px 14px;
+  font-size: 13px; margin: 12px 0;
+}
+.kbd {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 6px; font-size: 11px;
+  font-family: monospace; display: inline-block;
+}
+.step {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin-bottom: 10px;
+}
+.step-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; flex-shrink: 0; margin-top: 1px;
+}
+.step p { margin: 0; font-size: 13px; }
+.badge {
+  display: inline-block; padding: 1px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 500;
+}
+.badge-admin { background: #FAEEDA; color: #633806; }
+.badge-all { background: #E1F5EE; color: #085041; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+@media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+
+<div style="display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:start;">
+
+  {# Sommaire #}
+  <nav class="aide-nav" id="aide-nav">
+    <div class="nav-group">Démarrage</div>
+    <a href="#connexion">Connexion</a>
+    <a href="#interface">Interface</a>
+
+    <div class="nav-group">Patients</div>
+    <a href="#liste-patients">Liste patients</a>
+    <a href="#fiche-patient">Fiche patient</a>
+    <a href="#nouveau-patient">Nouveau patient</a>
+
+    <div class="nav-group">Bilans</div>
+    <a href="#nouveau-bilan">Nouveau bilan</a>
+    <a href="#edition-bilan">Édition bilan</a>
+    <a href="#sections">Sections</a>
+    <a href="#mise-en-forme">Mise en forme</a>
+    <a href="#documents">Documents Word</a>
+
+    <div class="nav-group">Suivis</div>
+    <a href="#suivi-amblyopie">Amblyopie</a>
+    <a href="#suivi-vb">Vision binoculaire</a>
+    <a href="#suivi-nv">Neurovisuel</a>
+    <a href="#suivi-bv">Basse vision</a>
+
+    <div class="nav-group">Communication</div>
+    <a href="#messagerie">Messagerie</a>
+    <a href="#notes-patient">Notes partagées</a>
+
+    <div class="nav-group">Administration</div>
+    <a href="#admin-sections">Sections & champs</a>
+    <a href="#admin-categories">Catégories</a>
+    <a href="#admin-praticiens">Praticiens</a>
+    <a href="#admin-sauvegarde">Sauvegardes</a>
+  </nav>
+
+  {# Contenu #}
+  <div>
+
+    {# ── CONNEXION ── #}
+    <section class="aide-section" id="connexion">
+      <h2>🔐 Connexion</h2>
+      <p>Accédez à l'application via votre navigateur à l'adresse communiquée par votre administrateur.</p>
+      <div class="step"><div class="step-num">1</div><p>Entrez votre identifiant (adresse e-mail ou nom d'utilisateur) et votre mot de passe.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Cliquez sur <strong>Se connecter</strong>.</p></div>
+      <div class="tip">💡 La session reste ouverte indéfiniment. Pour vous déconnecter, cliquez sur <strong>→ Déconnexion</strong> en bas de la barre de gauche.</div>
+    </section>
+
+    {# ── INTERFACE ── #}
+    <section class="aide-section" id="interface">
+      <h2>🖥️ Interface</h2>
+      <p>L'interface est composée de trois zones :</p>
+      <ul>
+        <li><strong>Barre de navigation gauche</strong> — accès aux différentes sections de l'application.</li>
+        <li><strong>Barre du haut</strong> — titre de la page et actions contextuelles (boutons).</li>
+        <li><strong>Zone centrale</strong> — contenu principal de la page.</li>
+      </ul>
+      <h3>Navigation principale</h3>
+      <ul>
+        <li><strong>Mes patients</strong> — liste de vos patients.</li>
+        <li><strong>Recherche</strong> — recherche rapide par nom.</li>
+        <li><strong>Mon historique</strong> — 20 derniers dossiers consultés.</li>
+        <li><strong>💬 Messages</strong> — messagerie inter-praticiens (badge rouge si messages non lus).</li>
+        <li><strong>⚙ Mon profil</strong> — informations personnelles, signature.</li>
+      </ul>
+    </section>
+
+    {# ── LISTE PATIENTS ── #}
+    <section class="aide-section" id="liste-patients">
+      <h2>👥 Liste des patients</h2>
+      <p>La page d'accueil affiche vos patients. Cliquez sur un patient pour ouvrir sa fiche.</p>
+      <h3>Recherche</h3>
+      <p>Utilisez la barre de <strong>Recherche</strong> dans le menu gauche pour trouver un patient par nom ou prénom.</p>
+      <h3>Mon historique</h3>
+      <p>Retrouvez rapidement vos 20 derniers dossiers consultés via <strong>Mon historique</strong>.</p>
+    </section>
+
+    {# ── FICHE PATIENT ── #}
+    <section class="aide-section" id="fiche-patient">
+      <h2>📋 Fiche patient</h2>
+      <p>La fiche patient regroupe toutes les informations et l'historique clinique.</p>
+      <h3>Zones de la fiche</h3>
+      <ul>
+        <li><strong>Notes partagées</strong> (en haut) — visibles par tous les praticiens, repliables.</li>
+        <li><strong>Identité</strong> (colonne gauche) — nom, date de naissance, coordonnées, médecin, opticien.</li>
+        <li><strong>Timeline</strong> (colonne droite) — historique chronologique de tous les bilans et suivis.</li>
+      </ul>
+      <h3>Timeline</h3>
+      <p>La timeline affiche bilans et suivis triés du plus récent au plus ancien. Cliquez sur un bilan pour le déplier et voir le résumé des sections. Le bouton <strong>Voir le bilan complet</strong> ouvre la page de visualisation détaillée.</p>
+      <div class="tip">💡 Cliquez sur l'icône 🗑 pour supprimer un suivi (action irréversible).</div>
+      <h3>Ajouter un suivi</h3>
+      <p>Le bouton <strong>+ Nouveau suivi</strong> ouvre un menu déroulant pour choisir le type de suivi à créer.</p>
+    </section>
+
+    {# ── NOUVEAU PATIENT ── #}
+    <section class="aide-section" id="nouveau-patient">
+      <h2>➕ Nouveau patient</h2>
+      <div class="step"><div class="step-num">1</div><p>Cliquez sur <strong>+ Nouveau patient</strong> dans la liste des patients.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Remplissez les informations : nom, prénom, date de naissance (obligatoire), coordonnées, médecin référent, opticien.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Cliquez sur <strong>Enregistrer</strong>.</p></div>
+    </section>
+
+    {# ── NOUVEAU BILAN ── #}
+    <section class="aide-section" id="nouveau-bilan">
+      <h2>📝 Nouveau bilan</h2>
+      <div class="step"><div class="step-num">1</div><p>Depuis la fiche patient, cliquez sur <strong>+ Nouveau bilan</strong>.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Choisissez éventuellement un modèle existant pour pré-remplir les sections.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Sélectionnez le motif de consultation et cliquez sur <strong>Créer</strong>.</p></div>
+    </section>
+
+    {# ── ÉDITION BILAN ── #}
+    <section class="aide-section" id="edition-bilan">
+      <h2>✏️ Édition d'un bilan</h2>
+      <h3>Ajouter une section</h3>
+      <p>Cliquez sur le bouton <strong>+ Ajouter une section</strong> dans la barre d'actions en bas de page, ou depuis la liste des sections disponibles.</p>
+      <h3>Réorganiser les sections</h3>
+      <p>Utilisez les flèches ▲ ▼ ou le glisser-déposer pour réordonner les sections dans le bilan.</p>
+      <h3>Bilan précédent</h3>
+      <p>Un cadre <strong>Bilan précédent</strong> affiche le dernier bilan du patient en haut de page. Utile pour comparer et copier des valeurs.</p>
+      <div class="tip">💡 Cliquez sur le titre d'une section pour la replier/déplier.</div>
+      <h3>Enregistrement</h3>
+      <p>Cliquez sur <strong>Enregistrer</strong> dans la barre d'actions fixe en bas de page. <span class="kbd">Ctrl</span> + <span class="kbd">S</span> déclenche aussi l'enregistrement.</p>
+    </section>
+
+    {# ── SECTIONS ── #}
+    <section class="aide-section" id="sections">
+      <h2>🗂️ Sections disponibles</h2>
+      <p>Les sections se regroupent par catégorie (couleur). Voici les principales :</p>
+      <div class="two-col">
+        <div>
+          <h3>Réfraction / Acuité</h3>
+          <ul>
+            <li>Correction portée</li>
+            <li>Réfraction objective</li>
+            <li>Réfraction subjective</li>
+            <li>Acuité visuelle</li>
+            <li>Test de Swaine</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Vision binoculaire</h3>
+          <ul>
+            <li>Cornéorénographie (ESE/ESI)</li>
+            <li>Motilité oculaire</li>
+            <li>Vision stéréoscopique</li>
+            <li>Ordonnances</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Administratif</h3>
+          <ul>
+            <li>Anamnèse</li>
+            <li>Conclusions</li>
+            <li>Courrier médecin</li>
+            <li>Ordonnance lunettes</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Autres</h3>
+          <ul>
+            <li>Sections personnalisées (créées par l'admin)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    {# ── MISE EN FORME ── #}
+    <section class="aide-section" id="mise-en-forme">
+      <h2>✨ Mise en forme du texte</h2>
+      <p>Dans les champs texte libre, une barre d'outils <strong>B / I / U</strong> permet de mettre en forme le texte.</p>
+      <ul>
+        <li><strong>B</strong> — Gras (<span class="kbd">Ctrl</span>+<span class="kbd">B</span>)</li>
+        <li><em>I</em> — Italique (<span class="kbd">Ctrl</span>+<span class="kbd">I</span>)</li>
+        <li><u>U</u> — Souligné</li>
+      </ul>
+      <div class="tip">💡 Sélectionnez le texte puis cliquez sur le bouton pour l'appliquer. La mise en forme est conservée dans les documents Word générés.</div>
+      <p>Dans les tableaux de suivi, une barre flottante apparaît au-dessus du champ actif.</p>
+    </section>
+
+    {# ── DOCUMENTS WORD ── #}
+    <section class="aide-section" id="documents">
+      <h2>📄 Documents Word (Collabora)</h2>
+      <p>Certaines sections permettent de générer et d'éditer des documents Word directement dans l'application.</p>
+      <h3>Générer un document</h3>
+      <div class="step"><div class="step-num">1</div><p>Dans la section (courrier, ordonnance, ordonnance lunettes), cliquez sur <strong>Générer le document</strong>.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Le document s'ouvre dans l'éditeur Collabora. Modifiez-le si nécessaire.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Enregistrez dans Collabora (<span class="kbd">Ctrl</span>+<span class="kbd">S</span>). Le document apparaît en pièce jointe de la section.</p></div>
+      <h3>Réouvrir un document</h3>
+      <p>Cliquez sur l'icône du document en pièce jointe pour le rouvrir dans Collabora. Les modifications sont sauvegardées en place.</p>
+      <div class="warn">⚠️ Ne fermez pas l'onglet Collabora sans avoir enregistré — les modifications non sauvegardées seront perdues.</div>
+      <h3>Générer le bilan complet</h3>
+      <p>Depuis la page de visualisation du bilan, cliquez sur <strong>Générer le document</strong> pour créer un document Word compilant toutes les sections sélectionnées.</p>
+    </section>
+
+    {# ── SUIVI AMBLYOPIE ── #}
+    <section class="aide-section" id="suivi-amblyopie">
+      <h2>👁️ Suivi amblyopie</h2>
+      <p>Permet de suivre l'évolution d'un patient en cours de traitement de l'amblyopie.</p>
+      <h3>Créer un suivi</h3>
+      <div class="step"><div class="step-num">1</div><p>Depuis la fiche patient, <strong>+ Nouveau suivi → Suivi amblyopie</strong>.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Renseignez la date de début et les informations du suivi.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Cliquez sur <strong>Créer le suivi</strong>.</p></div>
+      <h3>Tableau de séances</h3>
+      <p>Le tableau contient pour chaque séance :</p>
+      <ul>
+        <li><strong>Date</strong> et <strong>Praticien</strong></li>
+        <li><strong>Occlusion</strong> — type et durée</li>
+        <li><strong>Acuité visuelle</strong> OD / OG + notes</li>
+        <li><strong>VB</strong> — vision binoculaire</li>
+        <li><strong>Notes</strong></li>
+      </ul>
+      <div class="tip">💡 Cliquez sur <strong>+ Ajouter une séance</strong> pour ajouter une nouvelle ligne au tableau.</div>
+      <h3>Génération Word</h3>
+      <p>Le bouton <strong>📄 Générer Word</strong> crée un document récapitulatif de toutes les séances.</p>
+    </section>
+
+    {# ── SUIVI VB ── #}
+    <section class="aide-section" id="suivi-vb">
+      <h2>👓 Suivi rééducation VB</h2>
+      <p>Suivi des exercices de rééducation de la vision binoculaire.</p>
+      <p>Le tableau de séances contient : <strong>Fusion</strong>, <strong>Accommodation</strong>, <strong>Stéréogrammes</strong>, <strong>Notes</strong>.</p>
+      <p>Fonctionnement identique au suivi amblyopie (ajout de séances, génération Word, mise en forme).</p>
+    </section>
+
+    {# ── SUIVI NV ── #}
+    <section class="aide-section" id="suivi-nv">
+      <h2>🧠 Suivi rééducation neurovisuelle</h2>
+      <p>Suivi des exercices de rééducation neurovisuelle.</p>
+      <p>Le tableau de séances contient : <strong>VB-ACCO-OMOT</strong>, <strong>Neurovisuel</strong>, <strong>Notes</strong>.</p>
+    </section>
+
+    {# ── SUIVI BV ── #}
+    <section class="aide-section" id="suivi-bv">
+      <h2>🔍 Suivi rééducation basse vision</h2>
+      <p>Suivi des séances de rééducation basse vision.</p>
+      <p>Le tableau de séances contient :</p>
+      <ul>
+        <li><strong>Acuité visuelle</strong> OD / OG + notes</li>
+        <li><strong>Exercices</strong></li>
+        <li><strong>Notes</strong></li>
+      </ul>
+    </section>
+
+    {# ── MESSAGERIE ── #}
+    <section class="aide-section" id="messagerie">
+      <h2>💬 Messagerie</h2>
+      <p>La messagerie permet d'échanger des messages directs entre praticiens du cabinet.</p>
+      <h3>Envoyer un message</h3>
+      <div class="step"><div class="step-num">1</div><p>Cliquez sur <strong>💬 Messages</strong> dans la navigation.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Dans le bloc <strong>Nouveau message</strong>, choisissez un destinataire et rédigez votre message.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Cliquez sur <strong>Envoyer</strong> ou utilisez <span class="kbd">Ctrl</span>+<span class="kbd">Entrée</span>.</p></div>
+      <h3>Messages non lus</h3>
+      <p>Un badge rouge dans la navigation indique le nombre de messages non lus. Il se met à jour automatiquement toutes les 30 secondes.</p>
+    </section>
+
+    {# ── NOTES PARTAGÉES ── #}
+    <section class="aide-section" id="notes-patient">
+      <h2>📌 Notes partagées sur un patient</h2>
+      <p>Les notes partagées sont visibles par tous les praticiens et apparaissent en haut de la fiche patient.</p>
+      <h3>Ajouter une note</h3>
+      <p>Dans le cadre <strong>Notes partagées</strong> de la fiche patient, tapez votre note et cliquez sur <strong>Ajouter</strong>.</p>
+      <h3>Supprimer une note</h3>
+      <p>Cliquez sur le ✕ à droite de la note (uniquement vos propres notes, ou toutes les notes si vous êtes administrateur).</p>
+    </section>
+
+    {# ── ADMIN SECTIONS ── #}
+    <section class="aide-section" id="admin-sections">
+      <h2>⚙️ Administration — Sections et champs <span class="badge badge-admin">Admin</span></h2>
+      <p>Accessible via <strong>⚙ Mon profil → Administration → Sections</strong>.</p>
+      <h3>Modifier une section</h3>
+      <p>Cliquez sur une section pour accéder à sa page de détail. Vous pouvez :</p>
+      <ul>
+        <li>Modifier le nom affiché, la catégorie, le statut (active/désactivée).</li>
+        <li>Activer/masquer le champ d'observations libres et définir une observation par défaut.</li>
+        <li>Ajouter, modifier, réordonner ou supprimer des champs.</li>
+        <li>Pour les champs de type <em>liste</em>, gérer les options de la liste.</li>
+      </ul>
+      <div class="tip">💡 Toutes les propriétés s'enregistrent avec le bouton <strong>Enregistrer toutes les propriétés</strong>.</div>
+    </section>
+
+    {# ── ADMIN CATÉGORIES ── #}
+    <section class="aide-section" id="admin-categories">
+      <h2>🎨 Administration — Catégories <span class="badge badge-admin">Admin</span></h2>
+      <p>Les catégories définissent la couleur et l'icône des groupes de sections dans les bilans.</p>
+      <p>Accessible via <strong>Administration → Catégories</strong>. Vous pouvez créer de nouvelles catégories et personnaliser leur couleur de fond, couleur de texte et icône.</p>
+    </section>
+
+    {# ── ADMIN PRATICIENS ── #}
+    <section class="aide-section" id="admin-praticiens">
+      <h2>👤 Administration — Praticiens <span class="badge badge-admin">Admin</span></h2>
+      <p>Gérez les comptes praticiens depuis <strong>Administration → Praticiens</strong>.</p>
+      <ul>
+        <li><strong>Créer un praticien</strong> — renseignez nom, prénom, e-mail, rôle (praticien/admin) et mot de passe.</li>
+        <li><strong>Modifier</strong> — cliquez sur un praticien pour éditer ses informations.</li>
+        <li><strong>Désactiver</strong> — un praticien désactivé ne peut plus se connecter mais ses données sont conservées.</li>
+        <li><strong>Cabinets</strong> — associez chaque praticien à un ou plusieurs cabinets avec son numéro ADELI.</li>
+      </ul>
+    </section>
+
+    {# ── ADMIN SAUVEGARDES ── #}
+    <section class="aide-section" id="admin-sauvegarde">
+      <h2>💾 Administration — Sauvegardes <span class="badge badge-admin">Admin</span></h2>
+      <p>Accessible via <strong>Administration → Sauvegarde</strong>.</p>
+      <h3>Sauvegarde manuelle</h3>
+      <p>Cliquez sur <strong>📥 Télécharger la sauvegarde</strong> pour télécharger une archive complète (base de données + fichiers).</p>
+      <h3>Sauvegardes automatiques</h3>
+      <p>Une sauvegarde automatique est effectuée chaque nuit à 2h. Les 7 dernières sauvegardes sont conservées.</p>
+      <h3>Restauration</h3>
+      <p>Importez un fichier de sauvegarde (.zip ou .tar.gz) via le formulaire <strong>Restaurer une sauvegarde</strong>.</p>
+      <h3>Nettoyage des fichiers</h3>
+      <p>Le bouton <strong>🧹 Nettoyer les fichiers orphelins</strong> supprime les fichiers temporaires et les fichiers non référencés en base. À effectuer périodiquement.</p>
+    </section>
+
+  </div>
+</div>
+
+<script>
+// Highlight active section in nav
+const sections = document.querySelectorAll('.aide-section');
+const navLinks = document.querySelectorAll('.aide-nav a');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const active = document.querySelector(`.aide-nav a[href="#${entry.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+{% endblock %}

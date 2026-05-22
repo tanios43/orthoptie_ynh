@@ -2552,6 +2552,12 @@ def admin_journal():
                            praticiens=praticiens, praticien_filter=praticien_filter)
 
 
+@app.route('/aide')
+@login_required
+def aide():
+    return render_template('aide/index.html')
+
+
 @app.route('/mon-historique')
 @login_required
 def mon_historique():

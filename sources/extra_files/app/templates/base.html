@@ -455,6 +455,10 @@
       </div>
     </div>
     <a href="{{ url_for('profil') }}" class="logout-link">⚙ Mon profil</a>
+    <a href="{{ url_for('aide') }}"
+       class="nav-item {% if request.endpoint == 'aide' %}active{% endif %}">
+      <span class="icon">📖</span> Manuel
+    </a>
     <a href="{{ url_for('logout') }}" class="logout-link">→ Déconnexion</a>
   </div>
 </aside>
