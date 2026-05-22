@@ -269,23 +269,23 @@
               </select>
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <div id="wy-nv-{{seance.id}}-fusion"
+              <div id="wy-nv-{{seance.id}}-vb_acco_omot"
      contenteditable="true"
      class="table-wysiwyg"
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.vb_acco_omot or "") | mdhtml | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_vb_acco_omot" id="wy-nv-{{seance.id}}-fusion_hidden" form="form-suivi-vb"
+<input type="hidden" name="seance_{{seance.id}}_vb_acco_omot" id="wy-nv-{{seance.id}}-vb_acco_omot_hidden" form="form-suivi-nv"
        value="{{ seance.vb_acco_omot or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
-              <div id="wy-nv-{{seance.id}}-accommodation"
+              <div id="wy-nv-{{seance.id}}-neurovisuel"
      contenteditable="true"
      class="table-wysiwyg"
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.neurovisuel or "") | mdhtml | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_neurovisuel" id="wy-nv-{{seance.id}}-accommodation_hidden" form="form-suivi-vb"
+<input type="hidden" name="seance_{{seance.id}}_neurovisuel" id="wy-nv-{{seance.id}}-neurovisuel_hidden" form="form-suivi-nv"
        value="{{ seance.neurovisuel or '' }}">
             </td>
             
@@ -296,7 +296,7 @@
      style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.notes or "") | mdhtml | safe -}}
 </div>
-<input type="hidden" name="seance_{{seance.id}}_notes" id="wy-nv-{{seance.id}}-notes_hidden" form="form-suivi-vb"
+<input type="hidden" name="seance_{{seance.id}}_notes" id="wy-nv-{{seance.id}}-notes_hidden" form="form-suivi-nv"
        value="{{ seance.notes or '' }}">
             </td>
           </tr>
