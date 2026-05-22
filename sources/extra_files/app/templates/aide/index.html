@@ -134,7 +134,7 @@
       <h3>Navigation principale</h3>
       <ul>
         <li><strong>Mes patients</strong> — liste de vos patients.</li>
-        <li><strong>Recherche</strong> — recherche rapide par nom.</li>
+        <li><strong>Recherche</strong> — recherche rapide par nom, prénom ou date de naissance.</li>
         <li><strong>Mon historique</strong> — 20 derniers dossiers consultés.</li>
         <li><strong>💬 Messages</strong> — messagerie inter-praticiens (badge rouge si messages non lus).</li>
         <li><strong>⚙ Mon profil</strong> — informations personnelles, signature.</li>
@@ -146,7 +146,7 @@
       <h2>👥 Liste des patients</h2>
       <p>La page d'accueil affiche vos patients. Cliquez sur un patient pour ouvrir sa fiche.</p>
       <h3>Recherche</h3>
-      <p>Utilisez la barre de <strong>Recherche</strong> dans le menu gauche pour trouver un patient par nom ou prénom.</p>
+      <p>Utilisez la barre de <strong>Recherche</strong> dans le menu gauche pour trouver un patient par nom, prénom ou date de naissance.</p>
       <h3>Mon historique</h3>
       <p>Retrouvez rapidement vos 20 derniers dossiers consultés via <strong>Mon historique</strong>.</p>
     </section>
@@ -165,7 +165,13 @@
       <p>La timeline affiche bilans et suivis triés du plus récent au plus ancien. Cliquez sur un bilan pour le déplier et voir le résumé des sections. Le bouton <strong>Voir le bilan complet</strong> ouvre la page de visualisation détaillée.</p>
       <div class="tip">💡 Cliquez sur l'icône 🗑 pour supprimer un suivi (action irréversible).</div>
       <h3>Ajouter un suivi</h3>
-      <p>Le bouton <strong>+ Nouveau suivi</strong> ouvre un menu déroulant pour choisir le type de suivi à créer.</p>
+      <p>Le bouton <strong>+ Nouveau suivi</strong> ouvre un menu déroulant pour choisir le type de suivi :</p>
+      <ul>
+        <li>👁 Suivi amblyopie</li>
+        <li>👓 Suivi rééducation vision binoculaire (VB)</li>
+        <li>🧠 Suivi rééducation neurovisuelle</li>
+        <li>🔍 Suivi rééducation basse vision</li>
+      </ul>
     </section>
 
     {# ── NOUVEAU PATIENT ── #}
@@ -188,11 +194,11 @@
     <section class="aide-section" id="edition-bilan">
       <h2>✏️ Édition d'un bilan</h2>
       <h3>Ajouter une section</h3>
-      <p>Cliquez sur le bouton <strong>+ Ajouter une section</strong> dans la barre d'actions en bas de page, ou depuis la liste des sections disponibles.</p>
+      <p>Cliquez sur une section dans la liste des sections disponibles (colonne de droite) pour l'ajouter au bilan.</p>
       <h3>Réorganiser les sections</h3>
-      <p>Utilisez les flèches ▲ ▼ ou le glisser-déposer pour réordonner les sections dans le bilan.</p>
+      <p>Utilisez les boutons <strong>↑</strong> et <strong>↓</strong> dans l'en-tête de chaque section pour modifier son ordre dans le bilan.</p>
       <h3>Bilan précédent</h3>
-      <p>Un cadre <strong>Bilan précédent</strong> affiche le dernier bilan du patient en haut de page. Utile pour comparer et copier des valeurs.</p>
+      <p>Un cadre <strong>Bilans précédents</strong> affiche tous les bilans précédents du patient. Cliquez sur un bilan précédent pour le déplier et consulter ses sections. Utile pour comparer et vérifier l'évolution.</p>
       <div class="tip">💡 Cliquez sur le titre d'une section pour la replier/déplier.</div>
       <h3>Enregistrement</h3>
       <p>Cliquez sur <strong>Enregistrer</strong> dans la barre d'actions fixe en bas de page. <span class="kbd">Ctrl</span> + <span class="kbd">S</span> déclenche aussi l'enregistrement.</p>
@@ -256,7 +262,7 @@
     {# ── DOCUMENTS WORD ── #}
     <section class="aide-section" id="documents">
       <h2>📄 Documents Word (Collabora)</h2>
-      <p>Certaines sections permettent de générer et d'éditer des documents Word directement dans l'application.</p>
+      <p>Les sections <strong>Courrier médecin</strong>, <strong>Ordonnance</strong> et <strong>Ordonnance de lunettes</strong> permettent de générer et d'éditer des documents Word directement dans l'application via l'éditeur Collabora.</p>
       <h3>Générer un document</h3>
       <div class="step"><div class="step-num">1</div><p>Dans la section (courrier, ordonnance, ordonnance lunettes), cliquez sur <strong>Générer le document</strong>.</p></div>
       <div class="step"><div class="step-num">2</div><p>Le document s'ouvre dans l'éditeur Collabora. Modifiez-le si nécessaire.</p></div>
@@ -264,8 +270,7 @@
       <h3>Réouvrir un document</h3>
       <p>Cliquez sur l'icône du document en pièce jointe pour le rouvrir dans Collabora. Les modifications sont sauvegardées en place.</p>
       <div class="warn">⚠️ Ne fermez pas l'onglet Collabora sans avoir enregistré — les modifications non sauvegardées seront perdues.</div>
-      <h3>Générer le bilan complet</h3>
-      <p>Depuis la page de visualisation du bilan, cliquez sur <strong>Générer le document</strong> pour créer un document Word compilant toutes les sections sélectionnées.</p>
+
     </section>
 
     {# ── SUIVI AMBLYOPIE ── #}
@@ -285,6 +290,7 @@
         <li><strong>VB</strong> — vision binoculaire</li>
         <li><strong>Notes</strong></li>
       </ul>
+      <div class="tip">💡 Lors de la création d'un suivi amblyopie, les champs sont automatiquement pré-remplis avec les données du dernier bilan du patient (correction portée, acuité, stéréoscopie, ESE, etc.). Ces valeurs restent modifiables.</div>
       <div class="tip">💡 Cliquez sur <strong>+ Ajouter une séance</strong> pour ajouter une nouvelle ligne au tableau.</div>
       <h3>Génération Word</h3>
       <p>Le bouton <strong>📄 Générer Word</strong> crée un document récapitulatif de toutes les séances.</p>

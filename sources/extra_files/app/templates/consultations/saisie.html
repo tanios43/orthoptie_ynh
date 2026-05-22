@@ -998,6 +998,16 @@ function renderSection(type, label, idx, titre, obs, donnees) {
          onmouseover="this.style.background='rgba(0,0,0,.2)'"
          onmouseout="this.style.background='rgba(0,0,0,.1)'">📄 Générer</a>` : ''}
       <button type="button" tabindex="-1"
+              onclick="event.stopPropagation();deplacerSection(${idx},-1)"
+              title="Monter cette section"
+              style="background:none;border:none;color:${col.color};opacity:.6;cursor:pointer;font-size:13px;padding:0 3px;flex-shrink:0;"
+              onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'">↑</button>
+      <button type="button" tabindex="-1"
+              onclick="event.stopPropagation();deplacerSection(${idx},+1)"
+              title="Descendre cette section"
+              style="background:none;border:none;color:${col.color};opacity:.6;cursor:pointer;font-size:13px;padding:0 3px;flex-shrink:0;"
+              onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'">↓</button>
+      <button type="button" tabindex="-1"
               onclick="event.stopPropagation();supprimerSection(${idx})"
               title="Supprimer cette section"
               style="background:none;border:none;color:${col.color};opacity:.6;cursor:pointer;font-size:14px;padding:0 4px;flex-shrink:0;"
@@ -1298,6 +1308,27 @@ function ajouterSection(type, label) {
 }
 
 // ── Supprimer une section ──
+function deplacerSection(idx, direction) {
+  const container = document.getElementById('sections-container');
+  const sections = [...container.querySelectorAll('.bilan-section')];
+  const current = sections.find(s => parseInt(s.dataset.idx) === idx);
+  if (!current) return;
+  const pos = sections.indexOf(current);
+  const targetPos = pos + direction;
+  if (targetPos < 0 || targetPos >= sections.length) return;
+  const target = sections[targetPos];
+  if (direction === -1) {
+    container.insertBefore(current, target);
+  } else {
+    container.insertBefore(target, current);
+  }
+  // Renumérote les badges
+  [...container.querySelectorAll('.bilan-section')].forEach((s, i) => {
+    const num = s.querySelector('.bilan-section-num');
+    if (num) num.textContent = i + 1;
+  });
+}
+
 function supprimerSection(idx) {
   const el = document.getElementById(`sec-wrap-${idx}`);
   if (!el) return;
