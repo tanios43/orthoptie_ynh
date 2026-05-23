@@ -47,6 +47,11 @@
           <td><a href="{{ url_for('patient_detail', patient_id=p.id) }}">{{ p.nom }} {{ p.prenom }}</a></td>
           <td class="text-muted text-sm">
             {{ p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '—' }}
+            {% if p.date_naissance %}
+            <span style="color:var(--accent);font-size:11px;font-weight:500;margin-left:4px;">
+              ({{ age_a_la_date(p.date_naissance, today) }})
+            </span>
+            {% endif %}
           </td>
           <td class="text-muted text-sm">{{ p.telephone or '—' }}</td>
           <td class="text-muted text-sm">{{ p.medecin_referent or '—' }}</td>

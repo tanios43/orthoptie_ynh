@@ -2799,7 +2799,8 @@ def recherche():
             conds = [db.or_(Patient.nom.ilike(f'%{m}%'), Patient.prenom.ilike(f'%{m}%')) for m in q.split()]
             patients = Patient.query.filter(db.and_(*conds)).order_by(Patient.nom).all()
     activites = {p.id: _derniere_activite(p) for p in patients}
-    return render_template('patients/recherche.html', patients=patients, q=q, activites=activites)
+    return render_template('patients/recherche.html', patients=patients, q=q,
+                           activites=activites, today=datetime.utcnow().date())
 
 
 # ============================================================
