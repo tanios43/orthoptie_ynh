@@ -57,7 +57,7 @@ if [ -f "${SFTP_CONFIG}" ]; then
         # Uploads : sync incrémental, seuls les nouveaux/modifiés fichiers
         # --checksum : comparaison par contenu, pas par date
         # --delete   : supprime sur le NAS les fichiers supprimés localement
-        rsync -az --checksum --delete --timeout=300 \
+        rsync -az --checksum --delete --timeout=300 --chmod=D755,F644 \
             -e "ssh ${SSH_OPTS}" \
             "${DATA_DIR}/uploads/" \
             "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/uploads/"

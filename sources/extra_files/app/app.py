@@ -2469,7 +2469,7 @@ def admin_envoyer_sauvegarde_distante():
 
         # Uploads incrémental
         r = subprocess.run([
-            'rsync', '-az', '--checksum', '--delete', '--timeout=300',
+            'rsync', '-az', '--checksum', '--delete', '--chmod=D755,F644', '--timeout=300',
             '-e', ssh_opts,
             os.path.join(data_dir, 'uploads') + '/',
             f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/uploads/'
