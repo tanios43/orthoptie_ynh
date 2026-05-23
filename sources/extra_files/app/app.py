@@ -2579,7 +2579,12 @@ def admin_restaurer_nas():
                                capture_output=True)
             except Exception:
                 pass
-            flash('✅ Restauration depuis le NAS réussie. Rechargez la page.', 'success')
+            # Redémarrer le service pour prendre en compte la nouvelle DB
+            try:
+                subprocess.Popen(['systemctl', 'restart', 'orthoptie'])
+            except Exception:
+                pass
+            flash('✅ Restauration depuis le NAS réussie — service redémarré.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
     except subprocess.TimeoutExpired:
@@ -2837,7 +2842,14 @@ def admin_sauvegarde_importer():
     except Exception:
         pass
 
-    flash('Restauration effectuée. Reconnectez-vous.', 'success')
+    # Redémarrer le service
+    try:
+        import subprocess
+        subprocess.Popen(['systemctl', 'restart', 'orthoptie'])
+    except Exception:
+        pass
+
+    flash('Restauration effectuée — service redémarré. Reconnectez-vous.', 'success')
     return redirect(url_for('logout'))
 
 
