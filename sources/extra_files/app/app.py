@@ -2493,8 +2493,19 @@ def admin_envoyer_sauvegarde_distante():
 @app.route('/admin/sauvegarde/attente')
 @login_required
 def admin_sauvegarde_attente():
-    """Page d'attente après restauration — attend que le service redémarre."""
-    return render_template('admin/restauration_attente.html')
+    return render_template('admin/restauration_attente.html',
+                           restart=request.args.get('restart') == '1')
+
+
+@app.route('/admin/sauvegarde/trigger-restart', methods=['POST'])
+@login_required
+def admin_trigger_restart():
+    """Déclenche le redémarrage depuis JS après que la page d'attente est affichée."""
+    try:
+        subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
+    except Exception:
+        pass
+    return '', 200
 
 
 @app.route('/admin/sauvegarde/infos-nas')
@@ -2571,23 +2582,19 @@ def admin_restaurer_nas():
         if r.returncode != 0: errors.append(f'uploads: {r.stderr.strip()}')
 
         if not errors:
-            # Fix permissions + redémarrage via script sudoers
+            # Fermer les connexions SQLAlchemy
             try:
                 db.engine.dispose()
             except Exception:
                 pass
-            try:
-                subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
-            except Exception:
-                pass
-            flash('✅ Restauration depuis le NAS réussie — reconnectez-vous dans quelques secondes.', 'success')
+            flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
     except subprocess.TimeoutExpired:
         flash('❌ Timeout — connexion trop lente.', 'danger')
     except Exception as e:
         flash(f'❌ Erreur : {e}', 'danger')
-    return redirect(url_for('admin_sauvegarde_attente'))
+    return redirect(url_for('admin_sauvegarde_attente') + '?restart=1')
 
 
 @app.route('/admin/sauvegarde/lancer', methods=['POST'])
@@ -2825,19 +2832,14 @@ def admin_sauvegarde_importer():
                     if os.path.isfile(src):
                         shutil.copy2(src, dest)
 
-    # Fix permissions + redémarrage via script sudoers
+    # Fermer les connexions SQLAlchemy
     try:
         db.engine.dispose()
     except Exception:
         pass
-    try:
-        import subprocess
-        subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
-    except Exception:
-        pass
 
-    flash('Restauration effectuée — redémarrage en cours.', 'success')
-    return redirect(url_for('admin_sauvegarde_attente'))
+    flash('Restauration effectuée.', 'success')
+    return redirect(url_for('admin_sauvegarde_attente') + '?restart=1')
 
 
 @app.route('/admin/sauvegarde/telecharger/<nom>')
