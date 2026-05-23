@@ -4,6 +4,7 @@
 APP="orthoptie"
 DATA_DIR="/home/yunohost.app/${APP}"
 BACKUP_DIR="${DATA_DIR}/backups"
+SSH_KEY="${DATA_DIR}/ssh/backup_key"
 MAX_BACKUPS=7
 
 mkdir -p "${BACKUP_DIR}"
@@ -19,5 +20,24 @@ else
     exit 1
 fi
 
+# Rotation locale
 ls -t "${BACKUP_DIR}"/orthoptie_backup_*.tar.gz 2>/dev/null | tail -n +$((MAX_BACKUPS + 1)) | xargs -r rm --
 echo "Rotation effectuée — ${MAX_BACKUPS} sauvegardes conservées"
+
+# Envoi SFTP/rsync si configuré et activé
+SFTP_CONFIG="${DATA_DIR}/sftp_config.sh"
+if [ -f "${SFTP_CONFIG}" ]; then
+    source "${SFTP_CONFIG}"
+    if [ "${SFTP_ACTIF}" = "1" ] && [ -n "${SFTP_HOST}" ] && [ -f "${SSH_KEY}" ]; then
+        echo "Envoi vers ${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}..."
+        rsync -az --timeout=60 \
+            -e "ssh -i ${SSH_KEY} -p ${SFTP_PORT:-22} -o StrictHostKeyChecking=no -o BatchMode=yes" \
+            "${BACKUP_FILE}" \
+            "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/"
+        if [ $? -eq 0 ]; then
+            echo "Sauvegarde distante OK"
+        else
+            echo "Erreur envoi distant" >&2
+        fi
+    fi
+fi

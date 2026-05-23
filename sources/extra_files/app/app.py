@@ -734,6 +734,20 @@ class NotePatient(db.Model):
     praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
 
 
+class ConfigSauvegarde(db.Model):
+    """Configuration de la sauvegarde distante."""
+    __tablename__ = 'config_sauvegarde'
+    id            = db.Column(db.Integer, primary_key=True)
+    sftp_host     = db.Column(db.String(255), default='')
+    sftp_port     = db.Column(db.Integer, default=22)
+    sftp_user     = db.Column(db.String(100), default='')
+    sftp_path     = db.Column(db.String(500), default='/backups/orthoptie')
+    sftp_actif    = db.Column(db.Boolean, default=False)
+    cle_publique  = db.Column(db.Text, default='')
+    cle_privee    = db.Column(db.Text, default='')
+    updated_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class CategorieSection(db.Model):
     """Catégories personnalisables pour les sections de bilan."""
     __tablename__ = 'categorie_section'
@@ -2298,7 +2312,151 @@ def note_patient_supprimer(note_id):
     return redirect(url_for('patient_detail', patient_id=patient_id))
 
 
-@app.route('/admin/nettoyage-fichiers', methods=['POST'])
+@app.route('/admin/sauvegarde/config-distante', methods=['POST'])
+@login_required
+@admin_required
+def admin_sauvegarde_config_distante():
+    """Configure la sauvegarde SFTP distante."""
+    cfg = ConfigSauvegarde.query.first()
+    if not cfg:
+        cfg = ConfigSauvegarde()
+        db.session.add(cfg)
+    cfg.sftp_host  = request.form.get('sftp_host', '').strip()
+    cfg.sftp_port  = int(request.form.get('sftp_port', 22) or 22)
+    cfg.sftp_user  = request.form.get('sftp_user', '').strip()
+    cfg.sftp_path  = request.form.get('sftp_path', '/backups/orthoptie').strip()
+    cfg.sftp_actif = request.form.get('sftp_actif') == '1'
+    cfg.updated_at = datetime.utcnow()
+    db.session.commit()
+    # Générer le fichier de config shell pour le cron
+    import os
+    data_dir = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
+    config_path = os.path.join(data_dir, 'sftp_config.sh')
+    with open(config_path, 'w') as f:
+        f.write(f'SFTP_ACTIF="{1 if cfg.sftp_actif else 0}"\n')
+        f.write(f'SFTP_HOST="{cfg.sftp_host}"\n')
+        f.write(f'SFTP_PORT="{cfg.sftp_port}"\n')
+        f.write(f'SFTP_USER="{cfg.sftp_user}"\n')
+        f.write(f'SFTP_PATH="{cfg.sftp_path}"\n')
+    flash('Configuration sauvegarde distante enregistrée.', 'success')
+    return redirect(url_for('admin_sauvegarde'))
+
+
+@app.route('/admin/sauvegarde/generer-cle', methods=['POST'])
+@login_required
+@admin_required
+def admin_generer_cle_ssh():
+    """Génère une paire de clés SSH RSA 4096 bits."""
+    import subprocess, os
+    cfg = ConfigSauvegarde.query.first()
+    if not cfg:
+        cfg = ConfigSauvegarde()
+        db.session.add(cfg)
+    key_dir = os.path.join(app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie'), 'ssh')
+    os.makedirs(key_dir, exist_ok=True)
+    key_path = os.path.join(key_dir, 'backup_key')
+    if os.path.exists(key_path):
+        os.remove(key_path)
+    if os.path.exists(key_path + '.pub'):
+        os.remove(key_path + '.pub')
+    try:
+        subprocess.run([
+            'ssh-keygen', '-t', 'rsa', '-b', '4096',
+            '-f', key_path, '-N', '', '-C', 'orthoptie-backup'
+        ], check=True, capture_output=True)
+        with open(key_path) as f:
+            cfg.cle_privee = f.read()
+        with open(key_path + '.pub') as f:
+            cfg.cle_publique = f.read()
+        db.session.commit()
+        flash('Paire de clés SSH générée avec succès.', 'success')
+    except Exception as e:
+        flash(f'Erreur lors de la génération des clés : {e}', 'danger')
+    return redirect(url_for('admin_sauvegarde'))
+
+
+@app.route('/admin/sauvegarde/test-connexion', methods=['POST'])
+@login_required
+@admin_required
+def admin_test_connexion_sftp():
+    """Teste la connexion SFTP."""
+    import subprocess, os, tempfile
+    cfg = ConfigSauvegarde.query.first()
+    if not cfg or not cfg.sftp_host or not cfg.cle_privee:
+        flash('Configuration incomplète — renseignez l\'hôte et générez une clé SSH.', 'danger')
+        return redirect(url_for('admin_sauvegarde'))
+    key_dir = os.path.join(app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie'), 'ssh')
+    key_path = os.path.join(key_dir, 'backup_key')
+    if not os.path.exists(key_path):
+        os.makedirs(key_dir, exist_ok=True)
+        with open(key_path, 'w') as f:
+            f.write(cfg.cle_privee)
+        os.chmod(key_path, 0o600)
+    try:
+        result = subprocess.run([
+            'ssh', '-i', key_path,
+            '-p', str(cfg.sftp_port),
+            '-o', 'StrictHostKeyChecking=no',
+            '-o', 'ConnectTimeout=10',
+            '-o', 'BatchMode=yes',
+            f'{cfg.sftp_user}@{cfg.sftp_host}',
+            f'mkdir -p {cfg.sftp_path} && echo OK'
+        ], capture_output=True, text=True, timeout=15)
+        if result.returncode == 0:
+            flash(f'✅ Connexion réussie à {cfg.sftp_host} !', 'success')
+        else:
+            flash(f'❌ Échec de connexion : {result.stderr.strip() or result.stdout.strip()}', 'danger')
+    except subprocess.TimeoutExpired:
+        flash('❌ Timeout — vérifiez l\'adresse et le port.', 'danger')
+    except Exception as e:
+        flash(f'❌ Erreur : {e}', 'danger')
+    return redirect(url_for('admin_sauvegarde'))
+
+
+@app.route('/admin/sauvegarde/envoyer-distant', methods=['POST'])
+@login_required
+@admin_required
+def admin_envoyer_sauvegarde_distante():
+    """Envoie la dernière sauvegarde locale vers le SFTP distant."""
+    import subprocess, os, glob
+    cfg = ConfigSauvegarde.query.first()
+    if not cfg or not cfg.sftp_host or not cfg.cle_privee:
+        flash('Configuration SFTP incomplète.', 'danger')
+        return redirect(url_for('admin_sauvegarde'))
+    backup_dir = os.path.join(app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie'), 'backups')
+    fichiers = sorted(glob.glob(os.path.join(backup_dir, '*.tar.gz')), key=os.path.getmtime, reverse=True)
+    if not fichiers:
+        flash('Aucune sauvegarde locale trouvée.', 'danger')
+        return redirect(url_for('admin_sauvegarde'))
+    dernier = fichiers[0]
+    key_dir  = os.path.join(app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie'), 'ssh')
+    key_path = os.path.join(key_dir, 'backup_key')
+    if not os.path.exists(key_path):
+        os.makedirs(key_dir, exist_ok=True)
+        with open(key_path, 'w') as f: f.write(cfg.cle_privee)
+        os.chmod(key_path, 0o600)
+    try:
+        result = subprocess.run([
+            'rsync', '-avz', '--progress',
+            '-e', f'ssh -i {key_path} -p {cfg.sftp_port} -o StrictHostKeyChecking=no',
+            dernier,
+            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/'
+        ], capture_output=True, text=True, timeout=120)
+        if result.returncode == 0:
+            nom = os.path.basename(dernier)
+            flash(f'✅ Sauvegarde envoyée : {nom}', 'success')
+        else:
+            flash(f'❌ Erreur rsync : {result.stderr.strip()}', 'danger')
+    except subprocess.TimeoutExpired:
+        flash('❌ Timeout — la sauvegarde est peut-être trop volumineuse ou la connexion trop lente.', 'danger')
+    except FileNotFoundError:
+        flash('❌ rsync non installé sur le serveur.', 'danger')
+    except Exception as e:
+        flash(f'❌ Erreur : {e}', 'danger')
+    return redirect(url_for('admin_sauvegarde'))
+
+
+
 @login_required
 @admin_required
 def admin_nettoyage_fichiers():
@@ -2416,7 +2574,8 @@ def admin_sauvegarde():
             'taille': f"{stat.st_size / 1024 / 1024:.1f} Mo",
             'date': datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M'),
         })
-    return render_template('admin/sauvegarde.html', backups=backups_info)
+    return render_template('admin/sauvegarde.html', backups=backups_info,
+                           config_sauvegarde=ConfigSauvegarde.query.first())
 
 
 @app.route('/admin/sauvegarde/exporter')

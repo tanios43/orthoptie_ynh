@@ -1,84 +1,159 @@
 {% extends "base.html" %}
-{% block title %}Sauvegardes{% endblock %}
-{% block page_title %}💾 Sauvegardes{% endblock %}
+{% block title %}Sauvegarde{% endblock %}
+{% block page_title %}💾 Sauvegarde{% endblock %}
 
 {% block content %}
-<div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px;">
+{% set cfg = config_sauvegarde %}
+<div style="max-width:760px;display:flex;flex-direction:column;gap:16px;">
 
-  {# Export manuel #}
+  {# ── Sauvegarde locale ── #}
   <div class="card">
-    <div class="card-header"><h2>Exporter une sauvegarde</h2></div>
+    <div class="card-header"><h2>📥 Sauvegarde locale</h2></div>
     <div class="card-body">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
-        Génère un fichier zip contenant la base de données et tous les fichiers
-        (documents, signatures, uploads). À télécharger et conserver en lieu sûr.
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+        Télécharge une archive complète de la base de données et des fichiers uploadés.
       </p>
-      <a href="{{ url_for('admin_sauvegarde_exporter') }}"
-         class="btn btn-primary">
+      <a href="{{ url_for('admin_sauvegarde_exporter') }}" class="btn btn-primary">
         📥 Télécharger la sauvegarde
       </a>
     </div>
   </div>
 
-  {# Import / restauration #}
+  {# ── Restauration ── #}
   <div class="card">
-    <div class="card-header"><h2>Restaurer une sauvegarde</h2></div>
+    <div class="card-header"><h2>🔄 Restaurer une sauvegarde</h2></div>
     <div class="card-body">
-      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;
-                  padding:12px 16px;margin-bottom:16px;font-size:13px;">
-        ⚠️ <strong>Attention</strong> — La restauration remplace définitivement
-        toutes les données actuelles. Cette action est irréversible.
-      </div>
       <form method="POST" action="{{ url_for('admin_sauvegarde_importer') }}"
             enctype="multipart/form-data">
-        <div class="field-group" style="margin-bottom:12px;">
+        <div class="field-group" style="margin-bottom:10px;">
           <label class="field-label">Fichier de sauvegarde (.zip ou .tar.gz)</label>
-          <input type="file" name="backup_file" accept=".zip,.tar.gz,.gz" required>
-        </div>
-        <div class="field-group" style="margin-bottom:16px;">
-          <label class="field-label">Tapez <strong>oui</strong> pour confirmer</label>
-          <input type="text" name="confirmation" placeholder="oui"
-                 autocomplete="off" style="max-width:120px;">
+          <input type="file" name="fichier" accept=".zip,.tar.gz" required>
         </div>
         <button type="submit" class="btn btn-secondary"
-                style="color:#e53e3e;border-color:#e53e3e;">
+                onclick="return confirm('Restaurer cette sauvegarde ? Les données actuelles seront remplacées.')">
           🔄 Restaurer
         </button>
       </form>
     </div>
   </div>
 
-  {# Sauvegardes automatiques #}
+  {# ── Sauvegardes automatiques ── #}
   <div class="card">
-    <div class="card-header"><h2>Sauvegardes automatiques</h2></div>
+    <div class="card-header"><h2>🕑 Sauvegardes automatiques</h2></div>
     <div class="card-body">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
-        Sauvegarde automatique quotidienne à 2h du matin — 7 dernières conservées.
+      <p style="font-size:13px;color:var(--muted);">
+        Une sauvegarde automatique est effectuée chaque nuit à 2h. Les 7 dernières sont conservées sur le serveur.
       </p>
-      {% if backups %}
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        {% for b in backups %}
-        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;
-                    background:var(--bg);border:1px solid var(--border);border-radius:7px;">
-          <span style="font-size:18px;">💾</span>
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:500;">{{ b.nom }}</div>
-            <div style="font-size:11px;color:var(--muted);">{{ b.date }} · {{ b.taille }}</div>
-          </div>
-          <a href="{{ url_for('admin_sauvegarde_telecharger', nom=b.nom) }}"
-             class="btn btn-secondary btn-sm">📥</a>
-        </div>
-        {% endfor %}
-      </div>
+    </div>
+  </div>
+
+  {# ── Sauvegarde distante SFTP ── #}
+  <div class="card" style="overflow:hidden;">
+    <div class="card-header" style="background:#EEEDFE22;">
+      <h2>🌐 Sauvegarde distante (SFTP / NAS)</h2>
+      {% if cfg and cfg.sftp_actif %}
+      <span style="background:#E1F5EE;color:#085041;border-radius:10px;font-size:11px;padding:2px 8px;font-weight:500;margin-left:auto;">
+        ✅ Activée
+      </span>
       {% else %}
-      <div style="color:var(--muted);font-size:13px;">
-        Aucune sauvegarde automatique pour l'instant.
+      <span style="background:#F1EFE8;color:var(--muted);border-radius:10px;font-size:11px;padding:2px 8px;margin-left:auto;">
+        Désactivée
+      </span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Envoi automatique des sauvegardes vers un serveur distant (NAS TrueNAS, Synology, VPS…) via SSH/rsync.
+      </p>
+
+      {# Étape 1 : Clé SSH #}
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;">
+        Étape 1 — Clé SSH
+      </h3>
+      {% if cfg and cfg.cle_publique %}
+      <div style="background:var(--bg);border-radius:7px;padding:10px 12px;margin-bottom:10px;border:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">
+          Clé publique à copier sur votre NAS
+        </div>
+        <div style="font-family:monospace;font-size:11px;word-break:break-all;line-height:1.6;
+                    background:white;padding:8px;border-radius:5px;border:1px solid var(--border);">
+          {{ cfg.cle_publique }}
+        </div>
+        <button onclick="navigator.clipboard.writeText('{{ cfg.cle_publique | replace('\n','') }}');this.textContent='✅ Copié !';setTimeout(()=>this.textContent='📋 Copier',2000)"
+                class="btn btn-secondary btn-sm" style="margin-top:8px;">📋 Copier</button>
+      </div>
+      <div style="background:#FAEEDA;border-radius:7px;padding:10px 14px;font-size:12px;margin-bottom:12px;">
+        <strong>Sur TrueNAS Scale :</strong> Credentials → Users → sélectionnez votre utilisateur
+        → <em>SSH Public Keys</em> → collez la clé ci-dessus.
+      </div>
+      {% endif %}
+      <form method="POST" action="{{ url_for('admin_generer_cle_ssh') }}" style="margin-bottom:16px;">
+        <button type="submit" class="btn btn-secondary btn-sm"
+                onclick="return confirm('Générer une nouvelle clé ? L\'ancienne sera effacée.')">
+          🔑 {{ 'Regénérer' if cfg and cfg.cle_publique else 'Générer' }} la clé SSH
+        </button>
+      </form>
+
+      {# Étape 2 : Configuration #}
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;">
+        Étape 2 — Configuration du serveur distant
+      </h3>
+      <form method="POST" action="{{ url_for('admin_sauvegarde_config_distante') }}">
+        <div style="display:grid;grid-template-columns:1fr 100px;gap:10px;margin-bottom:10px;">
+          <div class="field-group">
+            <label class="field-label">Adresse du serveur (IP ou nom de domaine)</label>
+            <input type="text" name="sftp_host" placeholder="192.168.1.100 ou mon-nas.example.com"
+                   value="{{ cfg.sftp_host if cfg else '' }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Port SSH</label>
+            <input type="number" name="sftp_port" value="{{ cfg.sftp_port if cfg else 22 }}" min="1" max="65535">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div class="field-group">
+            <label class="field-label">Utilisateur SSH</label>
+            <input type="text" name="sftp_user" placeholder="orthoptie-backup"
+                   value="{{ cfg.sftp_user if cfg else '' }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Dossier distant</label>
+            <input type="text" name="sftp_path" placeholder="/mnt/pool/backups/orthoptie"
+                   value="{{ cfg.sftp_path if cfg else '/backups/orthoptie' }}">
+          </div>
+        </div>
+        <div class="field-group" style="margin-bottom:12px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" name="sftp_actif" value="1"
+                   {{ 'checked' if cfg and cfg.sftp_actif }}>
+            Activer l'envoi automatique après chaque sauvegarde nocturne
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="submit" class="btn btn-primary btn-sm">💾 Enregistrer la configuration</button>
+        </div>
+      </form>
+
+      {# Étape 3 : Test et envoi manuel #}
+      {% if cfg and cfg.sftp_host and cfg.cle_publique %}
+      <h3 style="font-size:14px;font-weight:600;margin:16px 0 8px;">
+        Étape 3 — Test et envoi manuel
+      </h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <form method="POST" action="{{ url_for('admin_test_connexion_sftp') }}">
+          <button type="submit" class="btn btn-secondary btn-sm">🔌 Tester la connexion</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin_envoyer_sauvegarde_distante') }}"
+              onsubmit="return confirm('Envoyer la dernière sauvegarde vers le serveur distant ?')">
+          <button type="submit" class="btn btn-secondary btn-sm">📤 Envoyer la dernière sauvegarde</button>
+        </form>
       </div>
       {% endif %}
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px;">
+  {# ── Nettoyage ── #}
+  <div class="card">
     <div class="card-header"><h2>🧹 Nettoyage des fichiers</h2></div>
     <div class="card-body">
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">

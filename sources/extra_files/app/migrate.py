@@ -31,6 +31,17 @@ if _db_path:
         "ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''",
         "ALTER TABLE section_def ADD COLUMN avec_observations BOOLEAN DEFAULT 1",
         "ALTER TABLE section_def ADD COLUMN obs_defaut TEXT DEFAULT ''",
+        """CREATE TABLE IF NOT EXISTS config_sauvegarde (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sftp_host TEXT DEFAULT '',
+            sftp_port INTEGER DEFAULT 22,
+            sftp_user TEXT DEFAULT '',
+            sftp_path TEXT DEFAULT '/backups/orthoptie',
+            sftp_actif BOOLEAN DEFAULT 0,
+            cle_publique TEXT DEFAULT '',
+            cle_privee TEXT DEFAULT '',
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
         """CREATE TABLE IF NOT EXISTS suivi_bv (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             patient_id INTEGER NOT NULL REFERENCES patient(id),
