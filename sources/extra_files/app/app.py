@@ -2457,6 +2457,7 @@ def admin_envoyer_sauvegarde_distante():
 
 
 
+@app.route('/admin/nettoyage-fichiers', methods=['POST'])
 @login_required
 @admin_required
 def admin_nettoyage_fichiers():
