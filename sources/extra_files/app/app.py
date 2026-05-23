@@ -2582,11 +2582,12 @@ def admin_restaurer_nas():
         if r.returncode != 0: errors.append(f'uploads: {r.stderr.strip()}')
 
         if not errors:
-            # Fermer les connexions SQLAlchemy
             try:
                 db.engine.dispose()
             except Exception:
                 pass
+            # Fix permissions + redémarrage direct (comme avant)
+            subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
             flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
@@ -2594,7 +2595,7 @@ def admin_restaurer_nas():
         flash('❌ Timeout — connexion trop lente.', 'danger')
     except Exception as e:
         flash(f'❌ Erreur : {e}', 'danger')
-    return redirect(url_for('admin_sauvegarde_attente') + '?restart=1')
+    return redirect(url_for('admin_sauvegarde'))
 
 
 @app.route('/admin/sauvegarde/lancer', methods=['POST'])
@@ -2837,9 +2838,13 @@ def admin_sauvegarde_importer():
         db.engine.dispose()
     except Exception:
         pass
-
+    # Fix permissions + redémarrage
+    try:
+        subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
+    except Exception:
+        pass
     flash('Restauration effectuée.', 'success')
-    return redirect(url_for('admin_sauvegarde_attente') + '?restart=1')
+    return redirect(url_for('admin_sauvegarde'))
 
 
 @app.route('/admin/sauvegarde/telecharger/<nom>')
