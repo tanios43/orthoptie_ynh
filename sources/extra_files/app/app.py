@@ -2490,6 +2490,13 @@ def admin_envoyer_sauvegarde_distante():
 
 
 
+@app.route('/admin/sauvegarde/attente')
+@login_required
+def admin_sauvegarde_attente():
+    """Page d'attente après restauration — attend que le service redémarre."""
+    return render_template('admin/restauration_attente.html')
+
+
 @app.route('/admin/sauvegarde/infos-nas')
 @login_required
 @admin_required
@@ -2573,29 +2580,29 @@ def admin_restaurer_nas():
                 uid = pwd.getpwnam('orthoptie').pw_uid
                 gid = pwd.getpwnam('orthoptie').pw_gid
                 os.chown(db_path, uid, gid)
-                # Corriger les permissions des uploads récursivement
                 subprocess.run(['chown', '-R', 'orthoptie:orthoptie',
                                 os.path.join(data_dir, 'uploads')],
                                capture_output=True)
             except Exception:
                 pass
-            # Redémarrer le service après un court délai
-            # (pour laisser la réponse HTTP partir avant)
+            # Fermer toutes les connexions SQLAlchemy
             try:
-                subprocess.Popen([
-                    'bash', '-c',
-                    'sleep 2 && systemctl restart orthoptie'
-                ])
+                db.engine.dispose()
             except Exception:
                 pass
-            flash('✅ Restauration depuis le NAS réussie — redémarrage dans 2s, reconnectez-vous.', 'success')
+            # Redémarrer après délai
+            try:
+                subprocess.Popen(['bash', '-c', 'sleep 3 && systemctl restart orthoptie'])
+            except Exception:
+                pass
+            flash('✅ Restauration depuis le NAS réussie — reconnectez-vous dans quelques secondes.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
     except subprocess.TimeoutExpired:
         flash('❌ Timeout — connexion trop lente.', 'danger')
     except Exception as e:
         flash(f'❌ Erreur : {e}', 'danger')
-    return redirect(url_for('admin_sauvegarde'))
+    return redirect(url_for('admin_sauvegarde_attente'))
 
 
 @app.route('/admin/sauvegarde/lancer', methods=['POST'])
@@ -2853,8 +2860,8 @@ def admin_sauvegarde_importer():
     except Exception:
         pass
 
-    flash('Restauration effectuée — redémarrage dans 2s, reconnectez-vous.', 'success')
-    return redirect(url_for('logout'))
+    flash('Restauration effectuée — redémarrage en cours.', 'success')
+    return redirect(url_for('admin_sauvegarde_attente'))
 
 
 @app.route('/admin/sauvegarde/telecharger/<nom>')

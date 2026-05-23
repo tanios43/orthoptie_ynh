@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Restauration en cours…</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; align-items: center;
+           justify-content: center; min-height: 100vh; margin: 0;
+           background: #f5f5f5; color: #333; }
+    .box { background: white; border-radius: 12px; padding: 40px 48px;
+           box-shadow: 0 4px 24px rgba(0,0,0,.1); text-align: center; max-width: 420px; }
+    .spinner { width: 48px; height: 48px; border: 4px solid #e0e0e0;
+               border-top-color: #534AB7; border-radius: 50%;
+               animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h2 { font-size: 18px; margin: 0 0 8px; }
+    p  { font-size: 13px; color: #666; margin: 0 0 20px; }
+    .bar { height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; }
+    .bar-fill { height: 100%; background: #534AB7; border-radius: 2px;
+                animation: progress 8s linear forwards; }
+    @keyframes progress { from { width: 0 } to { width: 100% } }
+    .status { margin-top: 16px; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="spinner"></div>
+    <h2>Restauration en cours…</h2>
+    <p>Le service redémarre pour prendre en compte les données restaurées.<br>
+       Vous allez être redirigé automatiquement.</p>
+    <div class="bar"><div class="bar-fill"></div></div>
+    <div class="status" id="status">Redémarrage du service…</div>
+  </div>
+
+  <script>
+  const messages = [
+    'Redémarrage du service…',
+    'Chargement de la base de données…',
+    'Vérification des fichiers…',
+    'Presque prêt…',
+  ];
+  let i = 0;
+  const el = document.getElementById('status');
+  setInterval(() => { if (i < messages.length - 1) el.textContent = messages[++i]; }, 2000);
+
+  // Tenter de se connecter toutes les secondes — rediriger quand le service répond
+  let attempts = 0;
+  const check = setInterval(() => {
+    attempts++;
+    fetch('/login', { method: 'HEAD', cache: 'no-store' })
+      .then(r => {
+        if (r.ok || r.status === 302 || r.status === 200) {
+          clearInterval(check);
+          window.location.href = '/login';
+        }
+      })
+      .catch(() => {});
+    if (attempts > 30) { clearInterval(check); window.location.href = '/login'; }
+  }, 1000);
+  </script>
+</body>
+</html>
