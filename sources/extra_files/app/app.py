@@ -2457,6 +2457,30 @@ def admin_envoyer_sauvegarde_distante():
 
 
 
+@app.route('/admin/sauvegarde/lancer', methods=['POST'])
+@login_required
+@admin_required
+def admin_sauvegarde_lancer():
+    """Lance manuellement le script de sauvegarde automatique."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ['/etc/cron.daily/orthoptie-backup'],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode == 0:
+            flash('✅ Sauvegarde lancée avec succès. ' + (result.stdout.split('\n')[0] if result.stdout else ''), 'success')
+        else:
+            flash(f'❌ Erreur : {result.stderr.strip() or result.stdout.strip()}', 'danger')
+    except subprocess.TimeoutExpired:
+        flash('❌ Timeout — la sauvegarde prend trop de temps.', 'danger')
+    except FileNotFoundError:
+        flash('❌ Script de sauvegarde introuvable.', 'danger')
+    except Exception as e:
+        flash(f'❌ Erreur : {e}', 'danger')
+    return redirect(url_for('admin_sauvegarde'))
+
+
 @app.route('/admin/nettoyage-fichiers', methods=['POST'])
 @login_required
 @admin_required

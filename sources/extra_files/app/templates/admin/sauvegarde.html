@@ -41,9 +41,15 @@
   <div class="card">
     <div class="card-header"><h2>🕑 Sauvegardes automatiques</h2></div>
     <div class="card-body">
-      <p style="font-size:13px;color:var(--muted);">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
         Une sauvegarde automatique est effectuée chaque nuit à 2h. Les 7 dernières sont conservées sur le serveur.
       </p>
+      <form method="POST" action="{{ url_for('admin_sauvegarde_lancer') }}">
+        <button type="submit" class="btn btn-secondary"
+                onclick="return confirm('Lancer une sauvegarde maintenant ?')">
+          ▶ Lancer une sauvegarde maintenant
+        </button>
+      </form>
     </div>
   </div>
 
