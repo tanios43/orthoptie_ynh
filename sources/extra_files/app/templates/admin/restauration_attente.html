@@ -17,7 +17,7 @@
     p  { font-size: 13px; color: #666; margin: 0 0 20px; }
     .bar { height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
     .bar-fill { height: 100%; background: #534AB7; border-radius: 2px;
-                animation: progress 10s linear forwards; }
+                animation: progress 12s linear forwards; }
     @keyframes progress { from { width: 0 } to { width: 100% } }
     .status { font-size: 12px; color: #999; }
   </style>
@@ -26,41 +26,37 @@
   <div class="box">
     <div class="spinner"></div>
     <h2>Restauration en cours…</h2>
-    <p>Corrections des permissions et redémarrage du service.<br>
-       Vous serez redirigé automatiquement.</p>
+    <p>Redémarrage du service en cours.<br>
+       Vous serez redirigé automatiquement vers la connexion.</p>
     <div class="bar"><div class="bar-fill"></div></div>
-    <div class="status" id="status">Initialisation…</div>
+    <div class="status" id="status">Correction des permissions…</div>
   </div>
 
   <script>
   const el = document.getElementById('status');
-  const restart = {{ 'true' if restart else 'false' }};
-
   const steps = [
-    [0,    'Correction des permissions…'],
     [2000, 'Redémarrage du service…'],
-    [5000, 'Chargement de la base de données…'],
-    [8000, 'Presque prêt…'],
+    [6000, 'Chargement de la base de données…'],
+    [9000, 'Presque prêt…'],
   ];
   steps.forEach(([delay, msg]) => setTimeout(() => el.textContent = msg, delay));
 
-  function tryRedirect() {
-    fetch('/login', { method: 'HEAD', cache: 'no-store' })
-      .then(r => { if (r.ok || r.status < 500) window.location.href = '/login'; })
-      .catch(() => {});
-  }
-
-  if (restart) {
-    // Déclencher le redémarrage depuis ici (page déjà affichée)
-    fetch('/admin/sauvegarde/trigger-restart', {
-      method: 'POST', credentials: 'include'
-    }).catch(() => {});
-    // Commencer à tester la disponibilité après 4s
-    setTimeout(() => setInterval(tryRedirect, 1000), 4000);
-  } else {
-    // Redémarrage déjà en cours (restauration locale)
-    setTimeout(() => setInterval(tryRedirect, 1000), 3000);
-  }
+  // Tester la disponibilité toutes les secondes à partir de 6s
+  let attempts = 0;
+  setTimeout(() => {
+    const check = setInterval(() => {
+      attempts++;
+      fetch('/login', { method: 'HEAD', cache: 'no-store' })
+        .then(r => {
+          if (r.ok || r.status === 200 || r.status === 302) {
+            clearInterval(check);
+            window.location.href = '/login';
+          }
+        })
+        .catch(() => {}); // service en cours de redémarrage, normal
+      if (attempts > 30) { clearInterval(check); window.location.href = '/login'; }
+    }, 1000);
+  }, 6000);
   </script>
 </body>
 </html>
