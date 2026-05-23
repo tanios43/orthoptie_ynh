@@ -19,9 +19,39 @@
     </div>
   </div>
 
-  {# ── Restauration ── #}
+  {# ── Restauration depuis le NAS ── #}
+  {% if config_sauvegarde and config_sauvegarde.sftp_host and config_sauvegarde.cle_publique %}
   <div class="card">
-    <div class="card-header"><h2>🔄 Restaurer une sauvegarde</h2></div>
+    <div class="card-header" style="background:#FAEEDA22;">
+      <h2>📡 Restaurer depuis le NAS</h2>
+    </div>
+    <div class="card-body">
+      <div id="nas-infos" style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+        <span id="nas-loading">⏳ Vérification de la dernière sauvegarde NAS…</span>
+        <span id="nas-date" style="display:none;">
+          Dernière sauvegarde NAS : <strong id="nas-date-val"></strong>
+          — Uploads : <span id="nas-size-val" style="color:var(--muted);"></span>
+        </span>
+        <span id="nas-error" style="display:none;color:var(--danger);"></span>
+      </div>
+      <div style="background:#FAEEDA;border-left:3px solid #EF9F27;border-radius:0 6px 6px 0;
+                  padding:10px 14px;font-size:13px;margin-bottom:14px;">
+        ⚠️ Cette opération <strong>remplace</strong> la base de données et les fichiers actuels
+        par ceux du NAS. Action irréversible.
+      </div>
+      <form method="POST" action="{{ url_for('admin_restaurer_nas') }}"
+            onsubmit="return confirm('Confirmer la restauration depuis le NAS ? Les données actuelles seront remplacées.')">
+        <button type="submit" class="btn btn-secondary" id="btn-restaurer-nas" disabled>
+          📡 Restaurer depuis le NAS
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Restauration locale ── #}
+  <div class="card">
+    <div class="card-header"><h2>🔄 Restaurer depuis un fichier local</h2></div>
     <div class="card-body">
       <form method="POST" action="{{ url_for('admin_sauvegarde_importer') }}"
             enctype="multipart/form-data">
@@ -176,4 +206,32 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if config_sauvegarde and config_sauvegarde.sftp_host and config_sauvegarde.cle_publique %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  fetch("{{ url_for('admin_sauvegarde_infos_nas') }}", {credentials: 'include'})
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('nas-loading').style.display = 'none';
+      if (data.ok) {
+        document.getElementById('nas-date-val').textContent = data.date;
+        document.getElementById('nas-size-val').textContent = data.size;
+        document.getElementById('nas-date').style.display = '';
+        document.getElementById('btn-restaurer-nas').disabled = false;
+      } else {
+        document.getElementById('nas-error').textContent = '❌ ' + (data.error || 'NAS inaccessible');
+        document.getElementById('nas-error').style.display = '';
+      }
+    })
+    .catch(() => {
+      document.getElementById('nas-loading').style.display = 'none';
+      document.getElementById('nas-error').textContent = '❌ Impossible de contacter le NAS';
+      document.getElementById('nas-error').style.display = '';
+    });
+});
+</script>
+{% endif %}
 {% endblock %}

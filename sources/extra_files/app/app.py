@@ -2490,6 +2490,88 @@ def admin_envoyer_sauvegarde_distante():
 
 
 
+@app.route('/admin/sauvegarde/infos-nas')
+@login_required
+@admin_required
+def admin_sauvegarde_infos_nas():
+    """Retourne les infos de la dernière sauvegarde NAS en JSON."""
+    import subprocess, os
+    cfg = ConfigSauvegarde.query.first()
+    if not cfg or not cfg.sftp_host or not cfg.cle_privee:
+        return {'error': 'NAS non configuré'}, 400
+    key_dir  = os.path.join(app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie'), 'ssh')
+    key_path = os.path.join(key_dir, 'backup_key')
+    if not os.path.exists(key_path):
+        os.makedirs(key_dir, exist_ok=True)
+        with open(key_path, 'w') as f: f.write(cfg.cle_privee)
+        os.chmod(key_path, 0o600)
+    try:
+        r = subprocess.run([
+            'ssh', '-i', key_path, '-p', str(cfg.sftp_port),
+            '-o', 'StrictHostKeyChecking=no', '-o', 'BatchMode=yes',
+            '-o', 'ConnectTimeout=10',
+            f'{cfg.sftp_user}@{cfg.sftp_host}',
+            f'stat -c "%Y" {cfg.sftp_path}/db/orthoptie_v2.db 2>/dev/null && '
+            f'du -sh {cfg.sftp_path}/uploads 2>/dev/null | cut -f1'
+        ], capture_output=True, text=True, timeout=15)
+        if r.returncode == 0:
+            lines = r.stdout.strip().split('\n')
+            ts = int(lines[0]) if lines and lines[0].isdigit() else None
+            size = lines[1] if len(lines) > 1 else '?'
+            date_str = datetime.fromtimestamp(ts).strftime('%d/%m/%Y à %H:%M') if ts else 'inconnue'
+            return {'date': date_str, 'size': size, 'ok': True}
+        return {'error': r.stderr.strip() or 'Connexion échouée'}, 400
+    except Exception as e:
+        return {'error': str(e)}, 400
+
+
+@app.route('/admin/sauvegarde/restaurer-nas', methods=['POST'])
+@login_required
+@admin_required
+def admin_restaurer_nas():
+    """Restaure depuis le NAS (db + uploads)."""
+    import subprocess, os, shutil
+    cfg = ConfigSauvegarde.query.first()
+    if not cfg or not cfg.sftp_host or not cfg.cle_privee:
+        flash('NAS non configuré.', 'danger')
+        return redirect(url_for('admin_sauvegarde'))
+    key_dir  = os.path.join(app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie'), 'ssh')
+    key_path = os.path.join(key_dir, 'backup_key')
+    if not os.path.exists(key_path):
+        os.makedirs(key_dir, exist_ok=True)
+        with open(key_path, 'w') as f: f.write(cfg.cle_privee)
+        os.chmod(key_path, 0o600)
+    data_dir = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
+    ssh_opts = f"ssh -i {key_path} -p {cfg.sftp_port} -o StrictHostKeyChecking=no -o BatchMode=yes"
+    errors = []
+    try:
+        # 1. Restaurer la base de données
+        r = subprocess.run([
+            'rsync', '-az', '--timeout=120', '-e', ssh_opts,
+            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/db/orthoptie_v2.db',
+            os.path.join(data_dir, 'orthoptie_v2.db')
+        ], capture_output=True, text=True, timeout=120)
+        if r.returncode != 0: errors.append(f'db: {r.stderr.strip()}')
+
+        # 2. Restaurer les uploads
+        r = subprocess.run([
+            'rsync', '-az', '--delete', '--timeout=600', '-e', ssh_opts,
+            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/uploads/',
+            os.path.join(data_dir, 'uploads') + '/'
+        ], capture_output=True, text=True, timeout=600)
+        if r.returncode != 0: errors.append(f'uploads: {r.stderr.strip()}')
+
+        if not errors:
+            flash('✅ Restauration depuis le NAS réussie. Rechargez la page.', 'success')
+        else:
+            flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
+    except subprocess.TimeoutExpired:
+        flash('❌ Timeout — connexion trop lente.', 'danger')
+    except Exception as e:
+        flash(f'❌ Erreur : {e}', 'danger')
+    return redirect(url_for('admin_sauvegarde'))
+
+
 @app.route('/admin/sauvegarde/lancer', methods=['POST'])
 @login_required
 @admin_required
