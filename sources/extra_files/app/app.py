@@ -2454,19 +2454,34 @@ def admin_envoyer_sauvegarde_distante():
         with open(key_path, 'w') as f: f.write(cfg.cle_privee)
         os.chmod(key_path, 0o600)
     try:
-        result = subprocess.run([
-            'rsync', '-avz', '--progress',
-            '-e', f'ssh -i {key_path} -p {cfg.sftp_port} -o StrictHostKeyChecking=no',
-            dernier,
-            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/'
+        ssh_opts = f"ssh -i {key_path} -p {cfg.sftp_port} -o StrictHostKeyChecking=no -o BatchMode=yes"
+        data_dir = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
+        errors = []
+
+        # Base de données
+        r = subprocess.run([
+            'rsync', '-az', '--timeout=120',
+            '-e', ssh_opts,
+            os.path.join(data_dir, 'orthoptie_v2.db'),
+            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/db/'
         ], capture_output=True, text=True, timeout=120)
-        if result.returncode == 0:
-            nom = os.path.basename(dernier)
-            flash(f'✅ Sauvegarde envoyée : {nom}', 'success')
+        if r.returncode != 0: errors.append(f'db: {r.stderr.strip()}')
+
+        # Uploads incrémental
+        r = subprocess.run([
+            'rsync', '-az', '--checksum', '--delete', '--timeout=300',
+            '-e', ssh_opts,
+            os.path.join(data_dir, 'uploads') + '/',
+            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/uploads/'
+        ], capture_output=True, text=True, timeout=300)
+        if r.returncode != 0: errors.append(f'uploads: {r.stderr.strip()}')
+
+        if not errors:
+            flash(f'✅ Sync incrémental terminé vers {cfg.sftp_host} (db + uploads)', 'success')
         else:
-            flash(f'❌ Erreur rsync : {result.stderr.strip()}', 'danger')
+            flash(f'⚠️ Sync partiel : {" | ".join(errors)}', 'warning')
     except subprocess.TimeoutExpired:
-        flash('❌ Timeout — la sauvegarde est peut-être trop volumineuse ou la connexion trop lente.', 'danger')
+        flash('❌ Timeout — connexion trop lente ou volume trop important.', 'danger')
     except FileNotFoundError:
         flash('❌ rsync non installé sur le serveur.', 'danger')
     except Exception as e:

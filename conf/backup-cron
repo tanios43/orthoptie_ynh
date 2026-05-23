@@ -6,38 +6,71 @@ DATA_DIR="/home/yunohost.app/${APP}"
 BACKUP_DIR="${DATA_DIR}/backups"
 SSH_KEY="${DATA_DIR}/ssh/backup_key"
 MAX_BACKUPS=7
+LOG_FILE="/var/log/orthoptie/backup.log"
+
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"; }
 
 mkdir -p "${BACKUP_DIR}"
+log "=== Démarrage sauvegarde ==="
+
+# ── 1. Sauvegarde locale complète ─────────────────────────────────────
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/orthoptie_backup_${DATE}.tar.gz"
 
 tar -czf "${BACKUP_FILE}" -C "${DATA_DIR}" "orthoptie_v2.db" "uploads" 2>/dev/null
 
 if [ $? -eq 0 ]; then
-    echo "Sauvegarde créée : ${BACKUP_FILE}"
+    SIZE=$(du -sh "${BACKUP_FILE}" | cut -f1)
+    log "Sauvegarde locale créée : ${BACKUP_FILE} (${SIZE})"
 else
-    echo "Erreur lors de la sauvegarde" >&2
+    log "ERREUR : échec de la sauvegarde locale"
     exit 1
 fi
 
-# Rotation locale
-ls -t "${BACKUP_DIR}"/orthoptie_backup_*.tar.gz 2>/dev/null | tail -n +$((MAX_BACKUPS + 1)) | xargs -r rm --
-echo "Rotation effectuée — ${MAX_BACKUPS} sauvegardes conservées"
+# Rotation locale — conserver MAX_BACKUPS archives
+ls -t "${BACKUP_DIR}"/orthoptie_backup_*.tar.gz 2>/dev/null \
+    | tail -n +$((MAX_BACKUPS + 1)) | xargs -r rm --
+log "Rotation locale : ${MAX_BACKUPS} sauvegardes conservées"
 
-# Envoi SFTP/rsync si configuré et activé
+# ── 2. Sync incrémental vers NAS (si configuré) ───────────────────────
+# Structure sur le NAS :
+#   /votre-path/db/        ← base de données (état du jour)
+#   /votre-path/uploads/   ← fichiers uploadés (sync incrémental)
+# Ces deux dossiers suffisent pour une restauration complète.
+
 SFTP_CONFIG="${DATA_DIR}/sftp_config.sh"
 if [ -f "${SFTP_CONFIG}" ]; then
     source "${SFTP_CONFIG}"
+
     if [ "${SFTP_ACTIF}" = "1" ] && [ -n "${SFTP_HOST}" ] && [ -f "${SSH_KEY}" ]; then
-        echo "Envoi vers ${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}..."
-        rsync -az --timeout=60 \
-            -e "ssh -i ${SSH_KEY} -p ${SFTP_PORT:-22} -o StrictHostKeyChecking=no -o BatchMode=yes" \
-            "${BACKUP_FILE}" \
-            "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/"
-        if [ $? -eq 0 ]; then
-            echo "Sauvegarde distante OK"
+        log "Sync incrémental vers ${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}..."
+
+        SSH_OPTS="-i ${SSH_KEY} -p ${SFTP_PORT:-22} -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30"
+
+        # Base de données (petit fichier, transféré entièrement chaque nuit)
+        rsync -az --timeout=120 \
+            -e "ssh ${SSH_OPTS}" \
+            "${DATA_DIR}/orthoptie_v2.db" \
+            "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/db/"
+        DB_STATUS=$?
+
+        # Uploads : sync incrémental, seuls les nouveaux/modifiés fichiers
+        # --checksum : comparaison par contenu, pas par date
+        # --delete   : supprime sur le NAS les fichiers supprimés localement
+        rsync -az --checksum --delete --timeout=300 \
+            -e "ssh ${SSH_OPTS}" \
+            "${DATA_DIR}/uploads/" \
+            "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/uploads/"
+        UPLOADS_STATUS=$?
+
+        if [ $DB_STATUS -eq 0 ] && [ $UPLOADS_STATUS -eq 0 ]; then
+            log "Sync distant OK — db + uploads synchronisés"
         else
-            echo "Erreur envoi distant" >&2
+            log "AVERTISSEMENT : sync partiel (db:${DB_STATUS} uploads:${UPLOADS_STATUS})"
         fi
+    else
+        log "Sync distant désactivé ou non configuré — ignoré"
     fi
 fi
+
+log "=== Sauvegarde terminée ==="
