@@ -2640,13 +2640,14 @@ def admin_sauvegarde_importer():
     if current_user.role != 'admin':
         return 'Accès refusé', 403
     import zipfile as zf, shutil
-    f = request.files.get('backup_file')
+    f = request.files.get('fichier') or request.files.get('backup_file')
     if not f or not (f.filename.endswith('.zip') or f.filename.endswith('.tar.gz')):
         flash('Fichier invalide — zip ou tar.gz requis.', 'danger')
         return redirect(url_for('admin_sauvegarde'))
 
-    confirmation = request.form.get('confirmation', '').strip().lower()
-    if confirmation != 'oui':
+    # Confirmation optionnelle
+    confirmation = request.form.get('confirmation', 'oui').strip().lower()
+    if confirmation not in ('oui', 'yes', ''):
         flash('Vous devez taper "oui" pour confirmer la restauration.', 'warning')
         return redirect(url_for('admin_sauvegarde'))
 
