@@ -4,8 +4,8 @@
 {% block page_title %}Recherche patient{% endblock %}
 
 {% block content %}
-<div style="max-width: 720px;">
-  <div class="card">
+<div style="max-width:100%;">
+  <div class="card" style="max-width:720px;">
     <div class="card-body">
       <form method="GET" style="display:flex;gap:8px;">
         <input type="text" name="q" value="{{ q }}" autofocus style="flex:1;"
@@ -30,22 +30,24 @@
     </div>
 
     {% if patients %}
-    <table class="data-table">
+    <table class="data-table" style="font-size:13px;width:100%;">
       <thead>
         <tr>
           <th>Nom / Prénom</th>
-          <th>Date de naissance</th>
+          <th style="white-space:nowrap;">Date de naissance</th>
           <th>Téléphone</th>
           <th>Médecin référent</th>
-          <th>Dernière activité</th>
+          <th style="white-space:nowrap;">Dernière activité</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         {% for p in patients %}
         <tr>
-          <td><a href="{{ url_for('patient_detail', patient_id=p.id) }}">{{ p.nom }} {{ p.prenom }}</a></td>
-          <td class="text-muted text-sm">
+          <td style="white-space:nowrap;font-weight:500;">
+            <a href="{{ url_for('patient_detail', patient_id=p.id) }}">{{ p.nom }} {{ p.prenom }}</a>
+          </td>
+          <td class="text-muted text-sm" style="white-space:nowrap;">
             {{ p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '—' }}
             {% if p.date_naissance %}
             <span style="color:var(--accent);font-size:11px;font-weight:500;margin-left:4px;">
@@ -53,9 +55,9 @@
             </span>
             {% endif %}
           </td>
-          <td class="text-muted text-sm">{{ p.telephone or '—' }}</td>
+          <td class="text-muted text-sm" style="white-space:nowrap;">{{ p.telephone or '—' }}</td>
           <td class="text-muted text-sm">{{ p.medecin_referent or '—' }}</td>
-          <td class="text-sm">
+          <td class="text-sm" style="white-space:nowrap;">
             {% set da = activites.get(p.id) if activites is defined else none %}
             {% if da %}
               <span class="badge badge-green">{{ da.strftime('%d/%m/%Y') }}</span>
@@ -63,7 +65,7 @@
               <span class="badge badge-gray">Aucune</span>
             {% endif %}
           </td>
-          <td>
+          <td style="white-space:nowrap;">
             <a href="{{ url_for('consultation_nouvelle', patient_id=p.id) }}"
                class="btn btn-secondary btn-sm">+ Bilan</a>
           </td>
