@@ -37,6 +37,7 @@
           <th>Date de naissance</th>
           <th>Téléphone</th>
           <th>Médecin référent</th>
+          <th>Dernière activité</th>
           <th></th>
         </tr>
       </thead>
@@ -49,6 +50,14 @@
           </td>
           <td class="text-muted text-sm">{{ p.telephone or '—' }}</td>
           <td class="text-muted text-sm">{{ p.medecin_referent or '—' }}</td>
+          <td class="text-sm">
+            {% set da = activites.get(p.id) if activites is defined else none %}
+            {% if da %}
+              <span class="badge badge-green">{{ da.strftime('%d/%m/%Y') }}</span>
+            {% else %}
+              <span class="badge badge-gray">Aucune</span>
+            {% endif %}
+          </td>
           <td>
             <a href="{{ url_for('consultation_nouvelle', patient_id=p.id) }}"
                class="btn btn-secondary btn-sm">+ Bilan</a>

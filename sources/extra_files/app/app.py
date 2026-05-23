@@ -1091,11 +1091,29 @@ def api_communes():
 # PATIENTS
 # ============================================================
 
+def _derniere_activite(patient):
+    """Retourne la date la plus récente parmi bilans et tous les suivis."""
+    from datetime import date as date_type
+    dates = []
+    for c in patient.consultations:
+        if c.date_consult: dates.append(c.date_consult)
+    for s in SuiviAmblyopie.query.filter_by(patient_id=patient.id).all():
+        dates.append(s.derniere_seance_date)
+    for s in SuiviVB.query.filter_by(patient_id=patient.id).all():
+        dates.append(s.derniere_seance_date)
+    for s in SuiviNV.query.filter_by(patient_id=patient.id).all():
+        dates.append(s.derniere_seance_date)
+    for s in SuiviBV.query.filter_by(patient_id=patient.id).all():
+        dates.append(s.derniere_seance_date)
+    return max(dates) if dates else None
+
+
 @app.route('/')
 @login_required
 def index():
     patients = Patient.query.order_by(Patient.nom).all()
-    return render_template('patients/liste.html', patients=patients)
+    activites = {p.id: _derniere_activite(p) for p in patients}
+    return render_template('patients/liste.html', patients=patients, activites=activites)
 
 
 @app.route('/patient/nouveau', methods=['GET', 'POST'])
@@ -2780,7 +2798,8 @@ def recherche():
         else:
             conds = [db.or_(Patient.nom.ilike(f'%{m}%'), Patient.prenom.ilike(f'%{m}%')) for m in q.split()]
             patients = Patient.query.filter(db.and_(*conds)).order_by(Patient.nom).all()
-    return render_template('patients/recherche.html', patients=patients, q=q)
+    activites = {p.id: _derniere_activite(p) for p in patients}
+    return render_template('patients/recherche.html', patients=patients, q=q, activites=activites)
 
 
 # ============================================================
