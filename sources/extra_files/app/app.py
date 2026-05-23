@@ -2547,7 +2547,8 @@ def admin_restaurer_nas():
     try:
         # 1. Restaurer la base de données
         r = subprocess.run([
-            'rsync', '-az', '--timeout=120', '-e', ssh_opts,
+            'rsync', '-az', '--no-perms', '--no-owner', '--no-group',
+            '--timeout=120', '-e', ssh_opts,
             f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/db/orthoptie_v2.db',
             os.path.join(data_dir, 'orthoptie_v2.db')
         ], capture_output=True, text=True, timeout=120)
@@ -2555,7 +2556,8 @@ def admin_restaurer_nas():
 
         # 2. Restaurer les uploads
         r = subprocess.run([
-            'rsync', '-az', '--delete', '--timeout=600', '-e', ssh_opts,
+            'rsync', '-az', '--delete', '--no-perms', '--no-owner', '--no-group',
+            '--timeout=600', '-e', ssh_opts,
             f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/uploads/',
             os.path.join(data_dir, 'uploads') + '/'
         ], capture_output=True, text=True, timeout=600)
