@@ -2562,6 +2562,21 @@ def admin_restaurer_nas():
         if r.returncode != 0: errors.append(f'uploads: {r.stderr.strip()}')
 
         if not errors:
+            # Corriger les permissions après restauration
+            import shutil
+            db_path = os.path.join(data_dir, 'orthoptie_v2.db')
+            os.chmod(db_path, 0o664)
+            try:
+                import pwd
+                uid = pwd.getpwnam('orthoptie').pw_uid
+                gid = pwd.getpwnam('orthoptie').pw_gid
+                os.chown(db_path, uid, gid)
+                # Corriger les permissions des uploads récursivement
+                subprocess.run(['chown', '-R', 'orthoptie:orthoptie',
+                                os.path.join(data_dir, 'uploads')],
+                               capture_output=True)
+            except Exception:
+                pass
             flash('✅ Restauration depuis le NAS réussie. Rechargez la page.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
@@ -2806,6 +2821,19 @@ def admin_sauvegarde_importer():
                     src = os.path.join(tmpdir, name)
                     if os.path.isfile(src):
                         shutil.copy2(src, dest)
+
+    # Corriger les permissions après restauration
+    try:
+        os.chmod(db_path, 0o664)
+        import pwd
+        uid = pwd.getpwnam('orthoptie').pw_uid
+        gid = pwd.getpwnam('orthoptie').pw_gid
+        os.chown(db_path, uid, gid)
+        import subprocess
+        subprocess.run(['chown', '-R', 'orthoptie:orthoptie', uploads_dir],
+                       capture_output=True)
+    except Exception:
+        pass
 
     flash('Restauration effectuée. Reconnectez-vous.', 'success')
     return redirect(url_for('logout'))
