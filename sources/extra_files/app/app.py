@@ -2571,28 +2571,13 @@ def admin_restaurer_nas():
         if r.returncode != 0: errors.append(f'uploads: {r.stderr.strip()}')
 
         if not errors:
-            # Corriger les permissions après restauration
-            import shutil
-            db_path = os.path.join(data_dir, 'orthoptie_v2.db')
-            os.chmod(db_path, 0o664)
-            try:
-                import pwd
-                uid = pwd.getpwnam('orthoptie').pw_uid
-                gid = pwd.getpwnam('orthoptie').pw_gid
-                os.chown(db_path, uid, gid)
-                subprocess.run(['chown', '-R', 'orthoptie:orthoptie',
-                                os.path.join(data_dir, 'uploads')],
-                               capture_output=True)
-            except Exception:
-                pass
-            # Fermer toutes les connexions SQLAlchemy
+            # Fix permissions + redémarrage via script sudoers
             try:
                 db.engine.dispose()
             except Exception:
                 pass
-            # Redémarrer après délai
             try:
-                subprocess.Popen(['bash', '-c', 'sleep 3 && systemctl restart orthoptie'])
+                subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
             except Exception:
                 pass
             flash('✅ Restauration depuis le NAS réussie — reconnectez-vous dans quelques secondes.', 'success')
@@ -2840,23 +2825,14 @@ def admin_sauvegarde_importer():
                     if os.path.isfile(src):
                         shutil.copy2(src, dest)
 
-    # Corriger les permissions après restauration
+    # Fix permissions + redémarrage via script sudoers
     try:
-        os.chmod(db_path, 0o664)
-        import pwd
-        uid = pwd.getpwnam('orthoptie').pw_uid
-        gid = pwd.getpwnam('orthoptie').pw_gid
-        os.chown(db_path, uid, gid)
-        import subprocess
-        subprocess.run(['chown', '-R', 'orthoptie:orthoptie', uploads_dir],
-                       capture_output=True)
+        db.engine.dispose()
     except Exception:
         pass
-
-    # Redémarrer le service après un court délai
     try:
         import subprocess
-        subprocess.Popen(['bash', '-c', 'sleep 2 && systemctl restart orthoptie'])
+        subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
     except Exception:
         pass
 

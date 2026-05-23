@@ -63,6 +63,20 @@ ynh_add_systemd_config
 chown -R "$app:www-data" "$install_dir"
 chown -R "$app:$app" "$data_dir"
 
+# Script fix permissions + sudoers
+cat > "/usr/local/bin/orthoptie-fix-perms" << FIXPERMS
+#!/bin/bash
+chown $app:$app "$data_dir/orthoptie_v2.db" 2>/dev/null
+chmod 664 "$data_dir/orthoptie_v2.db" 2>/dev/null
+chown -R $app:$app "$data_dir/uploads" 2>/dev/null
+chmod -R 755 "$data_dir/uploads" 2>/dev/null
+systemctl restart $app
+FIXPERMS
+chmod +x "/usr/local/bin/orthoptie-fix-perms"
+echo "$app ALL=(root) NOPASSWD: /usr/local/bin/orthoptie-fix-perms" \
+    > "/etc/sudoers.d/orthoptie-fix-perms"
+chmod 440 "/etc/sudoers.d/orthoptie-fix-perms"
+
 #=================================================
 # START SERVICE
 #=================================================
