@@ -4110,7 +4110,7 @@ def editer_ordonnance_lunettes_collabora(consultation_id):
 
     wopi_src = f"{get_wopi_base_url()}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(nom_doc)
-    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&theme=light"
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&darkTheme=false"
     editor_url = editor_url.replace('?&', '?').replace('&&', '&')
 
     return render_template('consultations/collabora_editor.html',
@@ -4425,7 +4425,7 @@ def editer_ordonnance_collabora(consultation_id, type_ordo):
 
     wopi_src     = f"{get_wopi_base_url()}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(nom_doc)
-    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&theme=light"
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&darkTheme=false"
     editor_url = editor_url.replace('?&', '?').replace('&&', '&')
 
     return render_template('consultations/collabora_editor.html',
@@ -5407,6 +5407,12 @@ def wopi_check_file_info(token):
         'DisableExport':         False,
         'DisablePrint':          False,
         'EnableOwnerTermination': True,
+        'UserExtraInfo': {
+            'Theme': 'Light',
+            'DarkTheme': False,
+        },
+        'EnableDarkTheme': False,
+        'Theme': 'Light',
     })
     resp.headers['ngrok-skip-browser-warning'] = 'true'
     return resp
@@ -5535,7 +5541,7 @@ def editer_fichier_collabora(consultation_id, fichier_id):
 
     wopi_src           = f"{get_wopi_base_url()}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(f.nom_original)
-    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&theme=light"
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&darkTheme=false"
     editor_url = editor_url.replace('?&', '?').replace('&&', '&')
 
     return render_template('consultations/collabora_editor.html',
@@ -5605,7 +5611,7 @@ def editer_collabora(consultation_id):
     collabora_action_url = _get_collabora_url(nom_fichier)
     print(f"[WOPI] src: {wopi_src}")
     print(f"[WOPI] Collabora action URL: {collabora_action_url}")
-    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&theme=light"
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&darkTheme=false"
     # Nettoyer les doubles ? ou & parasites
     editor_url = editor_url.replace('?&', '?').replace('&&', '&')
     print(f"[WOPI] Editor URL finale: {editor_url}")
