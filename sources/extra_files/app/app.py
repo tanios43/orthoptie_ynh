@@ -89,6 +89,19 @@ def get_categories():
     return cats
 
 
+@app.before_request
+def force_setup_si_admin_defaut():
+    """Bloque toute navigation si connecté avec le compte admin par défaut."""
+    if not current_user.is_authenticated:
+        return
+    is_default = getattr(current_user, 'is_default', False) or \
+                 (current_user.login == 'admin' and current_user.nom == '')
+    if is_default:
+        allowed = {'setup_premier_compte', 'logout', 'static'}
+        if request.endpoint not in allowed:
+            return redirect(url_for('setup_premier_compte'))
+
+
 @app.context_processor
 def inject_categories():
     return {'CATEGORIES': get_categories(), 'get_categories': get_categories}
@@ -1014,8 +1027,8 @@ def login():
         p = Praticien.query.filter_by(login=request.form.get('login'), actif=True).first()
         if p and p.check_password(request.form.get('password', '')):
             login_user(p)
-            # Si c'est le compte admin par défaut, forcer la création d'un vrai compte
-            if p.login == 'admin' and p.nom == 'Administrateur' and getattr(p, 'is_default', False):
+            # Compte admin par défaut → forcer la création d'un vrai compte
+            if getattr(p, 'is_default', False) or p.login == 'admin' and p.nom == '':
                 return redirect(url_for('setup_premier_compte'))
             return redirect(url_for('index'))
         flash('Identifiants ou mot de passe incorrects.', 'danger')
