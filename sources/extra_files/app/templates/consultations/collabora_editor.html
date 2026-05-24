@@ -8,6 +8,9 @@
 {% endblock %}
 
 {% block content %}
+{# Forcer le thème clair pour que Collabora ne hérite pas du thème sombre #}
+<meta name="color-scheme" content="light only">
+<style>:root { color-scheme: light only; }</style>
 <div class="card" style="max-width:640px;margin:40px auto;text-align:center;">
   <div class="card-body" style="padding:40px 32px;">
 
