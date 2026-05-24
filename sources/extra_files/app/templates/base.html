@@ -433,6 +433,10 @@
        class="nav-item {% if request.endpoint == 'admin_sauvegarde' %}active{% endif %}">
       <span class="icon">💾</span> Sauvegardes
     </a>
+    <a href="{{ url_for('admin_configuration') }}"
+       class="nav-item {% if request.endpoint == 'admin_configuration' %}active{% endif %}">
+      <span class="icon">⚙️</span> Configuration
+    </a>
     <a href="{{ url_for('admin_journal') }}"
        class="nav-item {% if request.endpoint == 'admin_journal' %}active{% endif %}">
       <span class="icon">🔒</span> Journal RGPD

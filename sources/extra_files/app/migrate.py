@@ -31,6 +31,12 @@ if _db_path:
         "ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''",
         "ALTER TABLE section_def ADD COLUMN avec_observations BOOLEAN DEFAULT 1",
         "ALTER TABLE section_def ADD COLUMN obs_defaut TEXT DEFAULT ''",
+        """CREATE TABLE IF NOT EXISTS config_app (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            collabora_url TEXT DEFAULT '',
+            wopi_base_url TEXT DEFAULT '',
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
         """CREATE TABLE IF NOT EXISTS config_sauvegarde (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sftp_host TEXT DEFAULT '',

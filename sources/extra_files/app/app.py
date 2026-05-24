@@ -102,6 +102,28 @@ def force_setup_si_admin_defaut():
             return redirect(url_for('setup_premier_compte'))
 
 
+def get_collabora_url():
+    """Retourne l'URL Collabora depuis la config DB ou la valeur par défaut."""
+    try:
+        cfg = ConfigApp.query.first()
+        if cfg and cfg.collabora_url:
+            return cfg.collabora_url.rstrip('/')
+    except Exception:
+        pass
+    return COLLABORA_URL
+
+
+def get_wopi_base_url():
+    """Retourne l'URL de base WOPI depuis la config DB ou la valeur par défaut."""
+    try:
+        cfg = ConfigApp.query.first()
+        if cfg and cfg.wopi_base_url:
+            return cfg.wopi_base_url.rstrip('/')
+    except Exception:
+        pass
+    return WOPI_BASE_URL
+
+
 @app.context_processor
 def inject_categories():
     return {'CATEGORIES': get_categories(), 'get_categories': get_categories}
@@ -360,7 +382,7 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 #   local test : 'http://host.docker.internal:5000'
 WOPI_BASE_URL = 'https://dossiers.cyps.ynh.fr'   # URL publique de ce serveur Flask
 
-# URL de votre serveur Collabora Online
+# URL de votre serveur Collabora Online (modifiable depuis Admin → Configuration)
 COLLABORA_URL = 'https://collabora.orthoptistes-yssingeaux.fr'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orthoptie_v2.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -746,6 +768,15 @@ class NotePatient(db.Model):
 
     patient   = db.relationship('Patient',   foreign_keys=[patient_id])
     praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+
+
+class ConfigApp(db.Model):
+    """Configuration générale de l'application."""
+    __tablename__ = 'config_app'
+    id              = db.Column(db.Integer, primary_key=True)
+    collabora_url   = db.Column(db.String(500), default='')
+    wopi_base_url   = db.Column(db.String(500), default='')
+    updated_at      = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class ConfigSauvegarde(db.Model):
@@ -2778,6 +2809,28 @@ def admin_categorie_supprimer(cat_id):
     return redirect(url_for('admin_categories'))
 
 
+@app.route('/admin/configuration', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_configuration():
+    """Configuration générale : URLs Collabora et WOPI."""
+    cfg = ConfigApp.query.first()
+    if not cfg:
+        cfg = ConfigApp()
+        db.session.add(cfg)
+        db.session.commit()
+    if request.method == 'POST':
+        cfg.collabora_url = request.form.get('collabora_url', '').strip().rstrip('/')
+        cfg.wopi_base_url = request.form.get('wopi_base_url', '').strip().rstrip('/')
+        cfg.updated_at    = datetime.utcnow()
+        db.session.commit()
+        flash('Configuration enregistrée.', 'success')
+        return redirect(url_for('admin_configuration'))
+    return render_template('admin/configuration.html', cfg=cfg,
+                           collabora_url_default=COLLABORA_URL,
+                           wopi_base_url_default=WOPI_BASE_URL)
+
+
 @app.route('/admin/sauvegarde', methods=['GET'])
 @login_required
 def admin_sauvegarde():
@@ -4055,7 +4108,7 @@ def editer_ordonnance_lunettes_collabora(consultation_id):
     token = _wopi_token_for(consultation_id, 'ordonnance_lunettes',
                             permanent_path, nom_doc, section_ordre=section_ordre)
 
-    wopi_src = f"{WOPI_BASE_URL}/wopi/files/{token}"
+    wopi_src = f"{get_wopi_base_url()}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(nom_doc)
     editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}"
     editor_url = editor_url.replace('?&', '?').replace('&&', '&')
@@ -4066,7 +4119,7 @@ def editer_ordonnance_lunettes_collabora(consultation_id):
                            nom_fichier=nom_doc,
                            token=token,
                            section_type='ordonnance_lunettes',
-                           collabora_url=COLLABORA_URL)
+                           collabora_url=get_collabora_url())
 
 
 def _generer_ordonnance_lunettes_docx(consultation, praticien, cabinet, pc, d):
@@ -4370,7 +4423,7 @@ def editer_ordonnance_collabora(consultation_id, type_ordo):
     token = _wopi_token_for(consultation_id, 'ordonnance', permanent_path,
                             nom_doc, section_ordre=section_ordre)
 
-    wopi_src     = f"{WOPI_BASE_URL}/wopi/files/{token}"
+    wopi_src     = f"{get_wopi_base_url()}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(nom_doc)
     editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}"
     editor_url = editor_url.replace('?&', '?').replace('&&', '&')
@@ -4381,7 +4434,7 @@ def editer_ordonnance_collabora(consultation_id, type_ordo):
                            nom_fichier=nom_doc,
                            token=token,
                            section_type='ordonnance',
-                           collabora_url=COLLABORA_URL)
+                           collabora_url=get_collabora_url())
 
 
 @app.route('/consultation/<int:consultation_id>/document', methods=['GET', 'POST'])
@@ -5291,7 +5344,7 @@ def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier, secti
 def _get_collabora_url(filename):
     """Retourne l'URL Collabora pour ouvrir un fichier .docx en édition."""
     import urllib.request, re
-    discovery_url = f"{COLLABORA_URL}/hosting/discovery"
+    discovery_url = f"{get_collabora_url()}/hosting/discovery"
     try:
         req = urllib.request.Request(
             discovery_url,
@@ -5318,7 +5371,7 @@ def _get_collabora_url(filename):
 
     # Fallback : URL directe standard Collabora/CODE
     # Format : https://collabora.domain.fr/browser/dist/cool.html?
-    return f"{COLLABORA_URL}/browser/dist/cool.html?"
+    return f"{get_collabora_url()}/browser/dist/cool.html?"
 
 
 @app.route('/wopi/files/<token>')
@@ -5350,7 +5403,7 @@ def wopi_check_file_info(token):
         'SupportsGetLock':       True,
         'UserCanNotWriteRelative': True,
         'SupportsExtendedLockLength': True,
-        'PostMessageOrigin':     COLLABORA_URL,
+        'PostMessageOrigin':     get_collabora_url(),
         'DisableExport':         False,
         'DisablePrint':          False,
         'EnableOwnerTermination': True,
@@ -5480,7 +5533,7 @@ def editer_fichier_collabora(consultation_id, fichier_id):
     token = _wopi_token_for(consultation_id, f.champ_name, file_path, f.nom_original,
                             section_ordre=f.section_ordre)
 
-    wopi_src           = f"{WOPI_BASE_URL}/wopi/files/{token}"
+    wopi_src           = f"{get_wopi_base_url()}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(f.nom_original)
     editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}"
     editor_url = editor_url.replace('?&', '?').replace('&&', '&')
@@ -5491,7 +5544,7 @@ def editer_fichier_collabora(consultation_id, fichier_id):
                            nom_fichier=f.nom_original,
                            token=token,
                            section_type=f.champ_name,
-                           collabora_url=COLLABORA_URL)
+                           collabora_url=get_collabora_url())
 
 
 @app.route('/consultation/<int:consultation_id>/editer-collabora', methods=['GET'])
@@ -5546,7 +5599,7 @@ def editer_collabora(consultation_id):
     token = _wopi_token_for(consultation_id, section_type, permanent_path, nom_fichier)
 
     # URL WOPI
-    wopi_src = f"{WOPI_BASE_URL}/wopi/files/{token}"
+    wopi_src = f"{get_wopi_base_url()}/wopi/files/{token}"
 
     # URL Collabora
     collabora_action_url = _get_collabora_url(nom_fichier)
@@ -5563,7 +5616,7 @@ def editer_collabora(consultation_id):
                            nom_fichier=nom_fichier,
                            token=token,
                            section_type=section_type,
-                           collabora_url=COLLABORA_URL,
+                           collabora_url=get_collabora_url(),
                            open_in_tab=True)
 
 if __name__ == '__main__':

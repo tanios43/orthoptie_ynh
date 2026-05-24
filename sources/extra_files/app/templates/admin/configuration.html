@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Configuration{% endblock %}
+{% block page_title %}⚙️ Configuration{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;">
+  <div class="card">
+    <div class="card-header"><h2>🖥️ Serveur Collabora Online</h2></div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="field-group" style="margin-bottom:14px;">
+          <label class="field-label">
+            URL du serveur Collabora
+            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px;">
+              (sans slash final)
+            </span>
+          </label>
+          <input type="url" name="collabora_url"
+                 value="{{ cfg.collabora_url or '' }}"
+                 placeholder="{{ collabora_url_default }}">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+            Valeur par défaut : <code>{{ collabora_url_default }}</code>
+            {% if not cfg.collabora_url %}
+            <span style="color:#1D9E75;margin-left:6px;">✅ Valeur par défaut utilisée</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="field-group" style="margin-bottom:14px;">
+          <label class="field-label">
+            URL publique de ce serveur (WOPI Base URL)
+            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px;">
+              (URL accessible depuis Collabora)
+            </span>
+          </label>
+          <input type="url" name="wopi_base_url"
+                 value="{{ cfg.wopi_base_url or '' }}"
+                 placeholder="{{ wopi_base_url_default }}">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+            Valeur par défaut : <code>{{ wopi_base_url_default }}</code>
+            {% if not cfg.wopi_base_url %}
+            <span style="color:#1D9E75;margin-left:6px;">✅ Valeur par défaut utilisée</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="background:#FAEEDA;border-radius:7px;padding:10px 14px;font-size:12px;margin-bottom:16px;">
+          💡 Laissez vide pour utiliser les valeurs par défaut définies dans le code.
+          Utile lors d'un changement de domaine ou de serveur Collabora.
+        </div>
+
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        {% if cfg.collabora_url or cfg.wopi_base_url %}
+        <button type="button" class="btn btn-secondary" style="margin-left:8px;"
+                onclick="if(confirm('Remettre les valeurs par défaut ?')){
+                  document.querySelector('[name=collabora_url]').value='';
+                  document.querySelector('[name=wopi_base_url]').value='';
+                  document.querySelector('form').submit();}">
+          Réinitialiser aux valeurs par défaut
+        </button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
