@@ -3,7 +3,9 @@
 {% block page_title %}⚙️ Configuration{% endblock %}
 
 {% block content %}
-<div style="max-width:640px;">
+<div style="max-width:680px;display:flex;flex-direction:column;gap:16px;">
+
+  {# ── URLs Collabora / WOPI ── #}
   <div class="card">
     <div class="card-header"><h2>🖥️ Serveur Collabora Online</h2></div>
     <div class="card-body">
@@ -11,56 +13,92 @@
         <div class="field-group" style="margin-bottom:14px;">
           <label class="field-label">
             URL du serveur Collabora
-            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px;">
-              (sans slash final)
-            </span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px;">(sans slash final)</span>
           </label>
           <input type="url" name="collabora_url"
                  value="{{ cfg.collabora_url or '' }}"
                  placeholder="{{ collabora_url_default }}">
           <div style="font-size:11px;color:var(--muted);margin-top:4px;">
             Valeur par défaut : <code>{{ collabora_url_default }}</code>
-            {% if not cfg.collabora_url %}
-            <span style="color:#1D9E75;margin-left:6px;">✅ Valeur par défaut utilisée</span>
-            {% endif %}
+            {% if not cfg.collabora_url %}<span style="color:#1D9E75;margin-left:6px;">✅ Valeur par défaut utilisée</span>{% endif %}
           </div>
         </div>
-
         <div class="field-group" style="margin-bottom:14px;">
           <label class="field-label">
             URL publique de ce serveur (WOPI Base URL)
-            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px;">
-              (URL accessible depuis Collabora)
-            </span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px;">(URL accessible depuis Collabora)</span>
           </label>
           <input type="url" name="wopi_base_url"
                  value="{{ cfg.wopi_base_url or '' }}"
                  placeholder="{{ wopi_base_url_default }}">
           <div style="font-size:11px;color:var(--muted);margin-top:4px;">
             Valeur par défaut : <code>{{ wopi_base_url_default }}</code>
-            {% if not cfg.wopi_base_url %}
-            <span style="color:#1D9E75;margin-left:6px;">✅ Valeur par défaut utilisée</span>
-            {% endif %}
+            {% if not cfg.wopi_base_url %}<span style="color:#1D9E75;margin-left:6px;">✅ Valeur par défaut utilisée</span>{% endif %}
           </div>
         </div>
-
         <div style="background:#FAEEDA;border-radius:7px;padding:10px 14px;font-size:12px;margin-bottom:16px;">
           💡 Laissez vide pour utiliser les valeurs par défaut définies dans le code.
-          Utile lors d'un changement de domaine ou de serveur Collabora.
         </div>
-
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
-        {% if cfg.collabora_url or cfg.wopi_base_url %}
-        <button type="button" class="btn btn-secondary" style="margin-left:8px;"
-                onclick="if(confirm('Remettre les valeurs par défaut ?')){
-                  document.querySelector('[name=collabora_url]').value='';
-                  document.querySelector('[name=wopi_base_url]').value='';
-                  document.querySelector('form').submit();}">
-          Réinitialiser aux valeurs par défaut
-        </button>
-        {% endif %}
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          {% if cfg.collabora_url or cfg.wopi_base_url %}
+          <button type="button" class="btn btn-secondary"
+                  onclick="if(confirm('Remettre les valeurs par défaut ?')){
+                    document.querySelector('[name=collabora_url]').value='';
+                    document.querySelector('[name=wopi_base_url]').value='';
+                    document.querySelector('form').submit();}">
+            Réinitialiser
+          </button>
+          {% endif %}
+        </div>
       </form>
     </div>
   </div>
+
+  {# ── Procédure configuration Collabora ── #}
+  <div class="card">
+    <div class="card-header" style="cursor:pointer;" onclick="toggleSection('collabora-proc')">
+      <h2>📋 Procédure de configuration de Collabora</h2>
+      <span id="ico-collabora-proc" style="font-size:11px;opacity:.6;margin-left:auto;">▶</span>
+    </div>
+    <div id="sec-collabora-proc" style="display:none;">
+      <div class="card-body" style="font-size:13px;line-height:1.8;">
+
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;">1. Accéder au fichier de configuration</h3>
+        <p>Sur le serveur hébergeant Collabora (YunoHost) :</p>
+        <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;overflow-x:auto;">sudo nano /etc/coolwsd/coolwsd.xml</pre>
+
+        <h3 style="font-size:14px;font-weight:600;margin:16px 0 8px;">2. Autoriser votre serveur comme hôte WOPI de confiance</h3>
+        <p>Recherchez la section <code>&lt;storage&gt;</code> et ajoutez une entrée <code>&lt;host&gt;</code> avec le domaine de votre serveur orthoptie :</p>
+        <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;overflow-x:auto;">&lt;storage desc="Backend storage"&gt;
+    &lt;filesystem allow="false" /&gt;
+    &lt;wopi desc="Allow/deny WOPI connections to storage"&gt;
+        &lt;host desc="Regex pattern of WOPI host" allow="true"&gt;
+            {{ (cfg.wopi_base_url or wopi_base_url_default) | replace('https://', '') | replace('http://', '') }}
+        &lt;/host&gt;
+    &lt;/wopi&gt;
+&lt;/storage&gt;</pre>
+        <div style="background:#FAEEDA;border-radius:7px;padding:10px 14px;font-size:12px;margin:10px 0;">
+          ⚠️ Le domaine est une expression régulière — les <strong>points doivent être échappés</strong> avec un backslash.<br>
+          Exemple : <code>dossiers\.cyps\.ynh\.fr</code> pour <code>dossiers.cyps.ynh.fr</code>
+        </div>
+
+        <h3 style="font-size:14px;font-weight:600;margin:16px 0 8px;">3. Redémarrer Collabora</h3>
+        <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;">sudo systemctl restart coolwsd</pre>
+
+        <h3 style="font-size:14px;font-weight:600;margin:16px 0 8px;">4. Vérifier que Collabora est accessible</h3>
+        <p>Depuis un navigateur, accédez à l'URL de découverte Collabora :</p>
+        <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;overflow-x:auto;">{{ (cfg.collabora_url or collabora_url_default) }}/hosting/discovery</pre>
+        <p>Vous devez voir un fichier XML — si la page est vide ou en erreur, Collabora n'est pas correctement configuré.</p>
+
+        <h3 style="font-size:14px;font-weight:600;margin:16px 0 8px;">Sur YunoHost</h3>
+        <p>Si Collabora est installé via YunoHost (application <em>Collabora Online</em>), la configuration se fait depuis :</p>
+        <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;">Webadmin → Applications → Collabora Online → Config panel</pre>
+        <p>Dans le champ <strong>Allowed hosts</strong>, ajoutez le domaine de votre serveur orthoptie.</p>
+
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
