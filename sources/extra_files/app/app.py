@@ -373,6 +373,7 @@ class Praticien(UserMixin, db.Model):
     email         = db.Column(db.String(200), unique=True)
     login         = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(200))
+    is_default    = db.Column(db.Boolean, default=False)
     rpps          = db.Column(db.String(11))   # N° RPPS national fixe
     couleur       = db.Column(db.String(7), default='#2E7D6B')  # couleur hex
     actif         = db.Column(db.Boolean, default=True)
@@ -1013,9 +1014,56 @@ def login():
         p = Praticien.query.filter_by(login=request.form.get('login'), actif=True).first()
         if p and p.check_password(request.form.get('password', '')):
             login_user(p)
+            # Si c'est le compte admin par défaut, forcer la création d'un vrai compte
+            if p.login == 'admin' and p.nom == 'Administrateur' and getattr(p, 'is_default', False):
+                return redirect(url_for('setup_premier_compte'))
             return redirect(url_for('index'))
         flash('Identifiants ou mot de passe incorrects.', 'danger')
     return render_template('login.html')
+
+
+@app.route('/setup/premier-compte', methods=['GET', 'POST'])
+@login_required
+def setup_premier_compte():
+    """Création du premier vrai compte — remplace le compte admin par défaut."""
+    if not current_user.is_default:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        prenom = request.form.get('prenom', '').strip()
+        nom    = request.form.get('nom', '').strip()
+        login_ = request.form.get('login', '').strip()
+        mdp    = request.form.get('password', '').strip()
+        mdp2   = request.form.get('password2', '').strip()
+        if not all([prenom, nom, login_, mdp]):
+            flash('Tous les champs sont obligatoires.', 'danger')
+        elif mdp != mdp2:
+            flash('Les mots de passe ne correspondent pas.', 'danger')
+        elif len(mdp) < 6:
+            flash('Le mot de passe doit contenir au moins 6 caractères.', 'danger')
+        elif Praticien.query.filter_by(login=login_).first():
+            flash('Cet identifiant est déjà utilisé.', 'danger')
+        else:
+            # Créer le vrai compte admin
+            nouveau = Praticien(
+                prenom    = prenom,
+                nom       = nom,
+                login     = login_,
+                role      = 'admin',
+                actif     = True,
+                is_default= False,
+            )
+            nouveau.set_password(mdp)
+            db.session.add(nouveau)
+            db.session.flush()
+            # Supprimer le compte admin par défaut
+            admin_default = Praticien.query.filter_by(is_default=True).first()
+            if admin_default:
+                logout_user()
+                db.session.delete(admin_default)
+            db.session.commit()
+            flash('Compte créé. Connectez-vous avec vos nouveaux identifiants.', 'success')
+            return redirect(url_for('login'))
+    return render_template('setup/premier_compte.html')
 
 
 @app.route('/logout')

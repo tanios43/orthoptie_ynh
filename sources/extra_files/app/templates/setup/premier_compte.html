@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Créer votre compte{% endblock %}
+{% block page_title %}🎉 Bienvenue — Créer votre compte administrateur{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;margin:0 auto;">
+
+  <div style="background:#E1F5EE;border-left:4px solid #1D9E75;border-radius:0 8px 8px 0;
+              padding:14px 16px;margin-bottom:20px;font-size:13px;">
+    <strong>Première connexion détectée.</strong><br>
+    Créez votre compte administrateur personnel. Le compte temporaire <code>admin</code>
+    sera supprimé automatiquement.
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Votre compte</h2></div>
+    <div class="card-body">
+      <form method="POST">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div class="field-group">
+            <label class="field-label">Prénom <span style="color:red">*</span></label>
+            <input type="text" name="prenom" required autofocus placeholder="Marie">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Nom <span style="color:red">*</span></label>
+            <input type="text" name="nom" required placeholder="Dupont">
+          </div>
+        </div>
+        <div class="field-group" style="margin-bottom:12px;">
+          <label class="field-label">Identifiant de connexion <span style="color:red">*</span></label>
+          <input type="text" name="login" required placeholder="marie.dupont"
+                 autocomplete="username">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+          <div class="field-group">
+            <label class="field-label">Mot de passe <span style="color:red">*</span></label>
+            <input type="password" name="password" required placeholder="6 caractères min."
+                   autocomplete="new-password">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Confirmer le mot de passe <span style="color:red">*</span></label>
+            <input type="password" name="password2" required placeholder="Répéter"
+                   autocomplete="new-password">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Créer mon compte et accéder à l'application</button>
+      </form>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;font-size:12px;color:var(--muted);text-align:center;">
+    Vous pourrez ajouter d'autres praticiens depuis l'administration une fois connecté.
+  </div>
+</div>
+{% endblock %}

@@ -544,4 +544,33 @@ with app.app_context():
     except Exception as e:
         print(f"ERREUR  : section ordonnance_lunettes — {e}")
 
+    # Colonne is_default sur praticien
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(db.text("ALTER TABLE praticien ADD COLUMN is_default BOOLEAN DEFAULT 0"))
+            conn.commit()
+            print("OK      : is_default sur praticien")
+        except Exception:
+            print("Present : is_default sur praticien")
+
+    # Créer le compte admin par défaut si aucun praticien n'existe
+    with app.app_context():
+        from app import Praticien
+        if Praticien.query.count() == 0:
+            from werkzeug.security import generate_password_hash
+            admin = Praticien(
+                prenom       = 'Administrateur',
+                nom          = '',
+                login        = 'admin',
+                role         = 'admin',
+                actif        = True,
+                is_default   = True,
+                password_hash= generate_password_hash('admin'),
+            )
+            db.session.add(admin)
+            db.session.commit()
+            print("OK      : compte admin par défaut créé (login: admin / mdp: admin)")
+        else:
+            print("Present : praticiens existants, pas de compte par défaut créé")
+
     print("\nMigration terminee.")
