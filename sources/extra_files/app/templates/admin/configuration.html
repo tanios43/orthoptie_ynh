@@ -96,6 +96,21 @@
         <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;">Webadmin → Applications → Collabora Online → Config panel</pre>
         <p>Dans le champ <strong>Allowed hosts</strong>, ajoutez le domaine de votre serveur orthoptie.</p>
 
+        <h3 style="font-size:14px;font-weight:600;margin:16px 0 8px;">5. Forcer le thème clair dans Collabora</h3>
+        <p>Par défaut Collabora peut s'ouvrir en mode sombre selon les préférences du navigateur. Pour forcer le thème clair, ajoutez cette ligne au <strong>début</strong> du fichier <code>/usr/share/coolwsd/browser/dist/branding.js</code> :</p>
+        <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;">sudo nano /usr/share/coolwsd/browser/dist/branding.js</pre>
+        <p>Ajoutez en première ligne :</p>
+        <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;">try { localStorage.setItem('darkTheme', 'false'); } catch(e) {}</pre>
+        <div style="background:#E1F5EE;border-radius:7px;padding:10px 14px;font-size:12px;margin:10px 0;">
+          ✅ Pas besoin de redémarrer coolwsd — c'est un fichier statique.<br>
+          Les utilisateurs devront vider le cache de leur navigateur (<kbd>Ctrl+Shift+R</kbd>) pour que le changement prenne effet.
+        </div>
+
+        <h3 style="font-size:14px;font-weight:600;margin:16px 0 8px;">Si le mode sombre persiste</h3>
+        <p>La préférence est peut-être déjà enregistrée dans le navigateur. Ouvrez Collabora, appuyez sur <kbd>F12</kbd> → Console et tapez :</p>
+        <pre style="background:var(--bg);padding:10px 14px;border-radius:7px;font-size:12px;">localStorage.setItem('darkTheme', 'false')</pre>
+        <p>Puis rechargez la page Collabora.</p>
+
       </div>
     </div>
   </div>
