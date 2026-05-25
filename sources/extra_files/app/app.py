@@ -3019,21 +3019,6 @@ def admin_sauvegarde_importer():
     return redirect(url_for('admin_sauvegarde_attente'))
 
 
-@app.route('/admin/sauvegarde/telecharger/<nom>')
-@login_required
-def admin_sauvegarde_telecharger(nom):
-    """Télécharge une sauvegarde automatique."""
-    if current_user.role != 'admin':
-        return 'Accès refusé', 403
-    backup_dir = os.path.normpath(os.path.join(app.config['UPLOAD_FOLDER'], '..', 'backups'))
-    path = os.path.join(backup_dir, nom)
-    if not os.path.exists(path) or not nom.startswith('orthoptie_backup_'):
-        return 'Fichier introuvable', 404
-    mimetype = 'application/gzip' if nom.endswith('.tar.gz') else 'application/zip'
-    from flask import send_file
-    return send_file(path, as_attachment=True, download_name=nom, mimetype=mimetype)
-
-
 @app.route('/session/ping', methods=['POST'])
 @login_required
 def session_ping():
