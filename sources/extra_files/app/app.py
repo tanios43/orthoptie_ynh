@@ -387,6 +387,7 @@ COLLABORA_URL = 'https://collabora.orthoptistes-yssingeaux.fr'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orthoptie_v2.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
+app.config['DATA_FOLDER'] = os.path.dirname(os.path.join(os.path.dirname(__file__), 'uploads'))
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx'}
 
@@ -2869,8 +2870,8 @@ def admin_sauvegarde():
         flash('Accès réservé aux administrateurs.', 'danger')
         return redirect(url_for('index'))
     import glob
-    backup_dir = os.path.join(app.config['UPLOAD_FOLDER'], '..', 'backups')
-    backup_dir = os.path.normpath(backup_dir)
+    data_dir   = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
+    backup_dir = os.path.join(data_dir, 'backups')
     os.makedirs(backup_dir, exist_ok=True)
     backups = sorted(
         glob.glob(os.path.join(backup_dir, 'orthoptie_backup_*.zip')) +
