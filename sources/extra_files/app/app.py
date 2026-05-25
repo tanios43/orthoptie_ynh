@@ -3846,7 +3846,6 @@ def admin_sections_reordonner():
 
 @app.route('/admin/section/<int:section_id>/champ/nouveau', methods=['POST'])
 @login_required
-@admin_required
 def admin_champ_nouveau(section_id):
     s = SectionDef.query.get_or_404(section_id)
     label = request.form.get('label', '').strip()
@@ -3865,7 +3864,6 @@ def admin_champ_nouveau(section_id):
 
 @app.route('/admin/champ/<int:champ_id>/modifier', methods=['POST'])
 @login_required
-@admin_required
 def admin_champ_modifier(champ_id):
     c = ChampDef.query.get_or_404(champ_id)
     c.label = request.form.get('label', c.label).strip()
@@ -3877,7 +3875,6 @@ def admin_champ_modifier(champ_id):
 
 @app.route('/admin/champ/<int:champ_id>/supprimer', methods=['POST'])
 @login_required
-@admin_required
 def admin_champ_supprimer(champ_id):
     c = ChampDef.query.get_or_404(champ_id); sid = c.section_id
     db.session.delete(c); db.session.commit(); flash('Champ supprimé.', 'success')
@@ -3886,7 +3883,6 @@ def admin_champ_supprimer(champ_id):
 
 @app.route('/admin/champs/reordonner', methods=['POST'])
 @login_required
-@admin_required
 def admin_champs_reordonner():
     for i, cid in enumerate(request.json.get('ordre', [])):
         c = ChampDef.query.get(cid)
@@ -3898,7 +3894,6 @@ def admin_champs_reordonner():
 
 @app.route('/admin/champ/<int:champ_id>/options_json')
 @login_required
-@admin_required
 def admin_options_json(champ_id):
     c = ChampDef.query.get_or_404(champ_id)
     return jsonify({'options': [
@@ -3909,7 +3904,6 @@ def admin_options_json(champ_id):
 
 @app.route('/admin/champ/<int:champ_id>/option/nouvelle', methods=['POST'])
 @login_required
-@admin_required
 def admin_option_nouvelle(champ_id):
     c = ChampDef.query.get_or_404(champ_id)
     valeur = request.form.get('valeur', '').strip()
@@ -3922,7 +3916,6 @@ def admin_option_nouvelle(champ_id):
 
 @app.route('/admin/option/<int:option_id>/supprimer', methods=['POST'])
 @login_required
-@admin_required
 def admin_option_supprimer(option_id):
     o = OptionDef.query.get_or_404(option_id); sid = o.champ.section_id; v = o.valeur
     db.session.delete(o); db.session.commit(); flash(f'Valeur « {v} » supprimée.', 'success')
@@ -3931,7 +3924,6 @@ def admin_option_supprimer(option_id):
 
 @app.route('/admin/options/reordonner', methods=['POST'])
 @login_required
-@admin_required
 def admin_options_reordonner():
     for i, oid in enumerate(request.json.get('ordre', [])):
         o = OptionDef.query.get(oid)
