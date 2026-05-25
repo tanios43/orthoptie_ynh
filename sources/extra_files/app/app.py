@@ -3419,7 +3419,25 @@ def fichier_titre(fichier_id):
     return jsonify({'ok': True})
 
 
-@app.route('/fichier/<int:fichier_id>/supprimer', methods=['POST'])
+@app.route('/fichier-bilan/<int:fichier_id>/voir')
+@login_required
+def consultation_fichier_voir(fichier_id):
+    """Affiche ou télécharge un fichier joint à un bilan."""
+    from flask import send_file as _sf
+    f = FichierBilan.query.get_or_404(fichier_id)
+    chemin = os.path.join(app.config['UPLOAD_FOLDER'],
+                          str(f.consultation_id), f.nom_stocke)
+    if not os.path.exists(chemin):
+        abort(404)
+    # Afficher inline si image ou PDF, sinon télécharger
+    inline_types = {'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'}
+    ext = f.type_fichier or ''
+    as_attachment = ext.lower() not in inline_types
+    return _sf(chemin, as_attachment=as_attachment,
+               download_name=f.nom_original)
+
+
+
 @login_required
 def fichier_supprimer(fichier_id):
     f = FichierBilan.query.get_or_404(fichier_id)

@@ -296,6 +296,21 @@
 
             {# Actions #}
             <div style="display:flex;gap:6px;flex-shrink:0;" onclick="event.stopPropagation()">
+              {% if c.fichiers %}
+              <button type="button"
+                      onclick="ouvrirPiecesJointes({{ c.id }}, '{{ c.date_consult.strftime('%d/%m/%Y') }}')"
+                      class="btn btn-secondary btn-sm"
+                      title="{{ c.fichiers|length }} pièce{{ 's' if c.fichiers|length > 1 }} jointe{{ 's' if c.fichiers|length > 1 }}"
+                      style="position:relative;">
+                📎
+                <span style="position:absolute;top:-5px;right:-5px;
+                             background:var(--accent);color:white;
+                             border-radius:50%;width:16px;height:16px;
+                             font-size:9px;font-weight:700;
+                             display:flex;align-items:center;justify-content:center;
+                             line-height:1;">{{ c.fichiers|length }}</span>
+              </button>
+              {% endif %}
               <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}"
                  class="btn btn-secondary btn-sm">✎</a>
               <a href="{{ url_for('consultation_detail', consultation_id=c.id) }}"
@@ -305,6 +320,39 @@
                       class="btn btn-secondary btn-sm"
                       style="color:#e53e3e;border-color:#e53e3e;"
                       title="Supprimer ce bilan">🗑</button>
+            </div>
+          </div>
+
+          {# Pièces jointes inline (masqué par défaut) #}
+          <div id="pj-{{ c.id }}" style="display:none;padding:10px 20px 12px;
+               background:var(--bg);border-top:1px solid var(--border);">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);
+                        margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">
+              📎 Pièces jointes ({{ c.fichiers|length }})
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              {% for f in c.fichiers %}
+              <a href="{{ url_for('consultation_fichier_voir', fichier_id=f.id) }}"
+                 target="_blank"
+                 style="display:flex;align-items:center;gap:6px;
+                        padding:6px 12px;border-radius:7px;
+                        background:white;border:1px solid var(--border);
+                        text-decoration:none;color:inherit;font-size:12px;
+                        transition:border-color .15s;"
+                 onmouseover="this.style.borderColor='var(--accent)'"
+                 onmouseout="this.style.borderColor='var(--border)'">
+                {% if f.type_fichier in ['jpg','jpeg','png','gif','webp'] %}
+                  🖼️
+                {% elif f.type_fichier == 'pdf' %}
+                  📄
+                {% elif f.type_fichier in ['doc','docx'] %}
+                  📝
+                {% else %}
+                  📎
+                {% endif %}
+                <span>{{ f.titre or f.nom_original }}</span>
+              </a>
+              {% endfor %}
             </div>
           </div>
 
@@ -876,6 +924,15 @@
 </div>
 
 <script>
+function ouvrirPiecesJointes(id, date) {
+  // Fermer toutes les autres PJ ouvertes
+  document.querySelectorAll('[id^="pj-"]').forEach(el => {
+    if (el.id !== 'pj-' + id) el.style.display = 'none';
+  });
+  const el = document.getElementById('pj-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
 function toggleBilan(id) {
   const body = document.getElementById(id);
   const chev = document.getElementById('chev-' + id);
