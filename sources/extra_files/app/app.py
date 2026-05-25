@@ -2888,7 +2888,40 @@ def admin_sauvegarde():
                            config_sauvegarde=ConfigSauvegarde.query.first())
 
 
-@app.route('/admin/sauvegarde/exporter')
+@app.route('/admin/sauvegarde/telecharger/<nom>')
+@login_required
+@admin_required
+def admin_sauvegarde_telecharger(nom):
+    """Télécharge une archive de sauvegarde locale."""
+    import re
+    if not re.match(r'^orthoptie_backup_[\w\-]+\.(tar\.gz|zip)$', nom):
+        abort(400)
+    data_dir   = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
+    backup_dir = os.path.join(data_dir, 'backups')
+    chemin     = os.path.join(backup_dir, nom)
+    if not os.path.exists(chemin):
+        abort(404)
+    return send_file(chemin, as_attachment=True, download_name=nom)
+
+
+@app.route('/admin/sauvegarde/supprimer-local/<nom>', methods=['POST'])
+@login_required
+@admin_required
+def admin_sauvegarde_supprimer_local(nom):
+    """Supprime une archive de sauvegarde locale."""
+    import re
+    if not re.match(r'^orthoptie_backup_[\w\-]+\.(tar\.gz|zip)$', nom):
+        abort(400)
+    data_dir   = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
+    backup_dir = os.path.join(data_dir, 'backups')
+    chemin     = os.path.join(backup_dir, nom)
+    if os.path.exists(chemin):
+        os.remove(chemin)
+        flash(f'Archive {nom} supprimée.', 'success')
+    return redirect(url_for('admin_sauvegarde'))
+
+
+
 @login_required
 def admin_sauvegarde_exporter():
     """Génère et télécharge un zip de sauvegarde."""

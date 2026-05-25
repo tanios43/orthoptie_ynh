@@ -69,17 +69,51 @@
 
   {# ── Sauvegardes automatiques ── #}
   <div class="card">
-    <div class="card-header"><h2>🕑 Sauvegardes automatiques</h2></div>
+    <div class="card-header"><h2>🕑 Sauvegardes automatiques locales</h2></div>
     <div class="card-body">
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
-        Une sauvegarde automatique est effectuée chaque nuit à 2h. Les 7 dernières sont conservées sur le serveur.
+        Une sauvegarde automatique est effectuée chaque nuit à 2h. Les 7 dernières sont conservées.
       </p>
-      <form method="POST" action="{{ url_for('admin_sauvegarde_lancer') }}">
+      <form method="POST" action="{{ url_for('admin_sauvegarde_lancer') }}" style="margin-bottom:16px;">
         <button type="submit" class="btn btn-secondary"
                 onclick="return confirm('Lancer une sauvegarde maintenant ?')">
           ▶ Lancer une sauvegarde maintenant
         </button>
       </form>
+      {% if backups %}
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:6px 8px;font-weight:600;">Fichier</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:600;">Taille</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:600;">Date</th>
+            <th style="padding:6px 8px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in backups %}
+          <tr style="border-bottom:0.5px solid var(--border);">
+            <td style="padding:7px 8px;color:var(--muted);font-size:12px;">{{ b.nom }}</td>
+            <td style="padding:7px 8px;text-align:right;color:var(--muted);">{{ b.taille }}</td>
+            <td style="padding:7px 8px;text-align:right;white-space:nowrap;">{{ b.date }}</td>
+            <td style="padding:7px 8px;text-align:right;white-space:nowrap;">
+              <a href="{{ url_for('admin_sauvegarde_telecharger', nom=b.nom) }}"
+                 class="btn btn-secondary btn-sm">📥 Télécharger</a>
+              <form method="POST"
+                    action="{{ url_for('admin_sauvegarde_supprimer_local', nom=b.nom) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Supprimer {{ b.nom }} ?')">
+                <button type="submit" class="btn btn-secondary btn-sm"
+                        style="color:#e53e3e;border-color:#e53e3e;">🗑</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="font-size:13px;color:var(--muted);">Aucune sauvegarde locale disponible.</p>
+      {% endif %}
     </div>
   </div>
 
