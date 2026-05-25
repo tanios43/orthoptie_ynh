@@ -2922,6 +2922,7 @@ def admin_sauvegarde_supprimer_local(nom):
 
 
 
+@app.route('/admin/sauvegarde/exporter')
 @login_required
 def admin_sauvegarde_exporter():
     """Génère et télécharge un zip de sauvegarde."""
