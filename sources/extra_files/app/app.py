@@ -387,7 +387,9 @@ COLLABORA_URL = 'https://collabora.orthoptistes-yssingeaux.fr'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orthoptie_v2.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
-app.config['DATA_FOLDER'] = os.path.dirname(os.path.join(os.path.dirname(__file__), 'uploads'))
+# DATA_FOLDER : résoudre le symlink uploads pour trouver le vrai répertoire de données
+_uploads_real = os.path.realpath(app.config['UPLOAD_FOLDER'])
+app.config['DATA_FOLDER'] = os.path.dirname(_uploads_real)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx'}
 
