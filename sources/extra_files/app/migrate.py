@@ -419,6 +419,30 @@ with app.app_context():
     except Exception as e:
         print(f"ERREUR  : nettoyage \\r : {e}")
 
+    # Renommer champ_def.nom en name si nécessaire (migration base test)
+    try:
+        _cur.execute("SELECT nom FROM champ_def LIMIT 1")
+        # La colonne s'appelle 'nom' — recréer la table avec le bon nom
+        _cur.executescript("""
+            CREATE TABLE IF NOT EXISTS champ_def_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                section_id INTEGER NOT NULL REFERENCES section_def(id),
+                name TEXT NOT NULL,
+                label TEXT NOT NULL,
+                type TEXT DEFAULT 'text',
+                ordre INTEGER DEFAULT 99,
+                actif BOOLEAN DEFAULT 1
+            );
+            INSERT INTO champ_def_new (id, section_id, name, label, type, ordre, actif)
+                SELECT id, section_id, nom, label, type_champ, ordre, 1 FROM champ_def;
+            DROP TABLE champ_def;
+            ALTER TABLE champ_def_new RENAME TO champ_def;
+        """)
+        _conn.commit()
+        print("OK      : champ_def.nom renommé en name")
+    except Exception:
+        print("Present : champ_def.name OK")
+
     # signature sur praticien
     try:
         with db.engine.connect() as conn:

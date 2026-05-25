@@ -10,4 +10,7 @@ ynh_backup --src_path="$data_dir"
 ynh_script_progression --message="Sauvegarde de la configuration nginx..." --weight=1
 ynh_backup --src_path="/etc/nginx/conf.d/$domain.d/$app.conf"
 
+ynh_script_progression --message="Sauvegarde du service systemd..." --weight=1
+ynh_backup --src_path="/etc/systemd/system/$app.service"
+
 ynh_script_progression --message="Sauvegarde terminée !" --last
