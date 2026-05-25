@@ -3019,6 +3019,7 @@ def admin_sauvegarde_importer():
         db.engine.dispose()
     except Exception:
         pass
+    import subprocess
     subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
     flash('Restauration effectuée.', 'success')
     return redirect(url_for('admin_sauvegarde_attente'))
