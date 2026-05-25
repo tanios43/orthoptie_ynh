@@ -89,6 +89,37 @@ def get_categories():
     return cats
 
 
+@app.after_request
+def add_security_headers(response):
+    """Ajoute les headers de sécurité HTTP à chaque réponse."""
+    response.headers['X-Frame-Options']        = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-XSS-Protection']       = '1; mode=block'
+    response.headers['Referrer-Policy']         = 'strict-origin-when-cross-origin'
+    # Ne pas cacher les pages authentifiées
+    if current_user.is_authenticated:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    return response
+
+
+# Rate limiting manuel sur le login
+_login_attempts = {}  # {ip: [timestamps]}
+
+def _check_rate_limit(ip):
+    """Retourne True si l'IP est bloquée (trop de tentatives)."""
+    import time
+    now = time.time()
+    attempts = _login_attempts.get(ip, [])
+    # Garder uniquement les tentatives des 15 dernières minutes
+    attempts = [t for t in attempts if now - t < 900]
+    _login_attempts[ip] = attempts
+    return len(attempts) >= 10  # max 10 tentatives / 15 min
+
+def _record_attempt(ip):
+    import time
+    _login_attempts.setdefault(ip, []).append(time.time())
+
+
 @app.before_request
 def force_setup_si_admin_defaut():
     """Bloque toute navigation si connecté avec le compte admin par défaut."""
@@ -370,7 +401,23 @@ def section_style(section_type, categorie=''):
     """Retourne bg/color/icon pour une section selon sa catégorie."""
     cat = categorie or BUILTIN_CATEGORIES.get(section_type, '')
     return get_categories().get(cat, CATEGORIES_BUILTIN[''])
-app.config['SECRET_KEY'] = 'changez-cette-cle-en-production'
+import os as _os
+_secret_key = _os.environ.get('ORTHOPTIE_SECRET_KEY') or _os.environ.get('SECRET_KEY')
+if not _secret_key:
+    # Générer et persister une clé si elle n'existe pas
+    _key_file = _os.path.join(_os.path.dirname(__file__), '.secret_key')
+    if _os.path.exists(_key_file):
+        with open(_key_file) as _f: _secret_key = _f.read().strip()
+    else:
+        import secrets as _sec
+        _secret_key = _sec.token_hex(32)
+        with open(_key_file, 'w') as _f: _f.write(_secret_key)
+        _os.chmod(_key_file, 0o600)
+
+app.config['SECRET_KEY']                = _secret_key
+app.config['SESSION_COOKIE_SECURE']     = True
+app.config['SESSION_COOKIE_HTTPONLY']   = True
+app.config['SESSION_COOKIE_SAMESITE']   = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(hours=24)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
@@ -1058,13 +1105,17 @@ def log_action(action, patient_id=None, consultation_id=None):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+        if _check_rate_limit(ip):
+            flash('Trop de tentatives de connexion. Réessayez dans 15 minutes.', 'danger')
+            return render_template('login.html')
         p = Praticien.query.filter_by(login=request.form.get('login'), actif=True).first()
         if p and p.check_password(request.form.get('password', '')):
             login_user(p)
-            # Compte admin par défaut → forcer la création d'un vrai compte
             if getattr(p, 'is_default', False) or p.login == 'admin' and p.nom == '':
                 return redirect(url_for('setup_premier_compte'))
             return redirect(url_for('index'))
+        _record_attempt(ip)
         flash('Identifiants ou mot de passe incorrects.', 'danger')
     return render_template('login.html')
 
@@ -3312,6 +3363,28 @@ def consultation_supprimer(consultation_id):
 
 def allowed_file(fn):
     return '.' in fn and fn.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def check_file_mime(file_storage):
+    """Vérifie les magic bytes du fichier uploadé."""
+    header = file_storage.read(16)
+    file_storage.seek(0)
+    ext = file_storage.filename.rsplit('.', 1)[-1].lower() if '.' in file_storage.filename else ''
+    # Signatures magic bytes connues
+    if header.startswith(b'\x89PNG') and ext == 'png':           return True
+    if header.startswith(b'\xff\xd8\xff') and ext in ('jpg','jpeg'): return True
+    if header[:6] in (b'GIF87a', b'GIF89a') and ext == 'gif':   return True
+    if header.startswith(b'%PDF') and ext == 'pdf':              return True
+    if header.startswith(b'PK\x03\x04') and ext in ('docx','doc'): return True
+    if header.startswith(b'RIFF') and ext == 'webp':             return True
+    # Format non reconnu — on vérifie juste qu'il n'y a pas de code PHP/script
+    try:
+        sample = file_storage.read(512).decode('utf-8', errors='ignore')
+        file_storage.seek(0)
+        if any(sig in sample for sig in ['<?php', '<script', '#!/']):
+            return False
+    except Exception:
+        pass
+    return True
 
 
 @app.route('/uploads/<int:consultation_id>/<filename>')
@@ -5750,4 +5823,4 @@ def editer_collabora(consultation_id):
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     init_db()
-    app.run(debug=True, port=5000)
+    app.run(debug=False, port=5000)

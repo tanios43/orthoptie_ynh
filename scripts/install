@@ -88,6 +88,11 @@ popd
 #=================================================
 ynh_script_progression --message="Configuration des permissions..." --weight=1
 
+# Générer une clé secrète unique pour Flask
+python3 -c "import secrets; print(secrets.token_hex(32))" > "$install_dir/.secret_key"
+chmod 600 "$install_dir/.secret_key"
+chown "$app:$app" "$install_dir/.secret_key"
+
 chown -R "$app:www-data" "$install_dir"
 chown -R "$app:$app" "$data_dir"
 chmod -R o-rwx "$install_dir"
