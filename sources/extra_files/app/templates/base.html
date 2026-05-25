@@ -408,15 +408,6 @@
     </a>
 
     <div class="nav-section"><span>Configuration</span></div>
-    {% if current_user.is_admin %}
-    <a href="{{ url_for('admin_praticiens') }}"
-       class="nav-item {% if request.endpoint and 'praticien' in request.endpoint and request.endpoint != 'profil' %}active{% endif %}">
-      <span class="icon">👥</span> Praticiens
-    </a>
-    <a href="{{ url_for('admin_cabinets') }}"
-       class="nav-item {% if request.endpoint and 'cabinet' in request.endpoint %}active{% endif %}">
-      <span class="icon">🏥</span> Cabinets
-    </a>
     <a href="{{ url_for('admin_sections') }}"
        class="nav-item {% if request.endpoint in ['admin_sections','admin_section_detail'] %}active{% endif %}">
       <span class="icon">⚙</span> Sections du bilan
@@ -428,6 +419,15 @@
     <a href="/admin/document-modeles"
        class="nav-item {% if request.endpoint and 'document' in request.endpoint %}active{% endif %}">
       <span class="icon">📄</span> Modèles de documents
+    </a>
+    {% if current_user.is_admin %}
+    <a href="{{ url_for('admin_praticiens') }}"
+       class="nav-item {% if request.endpoint and 'praticien' in request.endpoint and request.endpoint != 'profil' %}active{% endif %}">
+      <span class="icon">👥</span> Praticiens
+    </a>
+    <a href="{{ url_for('admin_cabinets') }}"
+       class="nav-item {% if request.endpoint and 'cabinet' in request.endpoint %}active{% endif %}">
+      <span class="icon">🏥</span> Cabinets
     </a>
     <a href="{{ url_for('admin_sauvegarde') }}"
        class="nav-item {% if request.endpoint == 'admin_sauvegarde' %}active{% endif %}">
