@@ -3787,7 +3787,6 @@ def admin_sections():
 
 @app.route('/admin/section/nouvelle', methods=['POST'])
 @login_required
-@admin_required
 def admin_section_nouvelle():
     label = request.form.get('label', '').strip()
     if not label: flash('Le nom est requis.', 'danger'); return redirect(url_for('admin_sections'))
@@ -3803,7 +3802,6 @@ def admin_section_nouvelle():
 
 @app.route('/admin/section/<int:section_id>')
 @login_required
-@admin_required
 def admin_section_detail(section_id):
     section = SectionDef.query.get_or_404(section_id)
     all_sections = SectionDef.query.order_by(SectionDef.ordre).all()
@@ -3812,7 +3810,6 @@ def admin_section_detail(section_id):
 
 @app.route('/admin/section/<int:section_id>/modifier', methods=['POST'])
 @login_required
-@admin_required
 def admin_section_modifier(section_id):
     s = SectionDef.query.get_or_404(section_id)
     s.label             = request.form.get('label', s.label).strip()
@@ -3826,7 +3823,6 @@ def admin_section_modifier(section_id):
 
 @app.route('/admin/section/<int:section_id>/supprimer', methods=['POST'])
 @login_required
-@admin_required
 def admin_section_supprimer(section_id):
     s = SectionDef.query.get_or_404(section_id)
     if s.builtin:
@@ -3839,7 +3835,6 @@ def admin_section_supprimer(section_id):
 
 @app.route('/admin/sections/reordonner', methods=['POST'])
 @login_required
-@admin_required
 def admin_sections_reordonner():
     for i, sid in enumerate(request.json.get('ordre', [])):
         s = SectionDef.query.get(sid)
@@ -3950,7 +3945,6 @@ def admin_options_reordonner():
 
 @app.route('/admin/modeles')
 @login_required
-@admin_required
 def admin_modeles():
     modeles = ModeleBilan.query.order_by(ModeleBilan.nom).all()
     sections, ordre = get_sections()
@@ -3960,7 +3954,6 @@ def admin_modeles():
 
 @app.route('/admin/modele/nouveau', methods=['POST'])
 @login_required
-@admin_required
 def admin_modele_nouveau():
     nom = request.form.get('nom', '').strip()
     if not nom:
@@ -3981,7 +3974,6 @@ def admin_modele_nouveau():
 
 @app.route('/admin/modele/<int:modele_id>/modifier', methods=['POST'])
 @login_required
-@admin_required
 def admin_modele_modifier(modele_id):
     m = ModeleBilan.query.get_or_404(modele_id)
     m.nom   = request.form.get('nom', m.nom).strip()
@@ -4001,7 +3993,6 @@ def admin_modele_modifier(modele_id):
 
 @app.route('/admin/modele/<int:modele_id>/supprimer', methods=['POST'])
 @login_required
-@admin_required
 def admin_modele_supprimer(modele_id):
     m = ModeleBilan.query.get_or_404(modele_id)
     nom = m.nom; db.session.delete(m); db.session.commit()
@@ -4121,7 +4112,6 @@ def init_db():
 
 @app.route('/admin/document-modeles')
 @login_required
-@admin_required
 def admin_document_modeles():
     modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
     sections, ordre = get_sections()
@@ -4131,7 +4121,6 @@ def admin_document_modeles():
 
 @app.route('/admin/document-modele/nouveau', methods=['POST'])
 @login_required
-@admin_required
 def admin_document_modele_nouveau():
     nom   = request.form.get('nom', '').strip()
     type_ = request.form.get('type', 'courrier')
@@ -4146,7 +4135,6 @@ def admin_document_modele_nouveau():
 
 @app.route('/admin/document-modele/<int:modele_id>')
 @login_required
-@admin_required
 def admin_document_modele_detail(modele_id):
     m = DocumentModele.query.get_or_404(modele_id)
     modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
@@ -4158,7 +4146,6 @@ def admin_document_modele_detail(modele_id):
 
 @app.route('/admin/document-modele/<int:modele_id>/modifier', methods=['POST'])
 @login_required
-@admin_required
 def admin_document_modele_modifier(modele_id):
     m = DocumentModele.query.get_or_404(modele_id)
     m.nom   = request.form.get('nom', m.nom).strip()
@@ -4170,7 +4157,6 @@ def admin_document_modele_modifier(modele_id):
 
 @app.route('/admin/document-modele/<int:modele_id>/supprimer', methods=['POST'])
 @login_required
-@admin_required
 def admin_document_modele_supprimer(modele_id):
     m = DocumentModele.query.get_or_404(modele_id)
     nom = m.nom; db.session.delete(m); db.session.commit()
@@ -4180,7 +4166,6 @@ def admin_document_modele_supprimer(modele_id):
 
 @app.route('/admin/document-modele/<int:modele_id>/bloc/nouveau', methods=['POST'])
 @login_required
-@admin_required
 def admin_document_bloc_nouveau(modele_id):
     m = DocumentModele.query.get_or_404(modele_id)
     max_o = max((b.ordre for b in m.blocs), default=0)
@@ -4195,7 +4180,6 @@ def admin_document_bloc_nouveau(modele_id):
 
 @app.route('/admin/document-bloc/<int:bloc_id>/modifier', methods=['POST'])
 @login_required
-@admin_required
 def admin_document_bloc_modifier(bloc_id):
     b = DocumentBloc.query.get_or_404(bloc_id)
     b.contenu = request.form.get('contenu', '').strip()
@@ -4205,7 +4189,6 @@ def admin_document_bloc_modifier(bloc_id):
 
 @app.route('/admin/document-bloc/<int:bloc_id>/supprimer', methods=['POST'])
 @login_required
-@admin_required
 def admin_document_bloc_supprimer(bloc_id):
     b = DocumentBloc.query.get_or_404(bloc_id)
     mid = b.modele_id; db.session.delete(b); db.session.commit()
@@ -4215,7 +4198,6 @@ def admin_document_bloc_supprimer(bloc_id):
 
 @app.route('/admin/document-blocs/reordonner', methods=['POST'])
 @login_required
-@admin_required
 def admin_document_blocs_reordonner():
     for i, bid in enumerate(request.json.get('ordre', [])):
         b = DocumentBloc.query.get(bid)
