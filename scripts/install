@@ -23,6 +23,10 @@ fi
 # Créer le dossier de logs
 mkdir -p "/var/log/$app"
 chown "$app:$app" "/var/log/$app"
+chmod 750 "/var/log/$app"
+touch "/var/log/$app/backup.log"
+chown "$app:$app" "/var/log/$app/backup.log"
+chmod 664 "/var/log/$app/backup.log"
 
 # Installer le cron de sauvegarde automatique
 if [ -f "$YNH_APP_BASEDIR/conf/backup-cron" ]; then
