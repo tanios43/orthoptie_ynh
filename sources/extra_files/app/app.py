@@ -2559,6 +2559,22 @@ def admin_envoyer_sauvegarde_distante():
         ], capture_output=True, text=True, timeout=120)
         if r.returncode != 0: errors.append(f'db: {r.stderr.strip()}')
 
+        # Clés SSH et config SFTP
+        ssh_dir = os.path.join(data_dir, 'ssh')
+        if os.path.isdir(ssh_dir):
+            r = subprocess.run([
+                'rsync', '-az', '--timeout=30', '-e', ssh_opts,
+                ssh_dir + '/',
+                f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/ssh/'
+            ], capture_output=True, text=True, timeout=30)
+        sftp_conf = os.path.join(data_dir, 'sftp_config.sh')
+        if os.path.exists(sftp_conf):
+            r = subprocess.run([
+                'rsync', '-az', '--timeout=30', '-e', ssh_opts,
+                sftp_conf,
+                f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/'
+            ], capture_output=True, text=True, timeout=30)
+
         # Uploads incrémental
         r = subprocess.run([
             'rsync', '-az', '--checksum', '--delete', '--chmod=D755,F644', '--timeout=300',
@@ -2663,6 +2679,20 @@ def admin_restaurer_nas():
             os.path.join(data_dir, 'orthoptie_v2.db')
         ], capture_output=True, text=True, timeout=120)
         if r.returncode != 0: errors.append(f'db: {r.stderr.strip()}')
+
+        # 2. Restaurer les clés SSH si présentes sur le NAS
+        subprocess.run([
+            'rsync', '-az', '--no-perms', '--no-owner', '--no-group',
+            '--timeout=30', '-e', ssh_opts,
+            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/ssh/',
+            os.path.join(data_dir, 'ssh') + '/'
+        ], capture_output=True, text=True, timeout=30)
+        subprocess.run([
+            'rsync', '-az', '--no-perms', '--no-owner', '--no-group',
+            '--timeout=30', '-e', ssh_opts,
+            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/sftp_config.sh',
+            os.path.join(data_dir, 'sftp_config.sh')
+        ], capture_output=True, text=True, timeout=30)
 
         # 2. Restaurer les uploads
         r = subprocess.run([

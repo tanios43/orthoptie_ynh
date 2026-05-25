@@ -17,7 +17,12 @@ log "=== Démarrage sauvegarde ==="
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/orthoptie_backup_${DATE}.tar.gz"
 
-tar -czf "${BACKUP_FILE}" -C "${DATA_DIR}" "orthoptie_v2.db" "uploads" 2>/dev/null
+tar -czf "${BACKUP_FILE}" -C "${DATA_DIR}" \
+    "orthoptie_v2.db" \
+    "uploads" \
+    $([ -d "${DATA_DIR}/ssh" ] && echo "ssh") \
+    $([ -f "${DATA_DIR}/sftp_config.sh" ] && echo "sftp_config.sh") \
+    2>/dev/null
 
 if [ $? -eq 0 ]; then
     SIZE=$(du -sh "${BACKUP_FILE}" | cut -f1)
@@ -53,6 +58,20 @@ if [ -f "${SFTP_CONFIG}" ]; then
             "${DATA_DIR}/orthoptie_v2.db" \
             "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/db/"
         DB_STATUS=$?
+
+        # Clés SSH et config SFTP
+        if [ -d "${DATA_DIR}/ssh" ]; then
+            rsync -az --timeout=30 \
+                -e "ssh ${SSH_OPTS}" \
+                "${DATA_DIR}/ssh/" \
+                "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/ssh/"
+        fi
+        if [ -f "${DATA_DIR}/sftp_config.sh" ]; then
+            rsync -az --timeout=30 \
+                -e "ssh ${SSH_OPTS}" \
+                "${DATA_DIR}/sftp_config.sh" \
+                "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/"
+        fi
 
         # Uploads : sync incrémental, seuls les nouveaux/modifiés fichiers
         # --checksum : comparaison par contenu, pas par date
