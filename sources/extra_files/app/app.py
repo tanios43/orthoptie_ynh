@@ -2973,12 +2973,13 @@ def admin_importer_config():
     try:
         data     = json.load(f)
         data_dir = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
-        # Config Collabora
         cfg_app = ConfigApp.query.first()
         if not cfg_app:
             cfg_app = ConfigApp(); db.session.add(cfg_app)
-        cfg_app.collabora_url = data.get('collabora_url', '')
-        cfg_app.wopi_base_url = data.get('wopi_base_url', '')
+        # Config Collabora — restaurer seulement si explicitement demandé
+        if request.form.get('importer_collabora') == '1':
+            cfg_app.collabora_url = data.get('collabora_url', '')
+            cfg_app.wopi_base_url = data.get('wopi_base_url', '')
         # Config SFTP
         cfg_sftp = ConfigSauvegarde.query.first()
         if not cfg_sftp:
