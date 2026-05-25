@@ -2904,6 +2904,7 @@ def admin_sauvegarde_telecharger(nom):
     chemin     = os.path.join(backup_dir, nom)
     if not os.path.exists(chemin):
         abort(404)
+    from flask import send_file
     return send_file(chemin, as_attachment=True, download_name=nom)
 
 
