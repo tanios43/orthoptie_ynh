@@ -2926,6 +2926,99 @@ def admin_sauvegarde_supprimer_local(nom):
 
 
 
+@app.route('/admin/sauvegarde/exporter-config')
+@login_required
+@admin_required
+def admin_exporter_config():
+    """Exporte la configuration (Collabora + SFTP) en JSON."""
+    import json
+    cfg_app  = ConfigApp.query.first()
+    cfg_sftp = ConfigSauvegarde.query.first()
+    data_dir = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
+    # Lire la clé privée SSH si elle existe
+    key_path = os.path.join(data_dir, 'ssh', 'backup_key')
+    cle_privee = ''
+    if os.path.exists(key_path):
+        with open(key_path) as f:
+            cle_privee = f.read()
+    config = {
+        'collabora_url':  cfg_app.collabora_url  if cfg_app  else '',
+        'wopi_base_url':  cfg_app.wopi_base_url   if cfg_app  else '',
+        'sftp_host':      cfg_sftp.sftp_host      if cfg_sftp else '',
+        'sftp_port':      cfg_sftp.sftp_port      if cfg_sftp else 22,
+        'sftp_user':      cfg_sftp.sftp_user      if cfg_sftp else '',
+        'sftp_path':      cfg_sftp.sftp_path      if cfg_sftp else '',
+        'sftp_actif':     cfg_sftp.sftp_actif     if cfg_sftp else False,
+        'cle_publique':   cfg_sftp.cle_publique   if cfg_sftp else '',
+        'cle_privee':     cle_privee,
+    }
+    from flask import Response
+    return Response(
+        json.dumps(config, indent=2, ensure_ascii=False),
+        mimetype='application/json',
+        headers={'Content-Disposition': 'attachment; filename=orthoptie_config.json'}
+    )
+
+
+@app.route('/admin/sauvegarde/importer-config', methods=['POST'])
+@login_required
+@admin_required
+def admin_importer_config():
+    """Importe la configuration (Collabora + SFTP) depuis un JSON."""
+    import json
+    f = request.files.get('fichier_config')
+    if not f or not f.filename.endswith('.json'):
+        flash('Fichier invalide — JSON requis.', 'danger')
+        return redirect(url_for('admin_sauvegarde'))
+    try:
+        data     = json.load(f)
+        data_dir = app.config.get('DATA_FOLDER', '/home/yunohost.app/orthoptie')
+        # Config Collabora
+        cfg_app = ConfigApp.query.first()
+        if not cfg_app:
+            cfg_app = ConfigApp(); db.session.add(cfg_app)
+        cfg_app.collabora_url = data.get('collabora_url', '')
+        cfg_app.wopi_base_url = data.get('wopi_base_url', '')
+        # Config SFTP
+        cfg_sftp = ConfigSauvegarde.query.first()
+        if not cfg_sftp:
+            cfg_sftp = ConfigSauvegarde(); db.session.add(cfg_sftp)
+        cfg_sftp.sftp_host    = data.get('sftp_host', '')
+        cfg_sftp.sftp_port    = int(data.get('sftp_port', 22))
+        cfg_sftp.sftp_user    = data.get('sftp_user', '')
+        cfg_sftp.sftp_path    = data.get('sftp_path', '')
+        cfg_sftp.sftp_actif   = data.get('sftp_actif', False)
+        cfg_sftp.cle_publique = data.get('cle_publique', '')
+        cfg_sftp.cle_privee   = data.get('cle_privee', '')
+        db.session.commit()
+        # Restaurer la clé SSH sur le disque
+        if data.get('cle_privee'):
+            key_dir = os.path.join(data_dir, 'ssh')
+            os.makedirs(key_dir, exist_ok=True)
+            key_path = os.path.join(key_dir, 'backup_key')
+            with open(key_path, 'w') as kf:
+                kf.write(data['cle_privee'])
+            os.chmod(key_path, 0o600)
+        if data.get('cle_publique'):
+            key_dir = os.path.join(data_dir, 'ssh')
+            os.makedirs(key_dir, exist_ok=True)
+            with open(os.path.join(key_dir, 'backup_key.pub'), 'w') as kf:
+                kf.write(data['cle_publique'])
+        # Regénérer sftp_config.sh
+        if cfg_sftp.sftp_host:
+            config_path = os.path.join(data_dir, 'sftp_config.sh')
+            with open(config_path, 'w') as cf:
+                cf.write(f'SFTP_ACTIF="{1 if cfg_sftp.sftp_actif else 0}"\n')
+                cf.write(f'SFTP_HOST="{cfg_sftp.sftp_host}"\n')
+                cf.write(f'SFTP_PORT="{cfg_sftp.sftp_port}"\n')
+                cf.write(f'SFTP_USER="{cfg_sftp.sftp_user}"\n')
+                cf.write(f'SFTP_PATH="{cfg_sftp.sftp_path}"\n')
+        flash('✅ Configuration importée avec succès.', 'success')
+    except Exception as e:
+        flash(f'❌ Erreur lors de l\'import : {e}', 'danger')
+    return redirect(url_for('admin_sauvegarde'))
+
+
 @app.route('/admin/sauvegarde/exporter')
 @login_required
 def admin_sauvegarde_exporter():

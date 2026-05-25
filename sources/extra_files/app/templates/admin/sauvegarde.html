@@ -6,6 +6,32 @@
 {% set cfg = config_sauvegarde %}
 <div style="max-width:760px;display:flex;flex-direction:column;gap:16px;">
 
+  {# ── Export / Import configuration ── #}
+  <div class="card">
+    <div class="card-header"><h2>⚙️ Configuration (Collabora + SFTP)</h2></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+        Exportez ou importez la configuration Collabora et SFTP/NAS (incluant la clé SSH).
+        Utile lors d'une migration vers un nouveau serveur.
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+        <a href="{{ url_for('admin_exporter_config') }}" class="btn btn-secondary">
+          📤 Exporter la configuration
+        </a>
+        <form method="POST" action="{{ url_for('admin_importer_config') }}"
+              enctype="multipart/form-data"
+              style="display:flex;gap:8px;align-items:center;">
+          <input type="file" name="fichier_config" accept=".json" required
+                 style="font-size:13px;">
+          <button type="submit" class="btn btn-secondary"
+                  onclick="return confirm('Importer cette configuration ? Les paramètres actuels seront remplacés.')">
+            📥 Importer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   {# ── Sauvegarde locale ── #}
   <div class="card">
     <div class="card-header"><h2>📥 Sauvegarde locale</h2></div>
