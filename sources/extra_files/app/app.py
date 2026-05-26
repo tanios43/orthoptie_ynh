@@ -4027,6 +4027,87 @@ def admin_options_reordonner():
 # ADMIN — MODÈLES DE BILAN
 # ============================================================
 
+@app.route('/admin/modeles/exporter')
+@login_required
+def admin_modeles_exporter():
+    """Exporte tous les modèles de bilan en JSON."""
+    import json
+    from flask import Response
+    modeles = ModeleBilan.query.order_by(ModeleBilan.nom).all()
+    data = {
+        'version': 1,
+        'type': 'modeles_bilan',
+        'modeles': [m.to_dict() for m in modeles]
+    }
+    return Response(
+        json.dumps(data, indent=2, ensure_ascii=False),
+        mimetype='application/json',
+        headers={'Content-Disposition': 'attachment; filename=modeles_bilan.json'}
+    )
+
+
+@app.route('/admin/modeles/exporter/<int:modele_id>')
+@login_required
+def admin_modele_exporter_un(modele_id):
+    """Exporte un seul modèle de bilan en JSON."""
+    import json
+    from flask import Response
+    m = ModeleBilan.query.get_or_404(modele_id)
+    data = {'version': 1, 'type': 'modeles_bilan', 'modeles': [m.to_dict()]}
+    nom = m.nom.replace(' ', '_').lower()
+    return Response(
+        json.dumps(data, indent=2, ensure_ascii=False),
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename=modele_{nom}.json'}
+    )
+
+
+@app.route('/admin/modeles/importer', methods=['POST'])
+@login_required
+def admin_modeles_importer():
+    """Importe des modèles de bilan depuis un JSON."""
+    import json
+    f = request.files.get('fichier_modeles')
+    if not f or not f.filename.endswith('.json'):
+        flash('Fichier invalide — JSON requis.', 'danger')
+        return redirect(url_for('admin_modeles'))
+    try:
+        data = json.load(f)
+        if data.get('type') != 'modeles_bilan':
+            flash('Fichier non reconnu — ce n\'est pas un export de modèles de bilan.', 'danger')
+            return redirect(url_for('admin_modeles'))
+        mode      = request.form.get('mode', 'ajouter')  # ajouter ou remplacer
+        importes  = 0
+        ignores   = 0
+        for m_data in data.get('modeles', []):
+            nom = m_data.get('nom', '').strip()
+            if not nom:
+                continue
+            # En mode "ajouter" : ignorer si un modèle du même nom existe déjà
+            if mode == 'ajouter':
+                existing = ModeleBilan.query.filter_by(nom=nom).first()
+                if existing:
+                    ignores += 1
+                    continue
+            # Créer le modèle
+            m = ModeleBilan(nom=nom, motif=m_data.get('motif', ''))
+            db.session.add(m)
+            db.session.flush()
+            for i, type_key in enumerate(m_data.get('sections', [])):
+                db.session.add(ModeleBilanSection(
+                    modele_id=m.id, type_key=type_key, ordre=i
+                ))
+            importes += 1
+        db.session.commit()
+        msg = f'✅ {importes} modèle(s) importé(s).'
+        if ignores:
+            msg += f' {ignores} ignoré(s) (nom déjà existant).'
+        flash(msg, 'success')
+    except Exception as e:
+        flash(f'❌ Erreur lors de l\'import : {e}', 'danger')
+    return redirect(url_for('admin_modeles'))
+
+
 @app.route('/admin/modeles')
 @login_required
 def admin_modeles():
