@@ -3,10 +3,37 @@
 {% block page_title %}Modèles de documents{% endblock %}
 
 {% block topbar_actions %}
+  <a href="{{ url_for('admin_document_modeles_exporter') }}" class="btn btn-secondary btn-sm">
+    📤 Exporter tous
+  </a>
   <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
 {% endblock %}
 
 {% block content %}
+
+{# ── Import ── #}
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-header"><h2>📥 Importer des modèles</h2></div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('admin_document_modeles_importer') }}"
+          enctype="multipart/form-data"
+          style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+      <div class="field-group" style="margin:0;">
+        <label class="field-label">Fichier JSON</label>
+        <input type="file" name="fichier_modeles" accept=".json" required>
+      </div>
+      <div class="field-group" style="margin:0;">
+        <label class="field-label">Mode</label>
+        <select name="mode">
+          <option value="ajouter">Ajouter (ignorer les doublons)</option>
+          <option value="remplacer">Remplacer les existants</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-secondary">📥 Importer</button>
+    </form>
+  </div>
+</div>
+
 <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;max-width:1000px;">
 
   {# Créer un modèle #}
@@ -69,6 +96,8 @@
         <span class="text-sm text-muted" style="margin-left:8px;">{{ m.blocs|length }} bloc(s)</span>
         <a href="{{ url_for('admin_document_modele_detail', modele_id=m.id) }}"
            class="btn btn-secondary btn-sm" style="margin-left:auto;">Éditer</a>
+        <a href="{{ url_for('admin_document_modele_exporter_un', modele_id=m.id) }}"
+           class="btn btn-secondary btn-sm">📤</a>
       </div>
     </div>
     {% endfor %}

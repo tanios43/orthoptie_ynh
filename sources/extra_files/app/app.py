@@ -4275,6 +4275,101 @@ def init_db():
 # ADMIN — MODÈLES DE DOCUMENTS
 # ============================================================
 
+@app.route('/admin/document-modeles/exporter')
+@login_required
+def admin_document_modeles_exporter():
+    """Exporte tous les modèles de documents en JSON."""
+    import json
+    from flask import Response
+    modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
+    data = {
+        'version': 1,
+        'type': 'modeles_documents',
+        'modeles': [{
+            'nom':   m.nom,
+            'type':  m.type,
+            'actif': m.actif,
+            'blocs': [{'type': b.type, 'contenu': b.contenu, 'ordre': b.ordre}
+                      for b in m.blocs]
+        } for m in modeles]
+    }
+    return Response(
+        json.dumps(data, indent=2, ensure_ascii=False),
+        mimetype='application/json',
+        headers={'Content-Disposition': 'attachment; filename=modeles_documents.json'}
+    )
+
+
+@app.route('/admin/document-modele/<int:modele_id>/exporter')
+@login_required
+def admin_document_modele_exporter_un(modele_id):
+    """Exporte un seul modèle de document en JSON."""
+    import json
+    from flask import Response
+    m = DocumentModele.query.get_or_404(modele_id)
+    data = {
+        'version': 1,
+        'type': 'modeles_documents',
+        'modeles': [{'nom': m.nom, 'type': m.type, 'actif': m.actif,
+                     'blocs': [{'type': b.type, 'contenu': b.contenu, 'ordre': b.ordre}
+                               for b in m.blocs]}]
+    }
+    nom = m.nom.replace(' ', '_').lower()
+    return Response(
+        json.dumps(data, indent=2, ensure_ascii=False),
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename=modele_doc_{nom}.json'}
+    )
+
+
+@app.route('/admin/document-modeles/importer', methods=['POST'])
+@login_required
+def admin_document_modeles_importer():
+    """Importe des modèles de documents depuis un JSON."""
+    import json
+    f = request.files.get('fichier_modeles')
+    if not f or not f.filename.endswith('.json'):
+        flash('Fichier invalide — JSON requis.', 'danger')
+        return redirect(url_for('admin_document_modeles'))
+    try:
+        data = json.load(f)
+        if data.get('type') != 'modeles_documents':
+            flash('Fichier non reconnu — ce n\'est pas un export de modèles de documents.', 'danger')
+            return redirect(url_for('admin_document_modeles'))
+        mode     = request.form.get('mode', 'ajouter')
+        importes = 0
+        ignores  = 0
+        for m_data in data.get('modeles', []):
+            nom  = m_data.get('nom', '').strip()
+            type_ = m_data.get('type', '').strip()
+            if not nom or not type_:
+                continue
+            if mode == 'ajouter':
+                existing = DocumentModele.query.filter_by(nom=nom, type=type_).first()
+                if existing:
+                    ignores += 1
+                    continue
+            m = DocumentModele(nom=nom, type=type_, actif=m_data.get('actif', True))
+            db.session.add(m)
+            db.session.flush()
+            for b_data in m_data.get('blocs', []):
+                db.session.add(DocumentBloc(
+                    modele_id=m.id,
+                    type=b_data.get('type', 'texte'),
+                    contenu=b_data.get('contenu', ''),
+                    ordre=b_data.get('ordre', 99)
+                ))
+            importes += 1
+        db.session.commit()
+        msg = f'✅ {importes} modèle(s) importé(s).'
+        if ignores:
+            msg += f' {ignores} ignoré(s) (nom+type déjà existant).'
+        flash(msg, 'success')
+    except Exception as e:
+        flash(f'❌ Erreur lors de l\'import : {e}', 'danger')
+    return redirect(url_for('admin_document_modeles'))
+
+
 @app.route('/admin/document-modeles')
 @login_required
 def admin_document_modeles():
