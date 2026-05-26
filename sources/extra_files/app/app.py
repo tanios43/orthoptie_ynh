@@ -3870,6 +3870,152 @@ def profil():
     return render_template('admin/profil.html', praticien=p)
 
 
+@app.route('/admin/sections/exporter')
+@login_required
+def admin_sections_exporter():
+    """Exporte toutes les sections (natives et personnalisées) en JSON."""
+    import json
+    from flask import Response
+    sections = SectionDef.query.order_by(SectionDef.ordre).all()
+    data = {
+        'version': 1,
+        'type': 'sections_def',
+        'sections': [{
+            'type_key':          s.type_key,
+            'label':             s.label,
+            'ordre':             s.ordre,
+            'builtin':           s.builtin,
+            'actif':             s.actif,
+            'obs_defaut':        s.obs_defaut or '',
+            'avec_observations': s.avec_observations,
+            'categorie':         s.categorie or '',
+            'champs': [{
+                'name':    c.name,
+                'label':   c.label,
+                'type':    c.type,
+                'ordre':   c.ordre,
+                'options': [o.valeur for o in c.options if o.actif]
+            } for c in s.champs if c.actif]
+        } for s in sections]
+    }
+    return Response(
+        json.dumps(data, indent=2, ensure_ascii=False),
+        mimetype='application/json',
+        headers={'Content-Disposition': 'attachment; filename=sections_def.json'}
+    )
+
+
+@app.route('/admin/sections/importer', methods=['POST'])
+@login_required
+def admin_sections_importer():
+    """Importe des sections depuis un JSON."""
+    import json
+    f = request.files.get('fichier_sections')
+    if not f or not f.filename.endswith('.json'):
+        flash('Fichier invalide — JSON requis.', 'danger')
+        return redirect(url_for('admin_sections'))
+    try:
+        data = json.load(f)
+        if data.get('type') != 'sections_def':
+            flash('Fichier non reconnu — ce n\'est pas un export de sections.', 'danger')
+            return redirect(url_for('admin_sections'))
+        mode       = request.form.get('mode', 'ajouter')
+        importees  = 0
+        mises_a_j  = 0
+        ignorees   = 0
+
+        for s_data in data.get('sections', []):
+            type_key = s_data.get('type_key', '').strip()
+            if not type_key:
+                continue
+
+            existing = SectionDef.query.filter_by(type_key=type_key).first()
+
+            if existing:
+                if s_data.get('builtin') and existing.builtin:
+                    # Section native → mettre à jour seulement les propriétés éditables
+                    existing.label             = s_data.get('label', existing.label)
+                    existing.obs_defaut        = s_data.get('obs_defaut', existing.obs_defaut)
+                    existing.avec_observations = s_data.get('avec_observations', existing.avec_observations)
+                    existing.categorie         = s_data.get('categorie', existing.categorie)
+                    # Ajouter les champs manquants (sans supprimer les existants)
+                    existing_names = {c.name for c in existing.champs}
+                    for i, c_data in enumerate(s_data.get('champs', [])):
+                        if c_data['name'] not in existing_names:
+                            nc = ChampDef(
+                                section_id=existing.id,
+                                name=c_data['name'], label=c_data['label'],
+                                type=c_data.get('type', 'text'),
+                                ordre=c_data.get('ordre', 99)
+                            )
+                            db.session.add(nc)
+                    mises_a_j += 1
+                elif mode == 'ajouter':
+                    ignorees += 1
+                    continue
+                else:  # remplacer section personnalisée
+                    existing.label             = s_data.get('label', existing.label)
+                    existing.obs_defaut        = s_data.get('obs_defaut', '')
+                    existing.avec_observations = s_data.get('avec_observations', True)
+                    existing.categorie         = s_data.get('categorie', '')
+                    existing.actif             = s_data.get('actif', True)
+                    # Remplacer les champs
+                    for c in list(existing.champs):
+                        db.session.delete(c)
+                    db.session.flush()
+                    for i, c_data in enumerate(s_data.get('champs', [])):
+                        nc = ChampDef(
+                            section_id=existing.id,
+                            name=c_data['name'], label=c_data['label'],
+                            type=c_data.get('type', 'text'),
+                            ordre=c_data.get('ordre', i)
+                        )
+                        db.session.add(nc)
+                        db.session.flush()
+                        for val in c_data.get('options', []):
+                            db.session.add(OptionDef(champ_id=nc.id, valeur=val, ordre=0))
+                    mises_a_j += 1
+            else:
+                # Nouvelle section personnalisée
+                if s_data.get('builtin'):
+                    # Native non trouvée localement — créer comme personnalisée
+                    pass
+                ns = SectionDef(
+                    type_key         = type_key,
+                    label            = s_data.get('label', type_key),
+                    ordre            = s_data.get('ordre', 99),
+                    builtin          = False,  # jamais recrée comme native
+                    actif            = s_data.get('actif', True),
+                    obs_defaut       = s_data.get('obs_defaut', ''),
+                    avec_observations= s_data.get('avec_observations', True),
+                    categorie        = s_data.get('categorie', ''),
+                )
+                db.session.add(ns)
+                db.session.flush()
+                for i, c_data in enumerate(s_data.get('champs', [])):
+                    nc = ChampDef(
+                        section_id=ns.id,
+                        name=c_data['name'], label=c_data['label'],
+                        type=c_data.get('type', 'text'),
+                        ordre=c_data.get('ordre', i)
+                    )
+                    db.session.add(nc)
+                    db.session.flush()
+                    for val in c_data.get('options', []):
+                        db.session.add(OptionDef(champ_id=nc.id, valeur=val, ordre=0))
+                importees += 1
+
+        db.session.commit()
+        msg = f'✅ {importees} section(s) importée(s), {mises_a_j} mise(s) à jour.'
+        if ignorees:
+            msg += f' {ignorees} ignorée(s) (type_key déjà existant).'
+        flash(msg, 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'❌ Erreur lors de l\'import : {e}', 'danger')
+    return redirect(url_for('admin_sections'))
+
+
 @app.route('/admin/sections')
 @login_required
 def admin_sections():

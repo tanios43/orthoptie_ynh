@@ -3,11 +3,42 @@
 {% block page_title %}Gestion des sections{% endblock %}
 
 {% block topbar_actions %}
+  <a href="{{ url_for('admin_sections_exporter') }}" class="btn btn-secondary btn-sm">
+    📤 Exporter toutes les sections
+  </a>
   <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
 {% endblock %}
 
 {% block content %}
 <div style="max-width:760px;">
+
+  {# ── Import ── #}
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><h2>📥 Importer des sections</h2></div>
+    <div class="card-body">
+      <div style="background:#E1F5EE;border-radius:7px;padding:10px 14px;font-size:12px;margin-bottom:12px;">
+        💡 <strong>Sections natives modifiées</strong> : leurs propriétés éditables (label, observations par défaut, champs ajoutés) seront mises à jour.
+        Les champs existants ne sont jamais supprimés.<br>
+        💡 <strong>Sections personnalisées</strong> : ajoutées si elles n'existent pas, selon le mode choisi.
+      </div>
+      <form method="POST" action="{{ url_for('admin_sections_importer') }}"
+            enctype="multipart/form-data"
+            style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+        <div class="field-group" style="margin:0;">
+          <label class="field-label">Fichier JSON</label>
+          <input type="file" name="fichier_sections" accept=".json" required>
+        </div>
+        <div class="field-group" style="margin:0;">
+          <label class="field-label">Mode (sections personnalisées)</label>
+          <select name="mode">
+            <option value="ajouter">Ajouter (ignorer les doublons)</option>
+            <option value="remplacer">Remplacer les existantes</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-secondary">📥 Importer</button>
+      </form>
+    </div>
+  </div>
 
   {# Créer une section #}
   <div class="card" style="margin-bottom:20px;">
