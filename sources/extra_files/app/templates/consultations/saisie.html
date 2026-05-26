@@ -1358,32 +1358,30 @@ function buildCopyMenu(destIdx, menu) {
       .filter(s => s.dataset.type === type);
     if (sections.length === 0) return;
     found = true;
-    if (sections.length === 1) {
-      // Une seule section — bouton direct
-      const srcIdx = parseInt(sections[0].dataset.idx);
+    sections.forEach((sec, i) => {
+      const srcIdx = parseInt(sec.dataset.idx);
+      // Récupérer les observations libres de cette section
+      const obsTA = sec.querySelector('textarea[name="sections_obs[]"]');
+      const obsHidden = sec.querySelector('input[name="sections_obs[]"]');
+      let obs = (obsTA ? obsTA.value : (obsHidden ? obsHidden.value : '')).trim();
+      const label = sections.length > 1
+        ? `${labels[type]} <span style="font-size:11px;color:var(--muted);">#${i+1}</span>`
+        : labels[type];
+      const obsHtml = obs
+        ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;
+                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;">
+             ${obs}
+           </div>`
+        : '';
       html += `<button type="button"
                 onclick="copierRefractionDirect(${srcIdx}, ${destIdx})"
-                style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;
+                style="display:block;width:100%;text-align:left;padding:8px 14px;font-size:13px;
                        border:none;background:none;cursor:pointer;border-bottom:0.5px solid var(--border);"
                 onmouseover="this.style.background='var(--bg)'"
                 onmouseout="this.style.background=''">
-                ${labels[type]}
+                ${label}${obsHtml}
               </button>`;
-    } else {
-      // Plusieurs sections — sous-menu avec numéro de section
-      sections.forEach((sec, i) => {
-        const srcIdx = parseInt(sec.dataset.idx);
-        const num = srcIdx + 1;
-        html += `<button type="button"
-                  onclick="copierRefractionDirect(${srcIdx}, ${destIdx})"
-                  style="display:block;width:100%;text-align:left;padding:9px 14px 9px 22px;font-size:13px;
-                         border:none;background:none;cursor:pointer;border-bottom:0.5px solid var(--border);"
-                  onmouseover="this.style.background='var(--bg)'"
-                  onmouseout="this.style.background=''">
-                  ${labels[type]} <span style="color:var(--muted);font-size:11px;">(section ${num})</span>
-                </button>`;
-      });
-    }
+    });
   });
   if (!found) {
     html += `<div style="padding:10px 14px;font-size:13px;color:var(--muted);">
