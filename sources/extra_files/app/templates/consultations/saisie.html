@@ -2252,10 +2252,13 @@ function sauverTitreFichier(id, titre) {
 // ── Suppression d'un fichier existant via fetch (évite les forms imbriqués) ──
 function supprimerFichier(id, nom) {
   if (!confirm('Supprimer le fichier « ' + nom + ' » ?')) return;
-  fetch('/fichier/' + id + '/supprimer', { method: 'POST' })
+  fetch('/fichier/' + id + '/supprimer', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'X-Requested-With': 'fetch'}
+  })
     .then(r => {
-      if (r.ok || r.redirected) {
-        // Supprimer la vignette du DOM sans recharger la page
+      if (r.ok) {
         const el = document.getElementById('fichier-' + id);
         if (el) el.remove();
       } else {

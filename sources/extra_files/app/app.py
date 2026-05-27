@@ -3438,6 +3438,7 @@ def consultation_fichier_voir(fichier_id):
 
 
 
+@app.route('/fichier/<int:fichier_id>/supprimer', methods=['POST'])
 @login_required
 def fichier_supprimer(fichier_id):
     f = FichierBilan.query.get_or_404(fichier_id)
