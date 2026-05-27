@@ -2069,6 +2069,59 @@ document.addEventListener('paste', (e) => {
 });
 
 
+// ── Avertissement si on quitte sans enregistrer ─────────────────
+let _bilanModifie = false;
+let _bilanEnregistrement = false;
+
+// Marquer comme modifié dès qu'un champ change
+document.addEventListener('input', () => { _bilanModifie = true; });
+document.addEventListener('change', () => { _bilanModifie = true; });
+
+// Ne pas avertir si on soumet le formulaire
+document.getElementById('form-bilan')?.addEventListener('submit', () => {
+  _bilanEnregistrement = true;
+});
+
+// Avertissement natif avant fermeture/rechargement de l'onglet
+window.addEventListener('beforeunload', (e) => {
+  if (_bilanModifie && !_bilanEnregistrement) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// Intercepter les clics sur les liens de navigation internes
+document.addEventListener('click', (e) => {
+  if (_bilanEnregistrement || !_bilanModifie) return;
+  const link = e.target.closest('a[href]');
+  if (!link) return;
+  const href = link.getAttribute('href');
+  // Ignorer les liens externes, ancres, javascript:
+  if (!href || href.startsWith('#') || href.startsWith('javascript') || href.startsWith('http')) return;
+  // Ignorer les liens dans le formulaire bilan (ex: générer document)
+  if (link.closest('#form-bilan')) return;
+  e.preventDefault();
+  if (confirm('Le bilan n\'est pas enregistré.\n\nVoulez-vous enregistrer avant de quitter ?')) {
+    _bilanEnregistrement = true;
+    // Soumettre le formulaire puis rediriger
+    const form = document.getElementById('form-bilan');
+    if (form) {
+      // Ajouter l'URL de redirection dans un champ caché
+      const redirect = document.createElement('input');
+      redirect.type = 'hidden';
+      redirect.name = 'redirect_after';
+      redirect.value = href;
+      form.appendChild(redirect);
+      syncAllWysiwyg();
+      form.submit();
+    }
+  } else {
+    // Quitter sans enregistrer
+    _bilanModifie = false;
+    window.location.href = href;
+  }
+});
+
 function autoResizeTA(el) {
   el.style.height = 'auto';
   el.style.height = Math.max(el.scrollHeight, 64) + 'px';
