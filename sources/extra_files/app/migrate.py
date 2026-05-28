@@ -208,6 +208,35 @@ if _db_path:
         except sqlite3.OperationalError:
             pass  # colonne/table déjà existante
     _conn.commit()
+
+    # Recréer message sans contrainte NOT NULL sur destinataire_id
+    try:
+        _cur.execute("INSERT INTO message (expediteur_id, destinataire_id, contenu) VALUES (0, NULL, '__test__')")
+        _cur.execute("DELETE FROM message WHERE contenu='__test__'")
+        _conn.commit()
+        print("Present : message.destinataire_id nullable OK")
+    except sqlite3.IntegrityError:
+        _cur.executescript("""
+            CREATE TABLE IF NOT EXISTS message_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id INTEGER REFERENCES conversation(id),
+                expediteur_id INTEGER NOT NULL REFERENCES praticien(id),
+                destinataire_id INTEGER REFERENCES praticien(id),
+                contenu TEXT NOT NULL,
+                lu BOOLEAN DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO message_new
+                SELECT id,
+                       CASE WHEN typeof(conversation_id)='integer' THEN conversation_id ELSE NULL END,
+                       expediteur_id, destinataire_id, contenu, lu, created_at
+                FROM message;
+            DROP TABLE message;
+            ALTER TABLE message_new RENAME TO message;
+        """)
+        _conn.commit()
+        print("OK      : message.destinataire_id rendu nullable")
+
     _conn.close()
     print("Pré-migration SQLite OK")
 
@@ -460,36 +489,6 @@ with app.app_context():
         print("OK      : champ_def.nom renommé en name")
     except Exception:
         print("Present : champ_def.name OK")
-
-    # Recréer message sans contrainte NOT NULL sur destinataire_id (pour conversations multi)
-    try:
-        _cur.execute("SELECT destinataire_id FROM message LIMIT 1")
-        # Vérifier si la contrainte est présente en tentant un INSERT null
-        _cur.execute("INSERT INTO message (expediteur_id, destinataire_id, contenu) VALUES (1, NULL, 'test_migrate')")
-        _cur.execute("DELETE FROM message WHERE contenu='test_migrate'")
-        _conn.commit()
-        print("Present : message.destinataire_id nullable OK")
-    except Exception:
-        _conn.rollback()
-        # Recréer la table sans contrainte NOT NULL
-        _cur.executescript("""
-            CREATE TABLE message_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                conversation_id INTEGER REFERENCES conversation(id),
-                expediteur_id INTEGER NOT NULL REFERENCES praticien(id),
-                destinataire_id INTEGER REFERENCES praticien(id),
-                contenu TEXT NOT NULL,
-                lu BOOLEAN DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-            INSERT INTO message_new
-                SELECT id, conversation_id, expediteur_id, destinataire_id, contenu, lu, created_at
-                FROM message;
-            DROP TABLE message;
-            ALTER TABLE message_new RENAME TO message;
-        """)
-        _conn.commit()
-        print("OK      : message.destinataire_id rendu nullable")
 
     # signature sur praticien
     try:
