@@ -613,6 +613,9 @@ const SECTIONS_ORDRE = {{ sections_ordre | tojson }};
 const MODELES = {{ modeles_json | tojson }};
 const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
 
+// Déclaration globale pour la surveillance des modifications non sauvegardées
+let _bilanModifie = false;
+let _bilanEnregistrement = false;
 // ── Compteur global d'index de section ──
 let sectionIndex = 0;
 
@@ -2070,9 +2073,6 @@ document.addEventListener('paste', (e) => {
 
 
 // ── Avertissement si on quitte sans enregistrer ─────────────────
-let _bilanModifie = false;
-let _bilanEnregistrement = false;
-
 // Marquer comme modifié dès qu'un champ change
 document.addEventListener('input', () => { _bilanModifie = true; });
 document.addEventListener('change', () => { _bilanModifie = true; });
