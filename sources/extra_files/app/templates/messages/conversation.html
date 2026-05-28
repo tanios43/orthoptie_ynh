@@ -2,118 +2,71 @@
 {% block title %}Messages — {{ autre.prenom }} {{ autre.nom }}{% endblock %}
 {% block page_title %}💬 Messages{% endblock %}
 
-{% block content %}
-<div style="display:grid;grid-template-columns:260px 1fr;gap:14px;">
+{% block topbar_actions %}
+  <a href="{{ url_for('messages_liste') }}" class="btn btn-secondary btn-sm">← Messages</a>
+{% endblock %}
 
-  {# Sidebar conversations #}
-  <div style="display:flex;flex-direction:column;gap:10px;">
-    <div class="card" style="overflow:hidden;">
-      <div style="padding:10px 14px;font-size:13px;font-weight:500;border-bottom:0.5px solid var(--border);">
-        Conversations
+{% block content %}
+<div style="display:flex;flex-direction:column;gap:10px;max-width:700px;">
+
+  <div class="card" style="overflow:hidden;">
+    <div style="padding:10px 16px;display:flex;align-items:center;gap:10px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#EEEDFE;color:#3C3489;
+                  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;">
+        {{ autre.prenom[0] }}{{ autre.nom[0] }}
       </div>
-      {% for conv in convs %}
-      <a href="{{ url_for('messages_conversation', praticien_id=conv.praticien.id) }}"
-         style="display:block;padding:10px 14px;border-bottom:0.5px solid var(--border);
-                text-decoration:none;color:inherit;transition:background .1s;
-                {% if conv.praticien.id == autre.id %}background:#EEEDFE22;border-left:3px solid #534AB7;{% elif conv.non_lus %}background:var(--accent-lt);{% endif %}">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:32px;height:32px;border-radius:50%;background:#EEEDFE;color:#3C3489;
-                      display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;">
-            {{ conv.praticien.prenom[0] }}{{ conv.praticien.nom[0] }}
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:{{ '600' if conv.non_lus else '500' if conv.praticien.id == autre.id else '400' }};">
-              {{ conv.praticien.prenom }} {{ conv.praticien.nom }}
-            </div>
-            {% if conv.dernier %}
-            <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              {{ conv.dernier.contenu[:35] }}{% if conv.dernier.contenu|length > 35 %}…{% endif %}
-            </div>
-            {% endif %}
-          </div>
-          {% if conv.non_lus %}
-          <span style="background:#E24B4A;color:white;border-radius:9px;min-width:18px;height:18px;
-                       display:inline-flex;align-items:center;justify-content:center;
-                       font-size:11px;padding:0 5px;flex-shrink:0;">{{ conv.non_lus }}</span>
-          {% endif %}
-        </div>
-      </a>
-      {% endfor %}
-      <div style="padding:10px 14px;">
-        <a href="{{ url_for('messages_liste') }}"
-           style="font-size:12px;color:var(--accent);text-decoration:none;">+ Nouveau message</a>
+      <div>
+        <div style="font-weight:500;">{{ autre.prenom }} {{ autre.nom }}</div>
+        <div style="font-size:11px;color:var(--muted);">{{ autre.titre or 'Orthoptiste' }}</div>
       </div>
     </div>
   </div>
 
-  {# Zone conversation #}
-  <div style="display:flex;flex-direction:column;gap:10px;">
-    <div class="card" style="overflow:hidden;">
-      <div style="padding:10px 16px;display:flex;align-items:center;gap:10px;">
-        <div style="width:36px;height:36px;border-radius:50%;background:#EEEDFE;color:#3C3489;
-                    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;">
-          {{ autre.prenom[0] }}{{ autre.nom[0] }}
-        </div>
-        <div>
-          <div style="font-weight:500;">{{ autre.prenom }} {{ autre.nom }}</div>
-          <div style="font-size:11px;color:var(--muted);">{{ autre.titre or 'Orthoptiste' }}</div>
-        </div>
+  {# Fil de messages #}
+  <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px;
+                            max-height:calc(100vh - 320px);overflow-y:auto;" id="msgs-container">
+    {% for msg in msgs %}
+    {% if msg.expediteur_id == current_user.id %}
+    <div style="text-align:right;">
+      <div style="display:inline-block;background:#EEEDFE;color:#26215C;
+                  border-radius:12px 12px 3px 12px;padding:8px 12px;max-width:70%;
+                  font-size:13px;text-align:left;">{{ msg.contenu }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+        {{ msg.created_at | localhour }}{% if msg.lu %} · Lu{% endif %}
       </div>
     </div>
+    {% else %}
+    <div>
+      <div style="display:inline-block;background:var(--bg);
+                  border-radius:12px 12px 12px 3px;padding:8px 12px;max-width:70%;
+                  font-size:13px;border:0.5px solid var(--border);">{{ msg.contenu }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+        {{ msg.created_at | localhour }}
+      </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px 0;">
+      Début de la conversation avec {{ autre.prenom }} {{ autre.nom }}
+    </div>
+    {% endfor %}
+  </div>
 
-    {# Fil de messages #}
-    <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px;
-                              max-height:calc(100vh - 320px);overflow-y:auto;" id="msgs-container">
-      {% for msg in msgs %}
-      {% if msg.expediteur_id == current_user.id %}
-      <div style="text-align:right;">
-        <div style="display:inline-block;background:#EEEDFE;color:#26215C;
-                    border-radius:12px 12px 3px 12px;padding:8px 12px;max-width:70%;
-                    font-size:13px;text-align:left;">
-          {{ msg.contenu }}
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-          {{ msg.created_at | localhour }}
-          {% if msg.lu %} · Lu{% endif %}
-        </div>
-      </div>
-      {% else %}
-      <div>
-        <div style="display:inline-block;background:var(--bg);
-                    border-radius:12px 12px 12px 3px;padding:8px 12px;max-width:70%;
-                    font-size:13px;border:0.5px solid var(--border);">
-          {{ msg.contenu }}
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-          {{ msg.created_at | localhour }}
-        </div>
-      </div>
-      {% endif %}
-      {% endfor %}
-      {% if not msgs %}
-      <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px 0;">
-        Début de la conversation avec {{ autre.prenom }} {{ autre.nom }}
-      </div>
-      {% endif %}
-    </div>
-
-    {# Zone de saisie #}
-    <div class="card">
-      <form method="POST" style="display:flex;gap:8px;padding:12px 16px;align-items:flex-end;">
-        <textarea name="contenu" rows="2" required placeholder="Votre message…"
-                  style="flex:1;resize:none;font-size:13px;"
-                  onkeydown="if(event.ctrlKey&&event.key==='Enter'){this.form.submit();}"></textarea>
-        <button type="submit" class="btn btn-primary" style="flex-shrink:0;">
-          Envoyer<br><span style="font-size:10px;opacity:.7;">Ctrl+↵</span>
-        </button>
-      </form>
-    </div>
+  {# Zone de saisie #}
+  <div class="card">
+    <form method="POST" style="display:flex;gap:8px;padding:12px 16px;align-items:flex-end;">
+      <textarea name="contenu" rows="2" required placeholder="Votre message…"
+                style="flex:1;resize:none;font-size:13px;"
+                onkeydown="if(event.ctrlKey&&event.key==='Enter'){this.form.submit();}"></textarea>
+      <button type="submit" class="btn btn-primary" style="flex-shrink:0;">
+        Envoyer<br><span style="font-size:10px;opacity:.7;">Ctrl+↵</span>
+      </button>
+    </form>
   </div>
 
 </div>
 
 <script>
-// Scroll to bottom of messages
 const c = document.getElementById('msgs-container');
 if (c) c.scrollTop = c.scrollHeight;
 </script>
