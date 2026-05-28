@@ -3237,8 +3237,22 @@ def recherche():
         if dn:
             patients = Patient.query.filter(Patient.date_naissance == dn).order_by(Patient.nom).all()
         else:
-            conds = [db.or_(Patient.nom.ilike(f'%{m}%'), Patient.prenom.ilike(f'%{m}%')) for m in q.split()]
-            patients = Patient.query.filter(db.and_(*conds)).order_by(Patient.nom).all()
+            # Normaliser le numéro de téléphone (supprimer espaces/tirets/points)
+            q_tel = re.sub(r'[\s\.\-]', '', q)
+            # Si la requête ressemble à un numéro (que des chiffres après normalisation)
+            if q_tel.isdigit() and len(q_tel) >= 4:
+                patients = Patient.query.filter(
+                    db.func.replace(db.func.replace(db.func.replace(
+                        Patient.telephone, ' ', ''), '.', ''), '-', ''
+                    ).ilike(f'%{q_tel}%')
+                ).order_by(Patient.nom).all()
+            else:
+                conds = [db.or_(
+                    Patient.nom.ilike(f'%{m}%'),
+                    Patient.prenom.ilike(f'%{m}%'),
+                    Patient.telephone.ilike(f'%{m}%')
+                ) for m in q.split()]
+                patients = Patient.query.filter(db.and_(*conds)).order_by(Patient.nom).all()
     activites = {p.id: _derniere_activite(p) for p in patients}
     return render_template('patients/recherche.html', patients=patients, q=q,
                            activites=activites, today=datetime.utcnow().date())
