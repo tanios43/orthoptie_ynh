@@ -997,7 +997,33 @@ function renderSection(type, label, idx, titre, obs, donnees) {
                 font-size:10px;font-weight:500;padding:2px 7px;text-decoration:none;flex-shrink:0;"
          onmouseover="this.style.background='rgba(0,0,0,.2)'"
          onmouseout="this.style.background='rgba(0,0,0,.1)'">📄 Générer</a>` : ''}
-
+      ${type === 'refraction_subj' ? `
+      <div style="position:relative;display:inline-block;" onclick="event.stopPropagation()">
+        <button type="button" tabindex="-1"
+                onclick="toggleCopyMenu(${idx})"
+                title="Copier depuis une autre section"
+                style="background:rgba(0,0,0,.1);border:none;border-radius:4px;color:${col.color};
+                       font-size:10px;font-weight:500;padding:2px 7px;cursor:pointer;flex-shrink:0;"
+                onmouseover="this.style.background='rgba(0,0,0,.2)'"
+                onmouseout="this.style.background='rgba(0,0,0,.1)'">📋 Copier depuis…</button>
+        <div id="copy-menu-${idx}" style="display:none;position:absolute;top:calc(100% + 4px);right:0;
+             background:white;border:1px solid var(--border);border-radius:8px;
+             box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:200px;z-index:500;overflow:hidden;">
+          <div style="padding:6px 12px;font-size:11px;font-weight:600;color:var(--muted);
+                      text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);
+                      background:var(--bg);">Copier depuis</div>
+          <button type="button" onclick="copierRefraction('correction_portee', ${idx})"
+                  style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;
+                         border:none;background:none;cursor:pointer;border-bottom:0.5px solid var(--border);"
+                  onmouseover="this.style.background='var(--bg)'"
+                  onmouseout="this.style.background=''">Correction portée</button>
+          <button type="button" onclick="copierRefraction('refraction_obj', ${idx})"
+                  style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;
+                         border:none;background:none;cursor:pointer;"
+                  onmouseover="this.style.background='var(--bg)'"
+                  onmouseout="this.style.background=''">Réfraction objective</button>
+        </div>
+      </div>` : ''}
       <button type="button" tabindex="-1"
               onclick="event.stopPropagation();deplacerSection(${idx},-1)"
               title="Monter cette section"
@@ -1312,69 +1338,32 @@ function ajouterSection(type, label) {
 function toggleCopyMenu(idx) {
   const menu = document.getElementById('copy-menu-' + idx);
   if (!menu) return;
+  // Fermer les autres menus ouverts
   document.querySelectorAll('[id^="copy-menu-"]').forEach(m => {
     if (m !== menu) m.style.display = 'none';
   });
-  // Construire le menu dynamiquement selon les sections disponibles
-  buildCopyMenu(idx, menu);
   menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
-
-function buildCopyMenu(destIdx, menu) {
-  const sources = ['correction_portee', 'refraction_obj'];
-  const labels  = {'correction_portee': 'Correction portée', 'refraction_obj': 'Réfraction objective'};
-  let html = `<div style="padding:6px 12px;font-size:11px;font-weight:600;color:var(--muted);
-                text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);
-                background:var(--bg);">Copier depuis</div>`;
-  let found = false;
-  sources.forEach(type => {
-    const sections = [...document.querySelectorAll('.bilan-section')]
-      .filter(s => s.dataset.type === type);
-    if (sections.length === 0) return;
-    found = true;
-    sections.forEach((sec, i) => {
-      const srcIdx = parseInt(sec.dataset.idx);
-      // Récupérer les observations libres de cette section
-      const obsTA = sec.querySelector('textarea[name="sections_obs[]"]');
-      const obsHidden = sec.querySelector('input[name="sections_obs[]"]');
-      let obs = (obsTA ? obsTA.value : (obsHidden ? obsHidden.value : '')).trim();
-      const label = sections.length > 1
-        ? `${labels[type]} <span style="font-size:11px;color:var(--muted);">#${i+1}</span>`
-        : labels[type];
-      const obsHtml = obs
-        ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;
-                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;">
-             ${obs}
-           </div>`
-        : '';
-      html += `<button type="button"
-                onclick="copierRefractionDirect(${srcIdx}, ${destIdx})"
-                style="display:block;width:100%;text-align:left;padding:8px 14px;font-size:13px;
-                       border:none;background:none;cursor:pointer;border-bottom:0.5px solid var(--border);"
-                onmouseover="this.style.background='var(--bg)'"
-                onmouseout="this.style.background=''">
-                ${label}${obsHtml}
-              </button>`;
-    });
-  });
-  if (!found) {
-    html += `<div style="padding:10px 14px;font-size:13px;color:var(--muted);">
-               Aucune section source disponible
-             </div>`;
-  }
-  menu.innerHTML = html;
-}
-
 // Fermer le menu si clic ailleurs
 document.addEventListener('click', function() {
   document.querySelectorAll('[id^="copy-menu-"]').forEach(m => m.style.display = 'none');
 });
 
-function copierRefractionDirect(srcIdx, destIdx) {
+function copierRefraction(sourceType, destIdx) {
+  // Trouver la section source dans le DOM
+  const srcSection = [...document.querySelectorAll('.bilan-section')]
+    .find(s => s.dataset.type === sourceType);
+  if (!srcSection) {
+    alert('Section "' + (sourceType === 'correction_portee' ? 'Correction portée' : 'Réfraction objective') + '" non trouvée dans ce bilan.');
+    document.querySelectorAll('[id^="copy-menu-"]').forEach(m => m.style.display = 'none');
+    return;
+  }
+  // Champs à copier : sph, cyl, axe pour OD et OG
   const fields = ['od_sph', 'od_cyl', 'od_axe', 'og_sph', 'og_cyl', 'og_axe'];
+  const srcIdx = parseInt(srcSection.dataset.idx);
   let copied = 0;
   fields.forEach(field => {
-    const srcInput = document.querySelector(`[name="champ__${srcIdx}__${field}"]`);
+    const srcInput = srcSection.querySelector(`[name="champ__${srcIdx}__${field}"]`);
     const dstInput = document.querySelector(`[name="champ__${destIdx}__${field}"]`);
     if (srcInput && dstInput) {
       dstInput.value = srcInput.value;
@@ -1383,6 +1372,7 @@ function copierRefractionDirect(srcIdx, destIdx) {
   });
   document.querySelectorAll('[id^="copy-menu-"]').forEach(m => m.style.display = 'none');
   if (copied > 0) {
+    // Flash visuel sur la section destination
     const destSection = document.getElementById('sec-wrap-' + destIdx);
     if (destSection) {
       destSection.style.transition = 'box-shadow .3s';
@@ -1390,17 +1380,6 @@ function copierRefractionDirect(srcIdx, destIdx) {
       setTimeout(() => destSection.style.boxShadow = '', 1200);
     }
   }
-}
-
-function copierRefraction(sourceType, destIdx) {
-  // Compatibilité — redirige vers buildCopyMenu si plusieurs sections
-  const sections = [...document.querySelectorAll('.bilan-section')]
-    .filter(s => s.dataset.type === sourceType);
-  if (sections.length === 0) {
-    alert('Section source non trouvée dans ce bilan.');
-    return;
-  }
-  copierRefractionDirect(parseInt(sections[0].dataset.idx), destIdx);
 }
 
 function deplacerSection(idx, direction) {
@@ -1632,6 +1611,7 @@ function copierDepuisHistorique(entryIdx, sectionIdx) {
 
 // ── Sauvegarder le bilan puis rediriger vers la génération ──
 function sauverEtGenerer(sectionType) {
+  // Ajouter un champ hidden pour indiquer la redirection post-save
   let redir = document.getElementById('redirect_after');
   if (!redir) {
     redir = document.createElement('input');
@@ -1806,7 +1786,9 @@ function sauverAvantOrdo(event, url) {
   }
   redir.value = url;
   form.submit();
-}(idxLunettes) {
+}
+
+function copierDepuisRefraction(idxLunettes) {
   const sections = document.querySelectorAll('[data-type="refraction_subj"]');
   if (!sections.length) {
     alert('Aucune section "Réfraction subjective" trouvée dans le bilan.');
@@ -2170,13 +2152,10 @@ function sauverTitreFichier(id, titre) {
 // ── Suppression d'un fichier existant via fetch (évite les forms imbriqués) ──
 function supprimerFichier(id, nom) {
   if (!confirm('Supprimer le fichier « ' + nom + ' » ?')) return;
-  fetch('/fichier/' + id + '/supprimer', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {'X-Requested-With': 'fetch'}
-  })
+  fetch('/fichier/' + id + '/supprimer', { method: 'POST' })
     .then(r => {
-      if (r.ok) {
+      if (r.ok || r.redirected) {
+        // Supprimer la vignette du DOM sans recharger la page
         const el = document.getElementById('fichier-' + id);
         if (el) el.remove();
       } else {
@@ -2297,14 +2276,10 @@ document.addEventListener('DOMContentLoaded', () => {
         sec.fichiers_sec.filter(f => f.champ_name !== 'wopi_doc').forEach(f => {
           const zone = el.querySelector(`[id^="pj-sec-preview-${idx}-"]`);
           if (!zone) return;
-          const wrap = document.createElement('a');
-          wrap.href = '/uploads/section/{{ consultation.id if consultation else 0 }}/' + f.nom_stocke;
-          wrap.target = '_blank';
+          const wrap = document.createElement('div');
           wrap.id = 'ficsec-' + f.id;
           wrap.dataset.persisted = '1';
-          wrap.style.cssText = 'position:relative;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);width:72px;text-align:center;text-decoration:none;display:block;cursor:pointer;transition:border-color .15s;';
-          wrap.onmouseover = function() { this.style.borderColor = 'var(--accent)'; };
-          wrap.onmouseout  = function() { this.style.borderColor = 'var(--border)'; };
+          wrap.style.cssText = 'position:relative;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);width:72px;text-align:center;';
           if (f.type_fichier === 'image') {
             const img = document.createElement('img');
             img.src = '/uploads/section/{{ consultation.id if consultation else 0 }}/' + f.nom_stocke;
@@ -2324,7 +2299,7 @@ document.addEventListener('DOMContentLoaded', () => {
           btn.type = 'button';
           btn.innerHTML = '✕';
           btn.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:16px;height:16px;color:#fff;font-size:9px;cursor:pointer;line-height:1;padding:0;';
-          btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); supprimerFichierSection(f.id, 'ficsec-' + f.id); };
+          btn.onclick = () => supprimerFichierSection(f.id, 'ficsec-' + f.id);
           wrap.appendChild(btn);
           zone.appendChild(wrap);
         });
