@@ -1000,7 +1000,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
                 font-size:10px;font-weight:500;padding:2px 7px;text-decoration:none;flex-shrink:0;"
          onmouseover="this.style.background='rgba(0,0,0,.2)'"
          onmouseout="this.style.background='rgba(0,0,0,.1)'">📄 Générer</a>` : ''}
-      ${type === 'refraction_subj' ? '<div style="position:relative;display:inline-block;" onclick="event.stopPropagation()"><button type="button" tabindex="-1" onclick="toggleCopyMenu(' + idx + ')" title="Copier depuis une autre section" style="background:rgba(0,0,0,.1);border:none;border-radius:4px;color:' + col.color + ';font-size:10px;font-weight:500;padding:2px 7px;cursor:pointer;flex-shrink:0;" onmouseover="this.style.background=\'rgba(0,0,0,.2)\'" onmouseout="this.style.background=\'rgba(0,0,0,.1)\'">📋 Copier depuis…</button><div id="copy-menu-' + idx + '" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:white;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:200px;z-index:500;overflow:hidden;"></div></div>' : ''}
+      ${type === 'refraction_subj' ? copierDepuisBtn(idx, col.color) : ''}
       <button type="button" tabindex="-1"
               onclick="event.stopPropagation();deplacerSection(${idx},-1)"
               title="Monter cette section"
@@ -1313,6 +1313,27 @@ function ajouterSection(type, label) {
 }
 
 // ── Supprimer une section ──
+function copierDepuisBtn(idx, color) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:relative;display:inline-block;';
+  div.onclick = (e) => e.stopPropagation();
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.tabIndex = -1;
+  btn.title = 'Copier depuis une autre section';
+  btn.textContent = '📋 Copier depuis…';
+  btn.style.cssText = `background:rgba(0,0,0,.1);border:none;border-radius:4px;color:${color};font-size:10px;font-weight:500;padding:2px 7px;cursor:pointer;flex-shrink:0;`;
+  btn.onmouseover = function() { this.style.background = 'rgba(0,0,0,.2)'; };
+  btn.onmouseout  = function() { this.style.background = 'rgba(0,0,0,.1)'; };
+  btn.onclick = (e) => { e.stopPropagation(); toggleCopyMenu(idx); };
+  const menu = document.createElement('div');
+  menu.id = 'copy-menu-' + idx;
+  menu.style.cssText = 'display:none;position:absolute;top:calc(100% + 4px);right:0;background:white;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:200px;z-index:500;overflow:hidden;';
+  div.appendChild(btn);
+  div.appendChild(menu);
+  return div.outerHTML;
+}
+
 function toggleCopyMenu(idx) {
   const menu = document.getElementById('copy-menu-' + idx);
   if (!menu) return;
