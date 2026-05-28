@@ -613,9 +613,6 @@ const SECTIONS_ORDRE = {{ sections_ordre | tojson }};
 const MODELES = {{ modeles_json | tojson }};
 const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
 
-// Déclaration globale pour la surveillance des modifications non sauvegardées
-let _bilanModifie = false;
-let _bilanEnregistrement = false;
 // ── Compteur global d'index de section ──
 let sectionIndex = 0;
 
@@ -1000,7 +997,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
                 font-size:10px;font-weight:500;padding:2px 7px;text-decoration:none;flex-shrink:0;"
          onmouseover="this.style.background='rgba(0,0,0,.2)'"
          onmouseout="this.style.background='rgba(0,0,0,.1)'">📄 Générer</a>` : ''}
-      ${type === 'refraction_subj' ? '' : ''}
+
       <button type="button" tabindex="-1"
               onclick="event.stopPropagation();deplacerSection(${idx},-1)"
               title="Monter cette section"
@@ -1259,7 +1256,6 @@ function ajouterSection(type, label) {
         form.appendChild(redir);
       }
       redir.value = 'modifier#section-' + type;
-      _bilanEnregistrement = true;
       setTimeout(() => form.submit(), 800);
     }
     return;
@@ -1313,27 +1309,6 @@ function ajouterSection(type, label) {
 }
 
 // ── Supprimer une section ──
-function copierDepuisBtn(idx, color) {
-  const div = document.createElement('div');
-  div.style.cssText = 'position:relative;display:inline-block;';
-  div.onclick = (e) => e.stopPropagation();
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.tabIndex = -1;
-  btn.title = 'Copier depuis une autre section';
-  btn.textContent = '📋 Copier depuis…';
-  btn.style.cssText = `background:rgba(0,0,0,.1);border:none;border-radius:4px;color:${color};font-size:10px;font-weight:500;padding:2px 7px;cursor:pointer;flex-shrink:0;`;
-  btn.onmouseover = function() { this.style.background = 'rgba(0,0,0,.2)'; };
-  btn.onmouseout  = function() { this.style.background = 'rgba(0,0,0,.1)'; };
-  btn.onclick = (e) => { e.stopPropagation(); toggleCopyMenu(idx); };
-  const menu = document.createElement('div');
-  menu.id = 'copy-menu-' + idx;
-  menu.style.cssText = 'display:none;position:absolute;top:calc(100% + 4px);right:0;background:white;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:200px;z-index:500;overflow:hidden;';
-  div.appendChild(btn);
-  div.appendChild(menu);
-  return div.outerHTML;
-}
-
 function toggleCopyMenu(idx) {
   const menu = document.getElementById('copy-menu-' + idx);
   if (!menu) return;
@@ -1657,7 +1632,6 @@ function copierDepuisHistorique(entryIdx, sectionIdx) {
 
 // ── Sauvegarder le bilan puis rediriger vers la génération ──
 function sauverEtGenerer(sectionType) {
-  _bilanEnregistrement = true;
   let redir = document.getElementById('redirect_after');
   if (!redir) {
     redir = document.createElement('input');
@@ -1831,7 +1805,6 @@ function sauverAvantOrdo(event, url) {
     form.appendChild(redir);
   }
   redir.value = url;
-  _bilanEnregistrement = true;
   form.submit();
 }(idxLunettes) {
   const sections = document.querySelectorAll('[data-type="refraction_subj"]');
@@ -2067,56 +2040,6 @@ document.addEventListener('paste', (e) => {
 });
 
 
-// ── Avertissement si on quitte sans enregistrer ─────────────────
-// Marquer comme modifié dès qu'un champ change
-document.addEventListener('input', () => { _bilanModifie = true; });
-document.addEventListener('change', () => { _bilanModifie = true; });
-
-// Ne pas avertir si on soumet le formulaire
-document.getElementById('form-bilan')?.addEventListener('submit', () => {
-  _bilanEnregistrement = true;
-});
-
-// Avertissement natif avant fermeture/rechargement de l'onglet
-window.addEventListener('beforeunload', (e) => {
-  if (_bilanModifie && !_bilanEnregistrement) {
-    e.preventDefault();
-    e.returnValue = '';
-  }
-});
-
-// Intercepter les clics sur les liens de navigation internes
-document.addEventListener('click', (e) => {
-  if (_bilanEnregistrement || !_bilanModifie) return;
-  const link = e.target.closest('a[href]');
-  if (!link) return;
-  const href = link.getAttribute('href');
-  // Ignorer les liens externes, ancres, javascript:
-  if (!href || href.startsWith('#') || href.startsWith('javascript') || href.startsWith('http')) return;
-  // Ignorer les liens dans le formulaire bilan (ex: générer document)
-  if (link.closest('#form-bilan')) return;
-  e.preventDefault();
-  if (confirm('Le bilan n\'est pas enregistré.\n\nVoulez-vous enregistrer avant de quitter ?')) {
-    _bilanEnregistrement = true;
-    // Soumettre le formulaire puis rediriger
-    const form = document.getElementById('form-bilan');
-    if (form) {
-      // Ajouter l'URL de redirection dans un champ caché
-      const redirect = document.createElement('input');
-      redirect.type = 'hidden';
-      redirect.name = 'redirect_after';
-      redirect.value = href;
-      form.appendChild(redirect);
-      syncAllWysiwyg();
-      form.submit();
-    }
-  } else {
-    // Quitter sans enregistrer
-    _bilanModifie = false;
-    window.location.href = href;
-  }
-});
-
 function autoResizeTA(el) {
   el.style.height = 'auto';
   el.style.height = Math.max(el.scrollHeight, 64) + 'px';
@@ -2144,7 +2067,6 @@ document.addEventListener('keydown', function(e) {
   // Alt + S → Sauvegarder
   if (alt && e.key === 's') {
     e.preventDefault();
-    _bilanEnregistrement = true;
     document.getElementById('form-bilan')?.submit();
     return;
   }
