@@ -3,88 +3,125 @@
 {% block page_title %}💬 Messages{% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:260px 1fr;gap:14px;max-height:calc(100vh - 140px);">
+<div style="display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start;">
 
-  {# Sidebar conversations #}
-  <div style="display:flex;flex-direction:column;gap:10px;">
-    <div class="card" style="overflow:hidden;">
-      <div style="padding:10px 14px;font-size:13px;font-weight:500;border-bottom:0.5px solid var(--border);">
-        Conversations
-      </div>
-      {% for conv in convs %}
-      <a href="{{ url_for('messages_conversation', praticien_id=conv.praticien.id) }}"
-         style="display:block;padding:10px 14px;border-bottom:0.5px solid var(--border);
-                text-decoration:none;color:inherit;transition:background .1s;
-                {% if conv.non_lus %}background:var(--accent-lt);{% endif %}"
-         onmouseover="this.style.background='var(--bg)'"
-         onmouseout="this.style.background='{% if conv.non_lus %}var(--accent-lt){% endif %}'">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:32px;height:32px;border-radius:50%;background:#EEEDFE;color:#3C3489;
-                      display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;">
-            {{ conv.praticien.prenom[0] }}{{ conv.praticien.nom[0] }}
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:{{ '600' if conv.non_lus else '400' }};">
-              {{ conv.praticien.prenom }} {{ conv.praticien.nom }}
-            </div>
-            {% if conv.dernier %}
-            <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              {{ conv.dernier.contenu[:40] }}{% if conv.dernier.contenu|length > 40 %}…{% endif %}
-            </div>
-            {% endif %}
-          </div>
-          {% if conv.non_lus %}
-          <span style="background:#E24B4A;color:white;border-radius:9px;min-width:18px;height:18px;
-                       display:inline-flex;align-items:center;justify-content:center;
-                       font-size:11px;font-weight:500;padding:0 5px;flex-shrink:0;">
-            {{ conv.non_lus }}
-          </span>
-          {% endif %}
-        </div>
-        {% if conv.dernier %}
-        <div style="font-size:11px;color:var(--muted);margin-top:3px;padding-left:40px;">
-          {{ conv.dernier.created_at | localhour }}
-        </div>
-        {% endif %}
-      </a>
-      {% else %}
-      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">
-        Aucune conversation
-      </div>
-      {% endfor %}
-    </div>
+  <div style="display:flex;flex-direction:column;gap:12px;">
 
     {# Nouveau message #}
     <div class="card">
       <div style="padding:10px 14px;font-size:13px;font-weight:500;border-bottom:0.5px solid var(--border);">
-        Nouveau message
+        Nouvelle conversation
       </div>
       <div class="card-body">
-        <form method="POST" action="{{ url_for('message_nouveau') }}">
+        <form method="POST" action="{{ url_for('messages_nouvelle_conversation') }}">
           <div class="field-group" style="margin-bottom:8px;">
-            <label class="field-label">Destinataire</label>
-            <select name="destinataire_id" required>
-              <option value="">Choisir…</option>
+            <label class="field-label">
+              Destinataire(s)
+              <span style="font-size:11px;color:var(--muted);font-weight:400;">
+                Ctrl+clic = plusieurs
+              </span>
+            </label>
+            <select name="destinataires[]" multiple required style="min-height:80px;">
               {% for p in praticiens_all %}
               <option value="{{ p.id }}">{{ p.prenom }} {{ p.nom }}</option>
               {% endfor %}
             </select>
           </div>
           <div class="field-group" style="margin-bottom:8px;">
+            <label class="field-label">Titre (optionnel)</label>
+            <input type="text" name="titre" placeholder="Ex: Planning semaine…">
+          </div>
+          <div class="field-group" style="margin-bottom:8px;">
             <label class="field-label">Message</label>
             <textarea name="contenu" rows="3" required placeholder="Votre message…"></textarea>
           </div>
-          <button type="submit" class="btn btn-primary btn-sm">Envoyer</button>
+          <button type="submit" class="btn btn-primary btn-sm">Créer la conversation</button>
         </form>
       </div>
     </div>
+
+    {# Conversations multi #}
+    {% if convs_multi %}
+    <div class="card">
+      <div style="padding:10px 14px;font-size:13px;font-weight:500;border-bottom:0.5px solid var(--border);">
+        Conversations
+      </div>
+      {% for conv in convs_multi %}
+      {% set non_lus = conv.non_lus_pour(current_user.id) %}
+      <a href="{{ url_for('messages_conversation_multi', conv_id=conv.id) }}"
+         style="display:block;padding:10px 14px;text-decoration:none;color:inherit;
+                border-bottom:0.5px solid var(--border);transition:background .15s;"
+         onmouseover="this.style.background='var(--bg)'"
+         onmouseout="this.style.background=''">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:{% if non_lus %}600{% else %}400{% endif %};">
+              {% if conv.titre %}{{ conv.titre }}{% else %}
+                {{ conv.participants | map(attribute='praticien') | map(attribute='nom') | join(', ') }}
+              {% endif %}
+            </div>
+            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {% set dm = conv.dernier_message() %}
+              {% if dm %}{{ dm.contenu[:50] }}{% endif %}
+            </div>
+          </div>
+          {% if non_lus %}
+          <span style="background:var(--accent);color:white;border-radius:9px;
+                       min-width:18px;height:18px;display:inline-flex;align-items:center;
+                       justify-content:center;font-size:11px;padding:0 5px;">
+            {{ non_lus }}
+          </span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Conversations legacy 1-to-1 #}
+    {% if legacy_convs %}
+    <div class="card">
+      <div style="padding:10px 14px;font-size:11px;font-weight:500;color:var(--muted);
+                  border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.4px;">
+        Messages anciens
+      </div>
+      {% for conv in legacy_convs %}
+      <a href="{{ url_for('messages_conversation', praticien_id=conv.praticien.id) }}"
+         style="display:block;padding:10px 14px;text-decoration:none;color:inherit;
+                border-bottom:0.5px solid var(--border);transition:background .15s;"
+         onmouseover="this.style.background='var(--bg)'"
+         onmouseout="this.style.background=''">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:{% if conv.non_lus %}600{% else %}400{% endif %};">
+              {{ conv.praticien.prenom }} {{ conv.praticien.nom }}
+            </div>
+            {% if conv.dernier %}
+            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ conv.dernier.contenu[:50] }}
+            </div>
+            {% endif %}
+          </div>
+          {% if conv.non_lus %}
+          <span style="background:var(--accent);color:white;border-radius:9px;
+                       min-width:18px;height:18px;display:inline-flex;align-items:center;
+                       justify-content:center;font-size:11px;padding:0 5px;">
+            {{ conv.non_lus }}
+          </span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
   </div>
 
-  {# Zone principale : sélectionner une conversation #}
-  <div class="card" style="display:flex;align-items:center;justify-content:center;">
+  {# Zone principale #}
+  <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:300px;">
     <div style="text-align:center;color:var(--muted);">
       <div style="font-size:32px;margin-bottom:8px;">💬</div>
-      <div style="font-size:14px;">Sélectionnez une conversation</div>
+      <div style="font-size:14px;">Sélectionnez une conversation ou créez-en une nouvelle</div>
     </div>
   </div>
 

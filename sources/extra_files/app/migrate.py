@@ -90,10 +90,27 @@ if _db_path:
             neurovisuel TEXT DEFAULT '',
             notes TEXT DEFAULT ''
         )""",
+        """CREATE TABLE IF NOT EXISTS conversation (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titre TEXT DEFAULT '',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS conversation_participant (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL REFERENCES conversation(id),
+            praticien_id INTEGER NOT NULL REFERENCES praticien(id)
+        )""",
+        """CREATE TABLE IF NOT EXISTS message_lu (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id INTEGER NOT NULL REFERENCES message(id),
+            praticien_id INTEGER NOT NULL REFERENCES praticien(id)
+        )""",
         """CREATE TABLE IF NOT EXISTS message (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             expediteur_id INTEGER NOT NULL REFERENCES praticien(id),
-            destinataire_id INTEGER NOT NULL REFERENCES praticien(id),
+            destinataire_id INTEGER REFERENCES praticien(id),
+            conversation_id INTEGER REFERENCES conversation(id),
             contenu TEXT NOT NULL,
             lu BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -177,6 +194,7 @@ if _db_path:
         "ALTER TABLE journal_acces ADD COLUMN ip_address VARCHAR(50) DEFAULT ''",
         "ALTER TABLE fichier_section ADD COLUMN section_type VARCHAR(50) DEFAULT ''",
         "ALTER TABLE praticien ADD COLUMN signature VARCHAR(500)",
+        "ALTER TABLE message ADD COLUMN conversation_id INTEGER REFERENCES conversation(id)",
         "ALTER TABLE seance_amblyopie ADD COLUMN av_notes TEXT DEFAULT ''",
         "ALTER TABLE seance_amblyopie ADD COLUMN praticien_id INTEGER REFERENCES praticien(id)",
         "ALTER TABLE wopi_session ADD COLUMN section_ordre INTEGER DEFAULT 0",

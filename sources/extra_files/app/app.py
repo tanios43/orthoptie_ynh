@@ -793,18 +793,81 @@ class SeanceAmblyopie(db.Model):
     praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
 
 
-class Message(db.Model):
-    """Message direct entre praticiens."""
-    __tablename__ = 'message'
+class Conversation(db.Model):
+    """Conversation entre praticiens (2 ou plus)."""
+    __tablename__ = 'conversation'
+    id         = db.Column(db.Integer, primary_key=True)
+    titre      = db.Column(db.String(200), default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    participants = db.relationship('ConversationParticipant', backref='conversation',
+                                   cascade='all, delete-orphan')
+    messages     = db.relationship('Message', backref='conversation',
+                                   order_by='Message.created_at',
+                                   cascade='all, delete-orphan')
+
+    def get_autres_participants(self, praticien_id):
+        return [p.praticien for p in self.participants if p.praticien_id != praticien_id]
+
+    def dernier_message(self):
+        return self.messages[-1] if self.messages else None
+
+    def non_lus_pour(self, praticien_id):
+        return sum(1 for m in self.messages
+                   if not m.lu_par(praticien_id) and m.expediteur_id != praticien_id)
+
+
+class ConversationParticipant(db.Model):
+    """Participant à une conversation."""
+    __tablename__ = 'conversation_participant'
+    id              = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
+    praticien_id    = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    praticien       = db.relationship('Praticien', foreign_keys=[praticien_id])
+
+
+class MessageLu(db.Model):
+    """Statut de lecture d'un message par participant."""
+    __tablename__ = 'message_lu'
     id           = db.Column(db.Integer, primary_key=True)
-    expediteur_id= db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
-    destinataire_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
-    contenu      = db.Column(db.Text, nullable=False)
-    lu           = db.Column(db.Boolean, default=False)
-    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    message_id   = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+
+
+class Message(db.Model):
+    """Message dans une conversation."""
+    __tablename__ = 'message'
+    id              = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=True)
+    expediteur_id   = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    # Champs legacy (messages 1-to-1 anciens)
+    destinataire_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    lu              = db.Column(db.Boolean, default=False)
+    contenu         = db.Column(db.Text, nullable=False)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
 
     expediteur   = db.relationship('Praticien', foreign_keys=[expediteur_id])
     destinataire = db.relationship('Praticien', foreign_keys=[destinataire_id])
+    lectures     = db.relationship('MessageLu', backref='message',
+                                   cascade='all, delete-orphan')
+
+    def lu_par(self, praticien_id):
+        """Vérifie si le message a été lu par ce praticien."""
+        if self.conversation_id:
+            return any(l.praticien_id == praticien_id for l in self.lectures)
+        # Legacy
+        return self.lu if self.destinataire_id == praticien_id else True
+
+    def marquer_lu(self, praticien_id):
+        """Marque le message comme lu par ce praticien."""
+        if self.conversation_id:
+            if not any(l.praticien_id == praticien_id for l in self.lectures):
+                db.session.add(MessageLu(message_id=self.id, praticien_id=praticien_id))
+        else:
+            if self.destinataire_id == praticien_id:
+                self.lu = True
+
 
 
 class NotePatient(db.Model):
@@ -2335,51 +2398,171 @@ def suivi_vb_generer(suivi_id):
 @app.route('/api/messages/count')
 @login_required
 def api_messages_count():
-    count = Message.query.filter_by(
-        destinataire_id=current_user.id, lu=False).count()
-    return {'count': count}
+    """Compte les messages non lus (conversations nouvelles et legacy)."""
+    # Messages legacy non lus
+    legacy = Message.query.filter_by(
+        destinataire_id=current_user.id, lu=False,
+        conversation_id=None).count()
+    # Messages dans conversations non lus
+    conv_msgs = db.session.query(Message.id).join(
+        Conversation, Message.conversation_id == Conversation.id
+    ).join(
+        ConversationParticipant,
+        ConversationParticipant.conversation_id == Conversation.id
+    ).filter(
+        ConversationParticipant.praticien_id == current_user.id,
+        Message.expediteur_id != current_user.id
+    ).outerjoin(
+        MessageLu,
+        db.and_(MessageLu.message_id == Message.id,
+                MessageLu.praticien_id == current_user.id)
+    ).filter(MessageLu.id == None).count()
+    return {'count': legacy + conv_msgs}
 
 
 @app.route('/messages')
 @login_required
 def messages_liste():
-    """Liste des conversations du praticien connecté."""
-    # Trouver tous les praticiens avec qui on a échangé
-    sent = db.session.query(Message.destinataire_id).filter_by(
-        expediteur_id=current_user.id)
-    received = db.session.query(Message.expediteur_id).filter_by(
-        destinataire_id=current_user.id)
-    ids = {r[0] for r in sent} | {r[0] for r in received}
-    praticiens_conv = Praticien.query.filter(
-        Praticien.id.in_(ids), Praticien.id != current_user.id
-    ).order_by(Praticien.nom).all()
-
-    # Dernier message + non lus par conversation
-    convs = []
-    for p in praticiens_conv:
-        dernier = Message.query.filter(
-            db.or_(
-                db.and_(Message.expediteur_id==current_user.id, Message.destinataire_id==p.id),
-                db.and_(Message.expediteur_id==p.id, Message.destinataire_id==current_user.id)
-            )
-        ).order_by(Message.created_at.desc()).first()
-        non_lus = Message.query.filter_by(
-            expediteur_id=p.id, destinataire_id=current_user.id, lu=False).count()
-        convs.append({'praticien': p, 'dernier': dernier, 'non_lus': non_lus})
-    convs.sort(key=lambda x: x['dernier'].created_at if x['dernier'] else datetime.min, reverse=True)
-
+    """Liste des conversations."""
     praticiens_all = Praticien.query.filter(
         Praticien.id != current_user.id, Praticien.actif == True
     ).order_by(Praticien.nom).all()
 
-    return render_template('messages/liste.html', convs=convs,
+    # Conversations multi-participants
+    convs_multi = Conversation.query.join(
+        ConversationParticipant,
+        ConversationParticipant.conversation_id == Conversation.id
+    ).filter(
+        ConversationParticipant.praticien_id == current_user.id
+    ).order_by(Conversation.updated_at.desc()).all()
+
+    # Messages legacy 1-to-1 (anciens messages sans conversation_id)
+    sent = db.session.query(Message.destinataire_id).filter(
+        Message.expediteur_id == current_user.id,
+        Message.conversation_id == None)
+    received = db.session.query(Message.expediteur_id).filter(
+        Message.destinataire_id == current_user.id,
+        Message.conversation_id == None)
+    legacy_ids = {r[0] for r in sent} | {r[0] for r in received}
+    # Exclure les praticiens déjà dans une conversation multi
+    conv_prat_ids = set()
+    for conv in convs_multi:
+        parts = [p.praticien_id for p in conv.participants]
+        if len(parts) == 2:
+            for pid in parts:
+                if pid != current_user.id:
+                    conv_prat_ids.add(pid)
+    legacy_only_ids = legacy_ids - conv_prat_ids
+    legacy_convs = []
+    for pid in legacy_only_ids:
+        p = Praticien.query.get(pid)
+        if not p: continue
+        dernier = Message.query.filter(
+            Message.conversation_id == None,
+            db.or_(
+                db.and_(Message.expediteur_id==current_user.id, Message.destinataire_id==pid),
+                db.and_(Message.expediteur_id==pid, Message.destinataire_id==current_user.id)
+            )
+        ).order_by(Message.created_at.desc()).first()
+        non_lus = Message.query.filter_by(
+            expediteur_id=pid, destinataire_id=current_user.id,
+            lu=False, conversation_id=None).count()
+        legacy_convs.append({'praticien': p, 'dernier': dernier, 'non_lus': non_lus, 'legacy': True})
+
+    return render_template('messages/liste.html',
+                           convs_multi=convs_multi,
+                           legacy_convs=legacy_convs,
                            praticiens_all=praticiens_all)
+
+
+@app.route('/messages/nouvelle-conversation', methods=['POST'])
+@login_required
+def messages_nouvelle_conversation():
+    """Créer une nouvelle conversation (2+ participants)."""
+    dest_ids = request.form.getlist('destinataires[]')
+    contenu  = request.form.get('contenu', '').strip()
+    titre    = request.form.get('titre', '').strip()
+    if not contenu or not dest_ids:
+        flash('Destinataire(s) et message requis.', 'danger')
+        return redirect(url_for('messages_liste'))
+    # Créer la conversation
+    conv = Conversation(titre=titre, updated_at=datetime.utcnow())
+    db.session.add(conv)
+    db.session.flush()
+    # Ajouter les participants (expéditeur + destinataires)
+    participants = {current_user.id}
+    for did in dest_ids:
+        try: participants.add(int(did))
+        except (ValueError, TypeError): pass
+    for pid in participants:
+        db.session.add(ConversationParticipant(
+            conversation_id=conv.id, praticien_id=pid))
+    # Ajouter le premier message
+    db.session.add(Message(
+        conversation_id=conv.id,
+        expediteur_id=current_user.id,
+        contenu=contenu
+    ))
+    db.session.commit()
+    return redirect(url_for('messages_conversation_multi', conv_id=conv.id))
+
+
+@app.route('/messages/conv/<int:conv_id>', methods=['GET', 'POST'])
+@login_required
+def messages_conversation_multi(conv_id):
+    """Conversation multi-participants."""
+    conv = Conversation.query.get_or_404(conv_id)
+    # Vérifier que l'utilisateur est participant
+    if not any(p.praticien_id == current_user.id for p in conv.participants):
+        abort(403)
+    if request.method == 'POST':
+        action = request.form.get('action', 'send')
+        if action == 'send':
+            contenu = request.form.get('contenu', '').strip()
+            if contenu:
+                db.session.add(Message(
+                    conversation_id=conv.id,
+                    expediteur_id=current_user.id,
+                    contenu=contenu
+                ))
+                conv.updated_at = datetime.utcnow()
+                db.session.commit()
+        elif action == 'ajouter_participant':
+            pid = request.form.get('praticien_id', type=int)
+            if pid and not any(p.praticien_id == pid for p in conv.participants):
+                db.session.add(ConversationParticipant(
+                    conversation_id=conv.id, praticien_id=pid))
+                db.session.commit()
+                flash('Participant ajouté.', 'success')
+        elif action == 'quitter':
+            part = ConversationParticipant.query.filter_by(
+                conversation_id=conv.id, praticien_id=current_user.id).first()
+            if part:
+                db.session.delete(part)
+                db.session.commit()
+                flash('Vous avez quitté la conversation.', 'success')
+                return redirect(url_for('messages_liste'))
+        return redirect(url_for('messages_conversation_multi', conv_id=conv_id))
+    # Marquer les messages comme lus
+    for msg in conv.messages:
+        if msg.expediteur_id != current_user.id:
+            msg.marquer_lu(current_user.id)
+    db.session.commit()
+    praticiens_all = Praticien.query.filter(
+        Praticien.id != current_user.id, Praticien.actif == True
+    ).order_by(Praticien.nom).all()
+    # Exclure ceux déjà dans la conversation
+    participant_ids = {p.praticien_id for p in conv.participants}
+    praticiens_ajoutables = [p for p in praticiens_all if p.id not in participant_ids]
+    return render_template('messages/conversation_multi.html',
+                           conv=conv,
+                           praticiens_ajoutables=praticiens_ajoutables)
 
 
 @app.route('/messages/<int:praticien_id>', methods=['GET', 'POST'])
 @login_required
 def messages_conversation(praticien_id):
-    """Conversation avec un praticien."""
+    """Conversation legacy 1-to-1."""
     autre = Praticien.query.get_or_404(praticien_id)
     if request.method == 'POST':
         contenu = request.form.get('contenu', '').strip()
@@ -2387,66 +2570,46 @@ def messages_conversation(praticien_id):
             db.session.add(Message(
                 expediteur_id=current_user.id,
                 destinataire_id=praticien_id,
-                contenu=contenu
+                contenu=contenu,
+                conversation_id=None
             ))
             db.session.commit()
         return redirect(url_for('messages_conversation', praticien_id=praticien_id))
-    # Marquer comme lus
     Message.query.filter_by(
-        expediteur_id=praticien_id, destinataire_id=current_user.id, lu=False
+        expediteur_id=praticien_id, destinataire_id=current_user.id,
+        lu=False, conversation_id=None
     ).update({'lu': True})
     db.session.commit()
     msgs = Message.query.filter(
+        Message.conversation_id == None,
         db.or_(
             db.and_(Message.expediteur_id==current_user.id, Message.destinataire_id==praticien_id),
             db.and_(Message.expediteur_id==praticien_id, Message.destinataire_id==current_user.id)
         )
     ).order_by(Message.created_at.asc()).all()
-
     praticiens_all = Praticien.query.filter(
         Praticien.id != current_user.id, Praticien.actif == True
     ).order_by(Praticien.nom).all()
-
-    convs = _get_convs()
     return render_template('messages/conversation.html', msgs=msgs, autre=autre,
-                           praticiens_all=praticiens_all, convs=convs)
+                           praticiens_all=praticiens_all, convs=[])
 
 
 def _get_convs():
-    sent = db.session.query(Message.destinataire_id).filter_by(expediteur_id=current_user.id)
-    received = db.session.query(Message.expediteur_id).filter_by(destinataire_id=current_user.id)
-    ids = {r[0] for r in sent} | {r[0] for r in received}
-    praticiens_conv = Praticien.query.filter(
-        Praticien.id.in_(ids), Praticien.id != current_user.id).all()
-    convs = []
-    for p in praticiens_conv:
-        dernier = Message.query.filter(
-            db.or_(
-                db.and_(Message.expediteur_id==current_user.id, Message.destinataire_id==p.id),
-                db.and_(Message.expediteur_id==p.id, Message.destinataire_id==current_user.id)
-            )
-        ).order_by(Message.created_at.desc()).first()
-        non_lus = Message.query.filter_by(
-            expediteur_id=p.id, destinataire_id=current_user.id, lu=False).count()
-        convs.append({'praticien': p, 'dernier': dernier, 'non_lus': non_lus})
-    convs.sort(key=lambda x: x['dernier'].created_at if x['dernier'] else datetime.min, reverse=True)
-    return convs
+    return []
 
 
-@app.route('/messages/nouveau', methods=['POST'])
+@app.route('/message/nouveau', methods=['POST'])
 @login_required
 def message_nouveau():
-    """Démarrer une nouvelle conversation."""
-    dest_id = request.form.get('destinataire_id', type=int)
-    contenu = request.form.get('contenu', '').strip()
-    if dest_id and contenu:
-        db.session.add(Message(
-            expediteur_id=current_user.id,
-            destinataire_id=dest_id,
-            contenu=contenu
-        ))
-        db.session.commit()
-    return redirect(url_for('messages_conversation', praticien_id=dest_id))
+    dest_ids = request.form.getlist('destinataires[]')
+    contenu  = request.form.get('contenu', '').strip()
+    titre    = request.form.get('titre', '').strip()
+    if not contenu or not dest_ids:
+        return redirect(url_for('messages_liste'))
+    # Créer via nouvelle conversation
+    from flask import redirect as _redirect
+    return _redirect(url_for('messages_nouvelle_conversation'))
+
 
 
 @app.route('/notes-patient/<int:patient_id>', methods=['POST'])
