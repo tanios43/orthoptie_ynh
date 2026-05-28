@@ -1000,33 +1000,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
                 font-size:10px;font-weight:500;padding:2px 7px;text-decoration:none;flex-shrink:0;"
          onmouseover="this.style.background='rgba(0,0,0,.2)'"
          onmouseout="this.style.background='rgba(0,0,0,.1)'">📄 Générer</a>` : ''}
-      ${type === 'refraction_subj' ? `
-      <div style="position:relative;display:inline-block;" onclick="event.stopPropagation()">
-        <button type="button" tabindex="-1"
-                onclick="toggleCopyMenu(${idx})"
-                title="Copier depuis une autre section"
-                style="background:rgba(0,0,0,.1);border:none;border-radius:4px;color:${col.color};
-                       font-size:10px;font-weight:500;padding:2px 7px;cursor:pointer;flex-shrink:0;"
-                onmouseover="this.style.background='rgba(0,0,0,.2)'"
-                onmouseout="this.style.background='rgba(0,0,0,.1)'">📋 Copier depuis…</button>
-        <div id="copy-menu-${idx}" style="display:none;position:absolute;top:calc(100% + 4px);right:0;
-             background:white;border:1px solid var(--border);border-radius:8px;
-             box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:200px;z-index:500;overflow:hidden;">
-          <div style="padding:6px 12px;font-size:11px;font-weight:600;color:var(--muted);
-                      text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);
-                      background:var(--bg);">Copier depuis</div>
-          <button type="button" onclick="copierRefraction('correction_portee', ${idx})"
-                  style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;
-                         border:none;background:none;cursor:pointer;border-bottom:0.5px solid var(--border);"
-                  onmouseover="this.style.background='var(--bg)'"
-                  onmouseout="this.style.background=''">Correction portée</button>
-          <button type="button" onclick="copierRefraction('refraction_obj', ${idx})"
-                  style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;
-                         border:none;background:none;cursor:pointer;"
-                  onmouseover="this.style.background='var(--bg)'"
-                  onmouseout="this.style.background=''">Réfraction objective</button>
-        </div>
-      </div>` : ''}
+      ${type === 'refraction_subj' ? '<div style="position:relative;display:inline-block;" onclick="event.stopPropagation()"><button type="button" tabindex="-1" onclick="toggleCopyMenu(' + idx + ')" title="Copier depuis une autre section" style="background:rgba(0,0,0,.1);border:none;border-radius:4px;color:' + col.color + ';font-size:10px;font-weight:500;padding:2px 7px;cursor:pointer;flex-shrink:0;" onmouseover="this.style.background=\'rgba(0,0,0,.2)\'" onmouseout="this.style.background=\'rgba(0,0,0,.1)\'">📋 Copier depuis…</button><div id="copy-menu-' + idx + '" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:white;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:200px;z-index:500;overflow:hidden;"></div></div>' : ''}
       <button type="button" tabindex="-1"
               onclick="event.stopPropagation();deplacerSection(${idx},-1)"
               title="Monter cette section"
