@@ -1282,6 +1282,7 @@ function ajouterSection(type, label) {
         form.appendChild(redir);
       }
       redir.value = 'modifier#section-' + type;
+      _bilanEnregistrement = true;
       setTimeout(() => form.submit(), 800);
     }
     return;
@@ -1658,7 +1659,7 @@ function copierDepuisHistorique(entryIdx, sectionIdx) {
 
 // ── Sauvegarder le bilan puis rediriger vers la génération ──
 function sauverEtGenerer(sectionType) {
-  // Ajouter un champ hidden pour indiquer la redirection post-save
+  _bilanEnregistrement = true;
   let redir = document.getElementById('redirect_after');
   if (!redir) {
     redir = document.createElement('input');
@@ -1832,10 +1833,9 @@ function sauverAvantOrdo(event, url) {
     form.appendChild(redir);
   }
   redir.value = url;
+  _bilanEnregistrement = true;
   form.submit();
-}
-
-function copierDepuisRefraction(idxLunettes) {
+}(idxLunettes) {
   const sections = document.querySelectorAll('[data-type="refraction_subj"]');
   if (!sections.length) {
     alert('Aucune section "Réfraction subjective" trouvée dans le bilan.');
@@ -2149,6 +2149,7 @@ document.addEventListener('keydown', function(e) {
   // Alt + S → Sauvegarder
   if (alt && e.key === 's') {
     e.preventDefault();
+    _bilanEnregistrement = true;
     document.getElementById('form-bilan')?.submit();
     return;
   }
