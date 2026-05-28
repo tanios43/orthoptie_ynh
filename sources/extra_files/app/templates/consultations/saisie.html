@@ -1000,7 +1000,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
                 font-size:10px;font-weight:500;padding:2px 7px;text-decoration:none;flex-shrink:0;"
          onmouseover="this.style.background='rgba(0,0,0,.2)'"
          onmouseout="this.style.background='rgba(0,0,0,.1)'">📄 Générer</a>` : ''}
-      ${type === 'refraction_subj' ? copierDepuisBtn(idx, col.color) : ''}
+      ${type === 'refraction_subj' ? '' : ''}
       <button type="button" tabindex="-1"
               onclick="event.stopPropagation();deplacerSection(${idx},-1)"
               title="Monter cette section"
