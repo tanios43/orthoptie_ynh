@@ -92,7 +92,7 @@
                     {% else %}
                     background:white;border:1px solid var(--border);border-radius:10px 10px 10px 2px;
                     {% endif %}">
-          {{ msg.contenu | nl2br | safe }}
+          {{ msg.contenu | replace('\n', '<br>') | safe }}
         </div>
         <div style="font-size:10px;color:var(--muted);margin-top:2px;padding:0 4px;">
           {{ msg.created_at | localtime }}
