@@ -2398,13 +2398,7 @@ def suivi_vb_generer(suivi_id):
 @app.route('/api/messages/count')
 @login_required
 def api_messages_count():
-    """Compte les messages non lus (conversations nouvelles et legacy)."""
-    # Messages legacy non lus
-    legacy = Message.query.filter_by(
-        destinataire_id=current_user.id, lu=False,
-        conversation_id=None).count()
-    # Messages dans conversations non lus
-    conv_msgs = db.session.query(Message.id).join(
+    count = db.session.query(Message.id).join(
         Conversation, Message.conversation_id == Conversation.id
     ).join(
         ConversationParticipant,
@@ -2417,7 +2411,7 @@ def api_messages_count():
         db.and_(MessageLu.message_id == Message.id,
                 MessageLu.praticien_id == current_user.id)
     ).filter(MessageLu.id == None).count()
-    return {'count': legacy + conv_msgs}
+    return {'count': count}
 
 
 @app.route('/messages')
@@ -2428,7 +2422,6 @@ def messages_liste():
         Praticien.id != current_user.id, Praticien.actif == True
     ).order_by(Praticien.nom).all()
 
-    # Conversations multi-participants
     convs_multi = Conversation.query.join(
         ConversationParticipant,
         ConversationParticipant.conversation_id == Conversation.id
@@ -2436,42 +2429,9 @@ def messages_liste():
         ConversationParticipant.praticien_id == current_user.id
     ).order_by(Conversation.updated_at.desc()).all()
 
-    # Messages legacy 1-to-1 (anciens messages sans conversation_id)
-    sent = db.session.query(Message.destinataire_id).filter(
-        Message.expediteur_id == current_user.id,
-        Message.conversation_id == None)
-    received = db.session.query(Message.expediteur_id).filter(
-        Message.destinataire_id == current_user.id,
-        Message.conversation_id == None)
-    legacy_ids = {r[0] for r in sent} | {r[0] for r in received}
-    # Exclure les praticiens déjà dans une conversation multi
-    conv_prat_ids = set()
-    for conv in convs_multi:
-        parts = [p.praticien_id for p in conv.participants]
-        if len(parts) == 2:
-            for pid in parts:
-                if pid != current_user.id:
-                    conv_prat_ids.add(pid)
-    legacy_only_ids = legacy_ids - conv_prat_ids
-    legacy_convs = []
-    for pid in legacy_only_ids:
-        p = Praticien.query.get(pid)
-        if not p: continue
-        dernier = Message.query.filter(
-            Message.conversation_id == None,
-            db.or_(
-                db.and_(Message.expediteur_id==current_user.id, Message.destinataire_id==pid),
-                db.and_(Message.expediteur_id==pid, Message.destinataire_id==current_user.id)
-            )
-        ).order_by(Message.created_at.desc()).first()
-        non_lus = Message.query.filter_by(
-            expediteur_id=pid, destinataire_id=current_user.id,
-            lu=False, conversation_id=None).count()
-        legacy_convs.append({'praticien': p, 'dernier': dernier, 'non_lus': non_lus, 'legacy': True})
-
     return render_template('messages/liste.html',
                            convs_multi=convs_multi,
-                           legacy_convs=legacy_convs,
+                           legacy_convs=[],
                            praticiens_all=praticiens_all)
 
 
