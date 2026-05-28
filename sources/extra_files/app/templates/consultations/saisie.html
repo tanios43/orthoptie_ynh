@@ -1282,6 +1282,7 @@ function ajouterSection(type, label) {
         form.appendChild(redir);
       }
       redir.value = 'modifier#section-' + type;
+      if (window._setBilanEnregistrement) window._setBilanEnregistrement();
       setTimeout(() => form.submit(), 800);
     }
     return;
@@ -1621,6 +1622,7 @@ function sauverEtGenerer(sectionType) {
     document.getElementById('form-bilan').appendChild(redir);
   }
   redir.value = `/consultation/${CONSULTATION_ID}/document?section=${sectionType}`;
+  if (window._setBilanEnregistrement) window._setBilanEnregistrement();
   document.getElementById('form-bilan').submit();
 }
 
@@ -1785,6 +1787,7 @@ function sauverAvantOrdo(event, url) {
     form.appendChild(redir);
   }
   redir.value = url;
+  if (window._setBilanEnregistrement) window._setBilanEnregistrement();
   form.submit();
 }
 
@@ -2428,5 +2431,64 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 <div id="histo-overlay" onclick="fermerDrawer()"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:499;"></div>
+
+<script>
+// ── Avertissement si on quitte sans enregistrer ──────────────────
+(function() {
+  var modifie = false;
+  var enregistrement = false;
+
+  // Marquer modifié dès qu'un champ change
+  document.addEventListener('input',  function() { modifie = true; });
+  document.addEventListener('change', function() { modifie = true; });
+
+  // Ne pas avertir si on soumet le formulaire normalement
+  var form = document.getElementById('form-bilan');
+  if (form) {
+    form.addEventListener('submit', function() { enregistrement = true; });
+  }
+
+  // Exposer pour que les soumissions auto puissent désactiver l'avertissement
+  window._setBilanEnregistrement = function() { enregistrement = true; };
+
+  // Avertissement natif avant fermeture/rechargement
+  window.addEventListener('beforeunload', function(e) {
+    if (modifie && !enregistrement) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // Intercepter les clics sur les liens de navigation
+  document.addEventListener('click', function(e) {
+    if (enregistrement || !modifie) return;
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (!href || href.charAt(0) === '#' || href.indexOf('javascript') === 0) return;
+    if (href.indexOf('http') === 0 && href.indexOf(window.location.host) === -1) return;
+    if (link.closest('#form-bilan')) return;
+    e.preventDefault();
+    if (confirm('Le bilan n\'est pas enregistré.\n\nVoulez-vous enregistrer avant de quitter ?')) {
+      enregistrement = true;
+      var f = document.getElementById('form-bilan');
+      if (f) {
+        var r = document.getElementById('redirect_after');
+        if (!r) {
+          r = document.createElement('input');
+          r.type = 'hidden'; r.id = 'redirect_after'; r.name = 'redirect_after';
+          f.appendChild(r);
+        }
+        r.value = href;
+        if (typeof syncAllWysiwyg === 'function') syncAllWysiwyg();
+        f.submit();
+      }
+    } else {
+      modifie = false;
+      window.location.href = href;
+    }
+  });
+})();
+</script>
 
 {% endblock %}
