@@ -2046,6 +2046,43 @@ document.addEventListener('paste', (e) => {
 });
 
 
+// ── Majuscules automatiques ─────────────────────────────────────
+(function() {
+  function shouldCapitalize(el) {
+    const v = el.value;
+    if (!v) return true; // début de champ vide
+    const pos = el.selectionStart || v.length;
+    const before = v.substring(0, pos);
+    if (!before.trim()) return true;
+    // Chercher le dernier caractère significatif (ignorer espaces mais pas \n)
+    let i = before.length - 1;
+    while (i >= 0 && before[i] === ' ') i--;
+    if (i < 0) return true;
+    const last = before[i];
+    return last === '.' || last === '!' || last === '?' || last === '\n';
+  }
+
+  function handleKeypress(e) {
+    // On agit sur la frappe d'une lettre
+    if (e.key.length !== 1 || !e.key.match(/[a-zA-ZÀ-ÿ]/)) return;
+    const el = e.target;
+    if (!el.matches('input[type="text"], input[type="number"], textarea')) return;
+    if (!shouldCapitalize(el)) return;
+
+    e.preventDefault();
+    const upper = e.key.toUpperCase();
+    const start = el.selectionStart;
+    const end   = el.selectionEnd;
+    const v     = el.value;
+    el.value = v.substring(0, start) + upper + v.substring(end);
+    el.selectionStart = el.selectionEnd = start + 1;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Appliquer sur tous les champs existants et futurs (delegation)
+  document.addEventListener('keypress', handleKeypress, true);
+})();
+
 function autoResizeTA(el) {
   el.style.height = 'auto';
   el.style.height = Math.max(el.scrollHeight, 64) + 'px';
