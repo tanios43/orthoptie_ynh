@@ -1599,7 +1599,14 @@ function copierDepuisHistorique(entryIdx, sectionIdx) {
   Object.entries(entry.donnees).forEach(([name, val]) => {
     const key = `champ__${sectionIdx}__${name}`;
     const input = wrap.querySelector(`[name="${key}"]`);
-    if (input) input.value = val;
+    if (!input) return;
+    input.value = val;
+    // Si c'est un champ wysiwyg (hidden lié à un div contenteditable)
+    const uid = input.id ? input.id.replace('_hidden', '') : '';
+    if (uid) {
+      const div = document.getElementById(uid);
+      if (div) div.innerHTML = typeof mdToHtml === 'function' ? mdToHtml(val) : val;
+    }
   });
 
   fermerDrawer();
