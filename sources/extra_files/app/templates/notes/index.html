@@ -88,18 +88,6 @@
 {# ── ONGLET TÂCHES ── #}
 <div id="onglet-taches" style="{% if onglet != 'taches' %}display:none;{% endif %}">
 
-  {# Filtres #}
-  <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
-    <a href="{{ url_for('notes_liste', onglet='taches', filtre='mes') }}"
-       class="btn btn-sm {% if filtre=='mes' %}btn-primary{% else %}btn-secondary{% endif %}">
-      Mes tâches
-    </a>
-    <a href="{{ url_for('notes_liste', onglet='taches', filtre='toutes') }}"
-       class="btn btn-sm {% if filtre=='toutes' %}btn-primary{% else %}btn-secondary{% endif %}">
-      Toutes
-    </a>
-  </div>
-
   {% if taches %}
   <div class="card" style="overflow:hidden;">
     {% for t in taches %}

@@ -2627,16 +2627,11 @@ def notes_liste():
     onglet = request.args.get('onglet', 'notes')
     notes = Note.query.filter_by(praticien_id=current_user.id)\
         .order_by(Note.epingle.desc(), Note.updated_at.desc()).all()
-    filtre = request.args.get('filtre', 'mes')
-    if filtre == 'mes':
-        taches = Tache.query.filter(
-            db.or_(Tache.praticien_id == current_user.id,
-                   Tache.assigne_a == current_user.id)
-        ).order_by(Tache.statut, Tache.echeance.asc().nullslast(),
-                   Tache.priorite).all()
-    else:
-        taches = Tache.query.order_by(
-            Tache.statut, Tache.echeance.asc().nullslast()).all()
+    taches = Tache.query.filter(
+        db.or_(Tache.praticien_id == current_user.id,
+               Tache.assigne_a == current_user.id)
+    ).order_by(Tache.statut, Tache.echeance.asc().nullslast(),
+               Tache.priorite).all()
     praticiens = Praticien.query.filter_by(actif=True)\
         .order_by(Praticien.nom).all()
     nb_taches = Tache.query.filter(
@@ -2645,7 +2640,7 @@ def notes_liste():
         Tache.statut != 'termine'
     ).count()
     return render_template('notes/index.html', notes=notes, taches=taches,
-                           onglet=onglet, filtre=filtre,
+                           onglet=onglet,
                            praticiens=praticiens, nb_taches=nb_taches,
                            today=datetime.utcnow().date())
 
