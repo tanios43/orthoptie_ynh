@@ -6020,30 +6020,39 @@ def _generer_docx(consultation, modele, sections_incluses):
         doc_xml = doc_xml.replace('</w:body>', sig_para + '</w:body>')
 
     # ── Pied de page impair : flèche ▶ bas droite (recto-verso) ─────
-    footer1_xml = (
+    footer_odd_xml = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        '<w:p><w:pPr><w:jc w:val="right"/>'
-        '<w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-        '<w:sz w:val="24"/><w:color w:val="CCCCCC"/></w:rPr>'
-        '</w:pPr>'
+        '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>'
         '<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
         '<w:sz w:val="24"/><w:color w:val="CCCCCC"/></w:rPr>'
         '<w:t>&#x25BA;</w:t></w:r>'
         '</w:p>'
         '</w:ftr>'
     )
-    # Référencer le footer impair dans le sectPr principal (dernier du document)
-    footer_ref = '<w:footerReference w:type="odd" r:id="rIdFooter1"/>'
-    if footer_ref not in doc_xml:
+    # Footer vide pour pages paires et défaut
+    footer_empty_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        '<w:p><w:pPr><w:jc w:val="right"/></w:pPr></w:p>'
+        '</w:ftr>'
+    )
+    footer1_xml = footer_odd_xml  # gardé pour compatibilité avec le code zip
+    # Référencer les footers dans le sectPr principal (dernier du document)
+    footer_odd_ref     = '<w:footerReference w:type="odd" r:id="rIdFooter1"/>'
+    footer_default_ref = '<w:footerReference w:type="default" r:id="rIdFooter2"/>'
+    footer_even_ref    = '<w:footerReference w:type="even" r:id="rIdFooter3"/>'
+    if footer_odd_ref not in doc_xml:
         last_sectp = doc_xml.rfind('</w:sectPr>')
         if last_sectp >= 0:
-            doc_xml = doc_xml[:last_sectp] + footer_ref + doc_xml[last_sectp:]
+            insert = footer_odd_ref + footer_default_ref + footer_even_ref
+            doc_xml = doc_xml[:last_sectp] + insert + doc_xml[last_sectp:]
         else:
-            doc_xml = doc_xml.replace('</w:body>', f'<w:sectPr>{footer_ref}</w:sectPr></w:body>')
+            doc_xml = doc_xml.replace('</w:body>',
+                f'<w:sectPr>{footer_odd_ref}{footer_default_ref}{footer_even_ref}</w:sectPr></w:body>')
 
     # Corriger la marge footer=0 qui empêche l'affichage
-    doc_xml = doc_xml.replace('w:footer="0"', 'w:footer="567"')  # 1cm en twips
+    doc_xml = doc_xml.replace('w:footer="0"', 'w:footer="567"')
 
     # ── Réécrire le docx ──────────────────────────────────────────────
     new_out = os.path.join(tmpdir, 'final.docx')
@@ -6076,6 +6085,12 @@ def _generer_docx(consultation, modele, sections_incluses):
                             '<Relationship Id="rIdFooter1" '
                             'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" '
                             'Target="footer1.xml"/>'
+                            '<Relationship Id="rIdFooter2" '
+                            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" '
+                            'Target="footer2.xml"/>'
+                            '<Relationship Id="rIdFooter3" '
+                            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" '
+                            'Target="footer3.xml"/>'
                             '</Relationships>'
                         )
                     zout.writestr(item, rels.encode('utf-8'))
@@ -6087,13 +6102,21 @@ def _generer_docx(consultation, modele, sections_incluses):
                             '<Override PartName="/word/footer1.xml" '
                             'ContentType="application/vnd.openxmlformats-officedocument'
                             '.wordprocessingml.footer+xml"/>'
+                            '<Override PartName="/word/footer2.xml" '
+                            'ContentType="application/vnd.openxmlformats-officedocument'
+                            '.wordprocessingml.footer+xml"/>'
+                            '<Override PartName="/word/footer3.xml" '
+                            'ContentType="application/vnd.openxmlformats-officedocument'
+                            '.wordprocessingml.footer+xml"/>'
                             '</Types>'
                         )
                     zout.writestr(item, ct.encode('utf-8'))
                 else:
                     zout.writestr(item, zin.read(fname))
-            # Ajouter footer1.xml
-            zout.writestr('word/footer1.xml', footer1_xml.encode('utf-8'))
+            # Ajouter les fichiers footer
+            zout.writestr('word/footer1.xml', footer_odd_xml.encode('utf-8'))   # impair : flèche
+            zout.writestr('word/footer2.xml', footer_empty_xml.encode('utf-8')) # défaut : vide
+            zout.writestr('word/footer3.xml', footer_empty_xml.encode('utf-8')) # pair : vide
             # Ajouter signature
             if sig_img_data:
                 zout.writestr(f'word/media/signature.{sig_ext}', sig_img_data)
