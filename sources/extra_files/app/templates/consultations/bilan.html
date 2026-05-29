@@ -236,7 +236,17 @@
         {% else %}
           {% set champs = sections_def.get(sec.type, {}).get('champs', []) %}
           {% for champ in champs %}
-            {% if champ.type == 'fichier' %}
+            {% if champ.type == 'spacer' %}
+              {# cellule vide — ignorée en affichage #}
+            {% elif champ.type == 'separator' %}
+              <div style="grid-column:1/-1;margin:4px 0 2px;padding-bottom:6px;
+                           border-bottom:1px solid var(--border);">
+                {% if champ.label %}
+                <span style="font-size:11px;font-weight:600;color:var(--muted);
+                              text-transform:uppercase;letter-spacing:.4px;">{{ champ.label }}</span>
+                {% endif %}
+              </div>
+            {% elif champ.type == 'fichier' %}
               {% set fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', champ.name) | list %}
               {% if fics %}
               <div style="margin:8px 0;">

@@ -113,7 +113,7 @@
               <div class="field-group">
                 <label class="field-label">Type</label>
                 <select name="type">
-                  {% for t in ['text','textarea','number','select','sph','fichier'] %}
+                  {% for t in ['text','textarea','number','select','sph','fichier','spacer','separator'] %}
                   <option value="{{ t }}" {{ 'selected' if champ.type == t }}>{{ t }}</option>
                   {% endfor %}
                 </select>
@@ -202,6 +202,10 @@
               <option value="select">Liste déroulante</option>
               <option value="sph">Sphère (±)</option>
               <option value="fichier">Pièce jointe</option>
+              <optgroup label="Mise en page">
+                <option value="spacer">Espaceur (cellule vide)</option>
+                <option value="separator">Séparateur (ligne + titre)</option>
+              </optgroup>
             </select>
           </div>
           <button type="submit" class="btn btn-primary btn-sm">+ Ajouter</button>
