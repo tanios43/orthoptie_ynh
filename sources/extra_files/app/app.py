@@ -5813,39 +5813,44 @@ def _generer_docx(consultation, modele, sections_incluses):
             champs   = sec_def.get('champs', [])
             nb_cols  = sec_def.get('nb_colonnes', 2) or 2
             lignes   = []
-            # On construit des "rangées" de nb_cols cellules
-            row_cells = []
+            # Collecter les cellules non-mise-en-page
+            pending_cells = []  # liste de (label, valeur) à regrouper
+
+            def flush_pending():
+                """Regroupe les cellules en rangées pleines, sans trous."""
+                if not pending_cells:
+                    return
+                # Filtrer les cellules vides
+                non_vides = [(lbl, val) for lbl, val in pending_cells if val and str(val).strip()]
+                if not non_vides:
+                    pending_cells.clear()
+                    return
+                # Regrouper en rangées de nb_cols
+                for i in range(0, len(non_vides), nb_cols):
+                    chunk = non_vides[i:i+nb_cols]
+                    # Compléter la dernière rangée si nécessaire
+                    while len(chunk) < nb_cols:
+                        chunk.append(('', ''))
+                    lignes.append(('__row__', chunk))
+                pending_cells.clear()
+
             for ch in champs:
                 if ch['type'] == 'fichier':
                     continue
                 if ch['type'] == 'spacer':
-                    row_cells.append(('', ''))  # cellule vide
-                    if len(row_cells) >= nb_cols:
-                        lignes.append(('__row__', row_cells))
-                        row_cells = []
+                    # Spacer = cellule vide intentionnelle — on la garde
+                    pending_cells.append(('', ''))
+                    if len(pending_cells) >= nb_cols:
+                        flush_pending()
                     continue
                 if ch['type'] == 'separator':
-                    # Flush la rangée en cours
-                    if row_cells:
-                        while len(row_cells) < nb_cols:
-                            row_cells.append(('', ''))
-                        lignes.append(('__row__', row_cells))
-                        row_cells = []
+                    flush_pending()
                     lignes.append(('__sep__', ch['label'] or ''))
                     continue
                 val = d.get(ch['name'], '')
-                if val:
-                    row_cells.append((ch['label'], str(val)))
-                else:
-                    row_cells.append(('', ''))
-                if len(row_cells) >= nb_cols:
-                    lignes.append(('__row__', row_cells))
-                    row_cells = []
-            # Flush dernière rangée incomplète
-            if row_cells:
-                while len(row_cells) < nb_cols:
-                    row_cells.append(('', ''))
-                lignes.append(('__row__', row_cells))
+                pending_cells.append((ch['label'], str(val) if val else ''))
+
+            flush_pending()
 
         sections_data.append({
             'label': sec.label,
