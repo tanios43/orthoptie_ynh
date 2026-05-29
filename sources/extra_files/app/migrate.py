@@ -238,7 +238,17 @@ if _db_path:
         _conn.commit()
         print("Present : message.destinataire_id nullable OK")
     except sqlite3.IntegrityError:
-        _cur.executescript("""
+        _conn.rollback()
+        # Vérifier si conversation_id existe déjà
+        _cur.execute("PRAGMA table_info(message)")
+        cols = [row[1] for row in _cur.fetchall()]
+        if 'conversation_id' in cols:
+            copy_conv = 'conversation_id,'
+            col_conv  = 'CASE WHEN typeof(conversation_id)=\'integer\' THEN conversation_id ELSE NULL END,'
+        else:
+            copy_conv = ''
+            col_conv  = 'NULL,'
+        _cur.executescript(f"""
             CREATE TABLE IF NOT EXISTS message_new (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 conversation_id INTEGER REFERENCES conversation(id),
@@ -249,9 +259,7 @@ if _db_path:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             INSERT INTO message_new
-                SELECT id,
-                       CASE WHEN typeof(conversation_id)='integer' THEN conversation_id ELSE NULL END,
-                       expediteur_id, destinataire_id, contenu, lu, created_at
+                SELECT id, {col_conv} expediteur_id, destinataire_id, contenu, lu, created_at
                 FROM message;
             DROP TABLE message;
             ALTER TABLE message_new RENAME TO message;
