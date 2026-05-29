@@ -6033,11 +6033,12 @@ def _generer_docx(consultation, modele, sections_incluses):
         '</w:p>'
         '</w:ftr>'
     )
-    # Référencer le footer impair dans sectPr du document
+    # Référencer le footer impair dans le sectPr principal (dernier du document)
     footer_ref = '<w:footerReference w:type="odd" r:id="rIdFooter1"/>'
     if footer_ref not in doc_xml:
-        if '</w:sectPr>' in doc_xml:
-            doc_xml = doc_xml.replace('</w:sectPr>', footer_ref + '</w:sectPr>')
+        last_sectp = doc_xml.rfind('</w:sectPr>')
+        if last_sectp >= 0:
+            doc_xml = doc_xml[:last_sectp] + footer_ref + doc_xml[last_sectp:]
         else:
             doc_xml = doc_xml.replace('</w:body>', f'<w:sectPr>{footer_ref}</w:sectPr></w:body>')
 
