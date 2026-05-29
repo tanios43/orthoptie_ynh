@@ -161,15 +161,33 @@ def inject_categories():
 
 
 @app.context_processor
-def inject_messages_count():
+def inject_globals_count():
     if current_user.is_authenticated:
         try:
-            count = Message.query.filter_by(
-                destinataire_id=current_user.id, lu=False).count()
-            return {'messages_non_lus': count}
+            # Messages non lus dans les conversations
+            msgs = db.session.query(Message.id).join(
+                Conversation, Message.conversation_id == Conversation.id
+            ).join(
+                ConversationParticipant,
+                ConversationParticipant.conversation_id == Conversation.id
+            ).filter(
+                ConversationParticipant.praticien_id == current_user.id,
+                Message.expediteur_id != current_user.id
+            ).outerjoin(
+                MessageLu,
+                db.and_(MessageLu.message_id == Message.id,
+                        MessageLu.praticien_id == current_user.id)
+            ).filter(MessageLu.id == None).count()
+            # Tâches actives
+            taches = Tache.query.filter(
+                db.or_(Tache.praticien_id == current_user.id,
+                       Tache.assigne_a == current_user.id),
+                Tache.statut != 'termine'
+            ).count()
+            return {'messages_non_lus': msgs, 'nb_taches_actives': taches}
         except Exception:
             pass
-    return {'messages_non_lus': 0}
+    return {'messages_non_lus': 0, 'nb_taches_actives': 0}
 
 
 @app.template_filter('mdhtml')
@@ -868,6 +886,37 @@ class Message(db.Model):
             if self.destinataire_id == praticien_id:
                 self.lu = True
 
+
+
+class Note(db.Model):
+    """Note personnelle d'un praticien."""
+    __tablename__ = 'note'
+    id           = db.Column(db.Integer, primary_key=True)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    titre        = db.Column(db.String(200), default='')
+    contenu      = db.Column(db.Text, default='')
+    couleur      = db.Column(db.String(20), default='#FEFCE8')
+    epingle      = db.Column(db.Boolean, default=False)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    praticien    = db.relationship('Praticien', foreign_keys=[praticien_id])
+
+
+class Tache(db.Model):
+    """Tâche personnelle ou partagée."""
+    __tablename__ = 'tache'
+    id           = db.Column(db.Integer, primary_key=True)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    titre        = db.Column(db.String(300), nullable=False)
+    description  = db.Column(db.Text, default='')
+    echeance     = db.Column(db.Date, nullable=True)
+    priorite     = db.Column(db.String(10), default='normale')  # basse, normale, haute
+    statut       = db.Column(db.String(20), default='a_faire')  # a_faire, en_cours, termine
+    assigne_a    = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    praticien    = db.relationship('Praticien', foreign_keys=[praticien_id])
+    assigne      = db.relationship('Praticien', foreign_keys=[assigne_a])
 
 
 class NotePatient(db.Model):
@@ -2570,6 +2619,138 @@ def message_nouveau():
     from flask import redirect as _redirect
     return _redirect(url_for('messages_nouvelle_conversation'))
 
+
+
+@app.route('/notes', methods=['GET'])
+@login_required
+def notes_liste():
+    onglet = request.args.get('onglet', 'notes')
+    notes = Note.query.filter_by(praticien_id=current_user.id)\
+        .order_by(Note.epingle.desc(), Note.updated_at.desc()).all()
+    filtre = request.args.get('filtre', 'mes')
+    if filtre == 'mes':
+        taches = Tache.query.filter(
+            db.or_(Tache.praticien_id == current_user.id,
+                   Tache.assigne_a == current_user.id)
+        ).order_by(Tache.statut, Tache.echeance.asc().nullslast(),
+                   Tache.priorite).all()
+    else:
+        taches = Tache.query.order_by(
+            Tache.statut, Tache.echeance.asc().nullslast()).all()
+    praticiens = Praticien.query.filter_by(actif=True)\
+        .order_by(Praticien.nom).all()
+    nb_taches = Tache.query.filter(
+        db.or_(Tache.praticien_id == current_user.id,
+               Tache.assigne_a == current_user.id),
+        Tache.statut != 'termine'
+    ).count()
+    return render_template('notes/index.html', notes=notes, taches=taches,
+                           onglet=onglet, filtre=filtre,
+                           praticiens=praticiens, nb_taches=nb_taches,
+                           today=datetime.utcnow().date())
+
+
+@app.route('/notes/nouvelle', methods=['POST'])
+@login_required
+def note_nouvelle():
+    n = Note(praticien_id=current_user.id,
+             titre=request.form.get('titre', '').strip(),
+             contenu=request.form.get('contenu', '').strip(),
+             couleur=request.form.get('couleur', '#FEFCE8'))
+    db.session.add(n); db.session.commit()
+    return redirect(url_for('notes_liste', onglet='notes'))
+
+
+@app.route('/notes/<int:note_id>/modifier', methods=['POST'])
+@login_required
+def note_modifier(note_id):
+    n = Note.query.get_or_404(note_id)
+    if n.praticien_id != current_user.id: abort(403)
+    n.titre   = request.form.get('titre', '').strip()
+    n.contenu = request.form.get('contenu', '').strip()
+    n.couleur = request.form.get('couleur', n.couleur)
+    n.updated_at = datetime.utcnow()
+    db.session.commit()
+    return redirect(url_for('notes_liste', onglet='notes'))
+
+
+@app.route('/notes/<int:note_id>/epingler', methods=['POST'])
+@login_required
+def note_epingler(note_id):
+    n = Note.query.get_or_404(note_id)
+    if n.praticien_id != current_user.id: abort(403)
+    n.epingle = not n.epingle
+    db.session.commit()
+    return redirect(url_for('notes_liste', onglet='notes'))
+
+
+@app.route('/notes/<int:note_id>/supprimer', methods=['POST'])
+@login_required
+def note_supprimer(note_id):
+    n = Note.query.get_or_404(note_id)
+    if n.praticien_id != current_user.id: abort(403)
+    db.session.delete(n); db.session.commit()
+    return redirect(url_for('notes_liste', onglet='notes'))
+
+
+@app.route('/taches/nouvelle', methods=['POST'])
+@login_required
+def tache_nouvelle():
+    echeance = None
+    if request.form.get('echeance'):
+        try: echeance = datetime.strptime(request.form['echeance'], '%Y-%m-%d').date()
+        except ValueError: pass
+    assigne_a = request.form.get('assigne_a', type=int) or None
+    t = Tache(praticien_id=current_user.id,
+              titre      =request.form.get('titre', '').strip(),
+              description=request.form.get('description', '').strip(),
+              echeance   =echeance,
+              priorite   =request.form.get('priorite', 'normale'),
+              assigne_a  =assigne_a)
+    db.session.add(t); db.session.commit()
+    return redirect(url_for('notes_liste', onglet='taches'))
+
+
+@app.route('/taches/<int:tache_id>/statut', methods=['POST'])
+@login_required
+def tache_statut(tache_id):
+    t = Tache.query.get_or_404(tache_id)
+    statuts = ['a_faire', 'en_cours', 'termine']
+    idx = statuts.index(t.statut) if t.statut in statuts else 0
+    t.statut = statuts[(idx + 1) % len(statuts)]
+    t.updated_at = datetime.utcnow()
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'fetch':
+        return jsonify({'statut': t.statut})
+    return redirect(url_for('notes_liste', onglet='taches'))
+
+
+@app.route('/taches/<int:tache_id>/modifier', methods=['POST'])
+@login_required
+def tache_modifier(tache_id):
+    t = Tache.query.get_or_404(tache_id)
+    if t.praticien_id != current_user.id: abort(403)
+    echeance = None
+    if request.form.get('echeance'):
+        try: echeance = datetime.strptime(request.form['echeance'], '%Y-%m-%d').date()
+        except ValueError: pass
+    t.titre       = request.form.get('titre', '').strip()
+    t.description = request.form.get('description', '').strip()
+    t.echeance    = echeance
+    t.priorite    = request.form.get('priorite', 'normale')
+    t.assigne_a   = request.form.get('assigne_a', type=int) or None
+    t.updated_at  = datetime.utcnow()
+    db.session.commit()
+    return redirect(url_for('notes_liste', onglet='taches'))
+
+
+@app.route('/taches/<int:tache_id>/supprimer', methods=['POST'])
+@login_required
+def tache_supprimer(tache_id):
+    t = Tache.query.get_or_404(tache_id)
+    if t.praticien_id != current_user.id: abort(403)
+    db.session.delete(t); db.session.commit()
+    return redirect(url_for('notes_liste', onglet='taches'))
 
 
 @app.route('/notes-patient/<int:patient_id>', methods=['POST'])

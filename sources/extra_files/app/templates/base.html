@@ -391,13 +391,24 @@
       <span class="icon">🕐</span> Mon historique
     </a>
     <a href="{{ url_for('messages_liste') }}" id="msg-nav-link"
-       class="nav-item {% if request.endpoint in ['messages_liste','messages_conversation'] %}active{% endif %}"
+       class="nav-item {% if request.endpoint in ['messages_liste','messages_conversation','messages_conversation_multi'] %}active{% endif %}"
        style="display:flex;align-items:center;justify-content:space-between;">
       <span><span class="icon">💬</span> Messages</span>
       {% if messages_non_lus %}
       <span id="msg-badge" style="background:#E24B4A;color:white;border-radius:9px;min-width:18px;height:18px;
                    display:inline-flex;align-items:center;justify-content:center;
                    font-size:11px;padding:0 5px;">{{ messages_non_lus }}</span>
+      {% endif %}
+    </a>
+
+    <a href="{{ url_for('notes_liste') }}"
+       class="nav-item {% if request.endpoint in ['notes_liste','note_nouvelle','tache_nouvelle'] %}active{% endif %}"
+       style="display:flex;align-items:center;justify-content:space-between;">
+      <span><span class="icon">📝</span> Notes &amp; Tâches</span>
+      {% if nb_taches_actives %}
+      <span style="background:#EF9F27;color:white;border-radius:9px;min-width:18px;height:18px;
+                   display:inline-flex;align-items:center;justify-content:center;
+                   font-size:11px;padding:0 5px;">{{ nb_taches_actives }}</span>
       {% endif %}
     </a>
 

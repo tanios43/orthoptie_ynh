@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% block title %}Notes & Tâches{% endblock %}
+{% block page_title %}📝 Notes & Tâches{% endblock %}
+
+{% block topbar_actions %}
+  <button type="button" onclick="ouvrirModalNote()"
+          class="btn btn-secondary btn-sm">+ Note</button>
+  <button type="button" onclick="ouvrirModalTache()"
+          class="btn btn-primary btn-sm">+ Tâche</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.onglet-btn { padding:8px 20px;border:none;background:none;cursor:pointer;font-size:14px;
+              border-bottom:2px solid transparent;color:var(--muted);transition:all .15s; }
+.onglet-btn.active { color:var(--accent);border-bottom-color:var(--accent);font-weight:500; }
+.note-card { border-radius:10px;padding:14px;position:relative;min-height:120px;
+             display:flex;flex-direction:column;gap:8px;cursor:pointer;
+             transition:transform .15s,box-shadow .15s; }
+.note-card:hover { transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.12); }
+.tache-row { display:flex;align-items:center;gap:10px;padding:10px 14px;
+             border-bottom:0.5px solid var(--border);transition:background .15s; }
+.tache-row:hover { background:var(--bg); }
+.badge-priorite { padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500; }
+.badge-statut { padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;cursor:pointer; }
+</style>
+
+{# Onglets #}
+<div style="border-bottom:1px solid var(--border);margin-bottom:20px;display:flex;gap:0;">
+  <button class="onglet-btn {% if onglet=='notes' %}active{% endif %}"
+          onclick="switchOnglet('notes')">📝 Notes</button>
+  <button class="onglet-btn {% if onglet=='taches' %}active{% endif %}"
+          onclick="switchOnglet('taches')">
+    ✅ Tâches
+    {% if nb_taches > 0 %}
+    <span style="background:var(--accent);color:white;border-radius:9px;
+                 font-size:11px;padding:1px 6px;margin-left:4px;">{{ nb_taches }}</span>
+    {% endif %}
+  </button>
+</div>
+
+{# ── ONGLET NOTES ── #}
+<div id="onglet-notes" style="{% if onglet != 'notes' %}display:none;{% endif %}">
+  {% if notes %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+    {% for n in notes %}
+    <div class="note-card" style="background:{{ n.couleur }};"
+         onclick="ouvrirModalNote({{ n.id }}, {{ n.titre|tojson }}, {{ n.contenu|tojson }}, '{{ n.couleur }}')">
+      {% if n.epingle %}
+      <div style="position:absolute;top:8px;right:10px;font-size:14px;">📌</div>
+      {% endif %}
+      {% if n.titre %}
+      <div style="font-weight:600;font-size:13px;padding-right:20px;">{{ n.titre }}</div>
+      {% endif %}
+      <div style="font-size:12px;color:#444;white-space:pre-wrap;flex:1;overflow:hidden;
+                  display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;">
+        {{ n.contenu }}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <span style="font-size:10px;color:#888;">{{ n.updated_at | localhour }}</span>
+        <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+          <form method="POST" action="{{ url_for('note_epingler', note_id=n.id) }}" style="margin:0;">
+            <button type="submit" title="{% if n.epingle %}Désépingler{% else %}Épingler{% endif %}"
+                    style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px;">
+              {% if n.epingle %}📍{% else %}📌{% endif %}
+            </button>
+          </form>
+          <form method="POST" action="{{ url_for('note_supprimer', note_id=n.id) }}" style="margin:0;"
+                onsubmit="return confirm('Supprimer cette note ?')">
+            <button type="submit"
+                    style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px;color:#999;">
+              🗑
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:48px 20px;color:var(--muted);">
+    <div style="font-size:40px;margin-bottom:8px;">📝</div>
+    <div>Aucune note. Créez votre première note !</div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── ONGLET TÂCHES ── #}
+<div id="onglet-taches" style="{% if onglet != 'taches' %}display:none;{% endif %}">
+
+  {# Filtres #}
+  <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
+    <a href="{{ url_for('notes_liste', onglet='taches', filtre='mes') }}"
+       class="btn btn-sm {% if filtre=='mes' %}btn-primary{% else %}btn-secondary{% endif %}">
+      Mes tâches
+    </a>
+    <a href="{{ url_for('notes_liste', onglet='taches', filtre='toutes') }}"
+       class="btn btn-sm {% if filtre=='toutes' %}btn-primary{% else %}btn-secondary{% endif %}">
+      Toutes
+    </a>
+  </div>
+
+  {% if taches %}
+  <div class="card" style="overflow:hidden;">
+    {% for t in taches %}
+    {% set statut_label = {'a_faire': 'À faire', 'en_cours': 'En cours', 'termine': 'Terminé'}[t.statut] %}
+    {% set statut_bg = {'a_faire': '#F3F4F6', 'en_cours': '#DBEAFE', 'termine': '#DCFCE7'}[t.statut] %}
+    {% set statut_color = {'a_faire': '#374151', 'en_cours': '#1D4ED8', 'termine': '#166534'}[t.statut] %}
+    {% set prio_bg = {'basse': '#F3F4F6', 'normale': '#FEFCE8', 'haute': '#FEE2E2'}[t.priorite] %}
+    {% set prio_color = {'basse': '#6B7280', 'normale': '#92400E', 'haute': '#DC2626'}[t.priorite] %}
+    <div class="tache-row {% if t.statut == 'termine' %}{{ '' }}{% endif %}"
+         style="{% if t.statut == 'termine' %}opacity:.6;{% endif %}">
+      {# Statut cliquable #}
+      <form method="POST" action="{{ url_for('tache_statut', tache_id=t.id) }}" style="margin:0;flex-shrink:0;">
+        <button type="submit" class="badge-statut"
+                style="background:{{ statut_bg }};color:{{ statut_color }};"
+                title="Cliquer pour changer le statut">
+          {{ statut_label }}
+        </button>
+      </form>
+      {# Priorité #}
+      <span class="badge-priorite" style="background:{{ prio_bg }};color:{{ prio_color }};flex-shrink:0;">
+        {{ {'basse':'↓','normale':'→','haute':'↑'}[t.priorite] }}
+      </span>
+      {# Titre + description #}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;{% if t.statut=='termine' %}text-decoration:line-through;{% endif %}">
+          {{ t.titre }}
+        </div>
+        {% if t.description %}
+        <div style="font-size:11px;color:var(--muted);">{{ t.description[:80] }}</div>
+        {% endif %}
+      </div>
+      {# Assigné à #}
+      {% if t.assigne %}
+      <span style="font-size:11px;color:var(--muted);flex-shrink:0;">
+        👤 {{ t.assigne.prenom }} {{ t.assigne.nom }}
+      </span>
+      {% endif %}
+      {# Échéance #}
+      {% if t.echeance %}
+      <span style="font-size:11px;flex-shrink:0;
+                   {% if t.echeance < today and t.statut != 'termine' %}color:#DC2626;font-weight:500;
+                   {% else %}color:var(--muted);{% endif %}">
+        📅 {{ t.echeance.strftime('%d/%m') }}
+      </span>
+      {% endif %}
+      {# Actions #}
+      {% if t.praticien_id == current_user.id %}
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button type="button"
+                onclick="ouvrirModalTache({{ t.id }}, {{ t.titre|tojson }}, {{ t.description|tojson }}, '{{ t.echeance or '' }}', '{{ t.priorite }}', {{ t.assigne_a or 'null' }})"
+                style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--muted);">✎</button>
+        <form method="POST" action="{{ url_for('tache_supprimer', tache_id=t.id) }}" style="margin:0;"
+              onsubmit="return confirm('Supprimer ?')">
+          <button type="submit"
+                  style="background:none;border:none;cursor:pointer;font-size:13px;color:#ccc;">🗑</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:48px 20px;color:var(--muted);">
+    <div style="font-size:40px;margin-bottom:8px;">✅</div>
+    <div>Aucune tâche. Créez votre première tâche !</div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── MODAL NOTE ── #}
+<div id="modal-note" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+     z-index:1000;display:flex;align-items:center;justify-content:center;" class="modal-overlay">
+  <div style="background:white;border-radius:12px;padding:24px;width:100%;max-width:480px;
+              box-shadow:0 8px 32px rgba(0,0,0,.2);" onclick="event.stopPropagation()">
+    <h3 id="modal-note-titre-h" style="margin:0 0 16px;font-size:16px;">Nouvelle note</h3>
+    <form id="form-note" method="POST" action="{{ url_for('note_nouvelle') }}">
+      <input type="hidden" name="_method" value="">
+      <div class="field-group">
+        <label class="field-label">Titre (optionnel)</label>
+        <input type="text" name="titre" id="note-titre" placeholder="Titre…">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Note</label>
+        <textarea name="contenu" id="note-contenu" rows="6" placeholder="Votre note…"></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Couleur</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% for c in ['#FEFCE8','#E1F5EE','#EEEDFE','#FEE2E2','#DBEAFE','#F3F4F6','#FAEEDA'] %}
+          <label style="cursor:pointer;">
+            <input type="radio" name="couleur" value="{{ c }}" style="display:none;"
+                   {% if loop.first %}checked{% endif %} class="couleur-radio">
+            <div class="couleur-swatch" data-val="{{ c }}"
+                 style="width:28px;height:28px;border-radius:50%;background:{{ c }};
+                        border:2px solid transparent;transition:border-color .15s;">
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" onclick="fermerModals()" class="btn btn-secondary">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── MODAL TACHE ── #}
+<div id="modal-tache" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+     z-index:1000;align-items:center;justify-content:center;" class="modal-overlay">
+  <div style="background:white;border-radius:12px;padding:24px;width:100%;max-width:480px;
+              box-shadow:0 8px 32px rgba(0,0,0,.2);" onclick="event.stopPropagation()">
+    <h3 id="modal-tache-titre-h" style="margin:0 0 16px;font-size:16px;">Nouvelle tâche</h3>
+    <form id="form-tache" method="POST" action="{{ url_for('tache_nouvelle') }}">
+      <div class="field-group">
+        <label class="field-label">Titre *</label>
+        <input type="text" name="titre" id="tache-titre" required placeholder="Que faut-il faire ?">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Description (optionnel)</label>
+        <textarea name="description" id="tache-desc" rows="2"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field-group">
+          <label class="field-label">Échéance</label>
+          <input type="date" name="echeance" id="tache-echeance">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Priorité</label>
+          <select name="priorite" id="tache-priorite">
+            <option value="basse">↓ Basse</option>
+            <option value="normale" selected>→ Normale</option>
+            <option value="haute">↑ Haute</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Assigner à</label>
+        <select name="assigne_a" id="tache-assigne">
+          <option value="">— Moi uniquement —</option>
+          {% for p in praticiens %}
+          {% if p.id != current_user.id %}
+          <option value="{{ p.id }}">{{ p.prenom }} {{ p.nom }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" onclick="fermerModals()" class="btn btn-secondary">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function switchOnglet(nom) {
+  document.getElementById('onglet-notes').style.display = nom === 'notes' ? '' : 'none';
+  document.getElementById('onglet-taches').style.display = nom === 'taches' ? '' : 'none';
+  document.querySelectorAll('.onglet-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0) === (nom === 'notes'));
+  });
+}
+
+function fermerModals() {
+  document.getElementById('modal-note').style.display = 'none';
+  document.getElementById('modal-tache').style.display = 'none';
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', function(e) {
+    if (e.target === this) fermerModals();
+  });
+});
+
+function ouvrirModalNote(id, titre, contenu, couleur) {
+  const modal = document.getElementById('modal-note');
+  const form  = document.getElementById('form-note');
+  modal.style.display = 'flex';
+  document.getElementById('note-titre').value   = titre   || '';
+  document.getElementById('note-contenu').value = contenu || '';
+  if (id) {
+    document.getElementById('modal-note-titre-h').textContent = 'Modifier la note';
+    form.action = '/notes/' + id + '/modifier';
+  } else {
+    document.getElementById('modal-note-titre-h').textContent = 'Nouvelle note';
+    form.action = '{{ url_for("note_nouvelle") }}';
+  }
+  // Sélectionner la couleur
+  document.querySelectorAll('.couleur-radio').forEach(r => {
+    r.checked = r.value === (couleur || '#FEFCE8');
+    r.closest('label').querySelector('.couleur-swatch').style.borderColor =
+      r.checked ? '#666' : 'transparent';
+  });
+}
+
+function ouvrirModalTache(id, titre, desc, echeance, priorite, assigneA) {
+  const modal = document.getElementById('modal-tache');
+  const form  = document.getElementById('form-tache');
+  modal.style.display = 'flex';
+  document.getElementById('tache-titre').value    = titre    || '';
+  document.getElementById('tache-desc').value     = desc     || '';
+  document.getElementById('tache-echeance').value = echeance || '';
+  document.getElementById('tache-priorite').value = priorite || 'normale';
+  document.getElementById('tache-assigne').value  = assigneA || '';
+  if (id) {
+    document.getElementById('modal-tache-titre-h').textContent = 'Modifier la tâche';
+    form.action = '/taches/' + id + '/modifier';
+  } else {
+    document.getElementById('modal-tache-titre-h').textContent = 'Nouvelle tâche';
+    form.action = '{{ url_for("tache_nouvelle") }}';
+  }
+}
+
+// Feedback couleur sélectionnée
+document.querySelectorAll('.couleur-radio').forEach(r => {
+  r.addEventListener('change', () => {
+    document.querySelectorAll('.couleur-swatch').forEach(s => s.style.borderColor = 'transparent');
+    r.closest('label').querySelector('.couleur-swatch').style.borderColor = '#666';
+  });
+});
+</script>
+{% endblock %}
