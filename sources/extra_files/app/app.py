@@ -6042,6 +6042,9 @@ def _generer_docx(consultation, modele, sections_incluses):
         else:
             doc_xml = doc_xml.replace('</w:body>', f'<w:sectPr>{footer_ref}</w:sectPr></w:body>')
 
+    # Corriger la marge footer=0 qui empêche l'affichage
+    doc_xml = doc_xml.replace('w:footer="0"', 'w:footer="567"')  # 1cm en twips
+
     # ── Réécrire le docx ──────────────────────────────────────────────
     new_out = os.path.join(tmpdir, 'final.docx')
     mime_map = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
