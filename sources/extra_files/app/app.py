@@ -2724,7 +2724,7 @@ def tache_statut(tache_id):
 @login_required
 def tache_modifier(tache_id):
     t = Tache.query.get_or_404(tache_id)
-    if t.praticien_id != current_user.id: abort(403)
+    if t.praticien_id != current_user.id and t.assigne_a != current_user.id: abort(403)
     echeance = None
     if request.form.get('echeance'):
         try: echeance = datetime.strptime(request.form['echeance'], '%Y-%m-%d').date()
@@ -2743,7 +2743,7 @@ def tache_modifier(tache_id):
 @login_required
 def tache_supprimer(tache_id):
     t = Tache.query.get_or_404(tache_id)
-    if t.praticien_id != current_user.id: abort(403)
+    if t.praticien_id != current_user.id and t.assigne_a != current_user.id: abort(403)
     db.session.delete(t); db.session.commit()
     return redirect(url_for('notes_liste', onglet='taches'))
 

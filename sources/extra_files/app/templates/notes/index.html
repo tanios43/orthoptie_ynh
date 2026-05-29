@@ -134,7 +134,7 @@
       </span>
       {% endif %}
       {# Actions #}
-      {% if t.praticien_id == current_user.id %}
+      {% if t.praticien_id == current_user.id or t.assigne_a == current_user.id %}
       <div style="display:flex;gap:4px;flex-shrink:0;">
         <button type="button"
                 class="btn-edit-tache"
