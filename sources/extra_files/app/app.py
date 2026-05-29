@@ -6019,30 +6019,90 @@ def _generer_docx(consultation, modele, sections_incluses):
         )
         doc_xml = doc_xml.replace('</w:body>', sig_para + '</w:body>')
 
+    # ── Pied de page impair : flèche ▶ bas droite (recto-verso) ─────
+    footer1_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        '<w:p><w:pPr><w:jc w:val="right"/>'
+        '<w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+        '<w:sz w:val="24"/><w:color w:val="CCCCCC"/></w:rPr>'
+        '</w:pPr>'
+        '<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+        '<w:sz w:val="24"/><w:color w:val="CCCCCC"/></w:rPr>'
+        '<w:t>&#x25BA;</w:t></w:r>'
+        '</w:p>'
+        '</w:ftr>'
+    )
+    # Activer pages paires/impaires dans settings.xml
+    settings_key = 'word/settings.xml'
+    if settings_key in all_files:
+        settings = all_files[settings_key].decode('utf-8')
+        if 'evenAndOddHeaders' not in settings:
+            settings = settings.replace(
+                '</w:settings>',
+                '<w:evenAndOddHeaders/></w:settings>'
+            )
+        all_files[settings_key] = settings.encode('utf-8')
+
+    # Référencer le footer impair dans sectPr du document
+    footer_ref = '<w:footerReference w:type="odd" r:id="rIdFooter1"/>'
+    if footer_ref not in doc_xml:
+        if '</w:sectPr>' in doc_xml:
+            doc_xml = doc_xml.replace('</w:sectPr>', footer_ref + '</w:sectPr>')
+        else:
+            doc_xml = doc_xml.replace('</w:body>', f'<w:sectPr>{footer_ref}</w:sectPr></w:body>')
+
     # ── Réécrire le docx ──────────────────────────────────────────────
     new_out = os.path.join(tmpdir, 'final.docx')
     mime_map = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
                 'gif': 'image/gif', 'webp': 'image/webp'}
     with zipfile.ZipFile(out_path, 'r') as zin:
         with zipfile.ZipFile(new_out, 'w', zipfile.ZIP_DEFLATED) as zout:
-            rels_xml = None
+            written = set()
             for item in zin.infolist():
-                if item.filename == 'word/document.xml':
+                fname = item.filename
+                if fname == 'word/document.xml':
                     zout.writestr(item, doc_xml.encode('utf-8'))
-                elif item.filename == 'word/_rels/document.xml.rels' and sig_img_data:
-                    rels_xml = zin.read(item.filename).decode('utf-8')
-                    # Ajouter la relation image
-                    rels_xml = rels_xml.replace(
-                        '</Relationships>',
-                        f'<Relationship Id="{sig_rel_id}" '
-                        f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
-                        f'Target="media/signature.{sig_ext}"/>'
-                        '</Relationships>'
-                    )
+                elif fname in all_files and fname != 'word/document.xml':
+                    # settings.xml mis à jour
+                    zout.writestr(item, all_files[fname])
+                elif fname == 'word/_rels/document.xml.rels':
+                    rels_xml = zin.read(fname).decode('utf-8')
+                    if sig_img_data and sig_rel_id:
+                        rels_xml = rels_xml.replace(
+                            '</Relationships>',
+                            f'<Relationship Id="{sig_rel_id}" '
+                            f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+                            f'Target="media/signature.{sig_ext}"/>'
+                            '</Relationships>'
+                        )
+                    # Ajouter relation footer
+                    if 'rIdFooter1' not in rels_xml:
+                        rels_xml = rels_xml.replace(
+                            '</Relationships>',
+                            '<Relationship Id="rIdFooter1" '
+                            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" '
+                            'Target="footer1.xml"/>'
+                            '</Relationships>'
+                        )
                     zout.writestr(item, rels_xml.encode('utf-8'))
+                elif fname == '[Content_Types].xml':
+                    ct_xml = zin.read(fname).decode('utf-8')
+                    if 'footer1.xml' not in ct_xml:
+                        ct_xml = ct_xml.replace(
+                            '</Types>',
+                            '<Override PartName="/word/footer1.xml" '
+                            'ContentType="application/vnd.openxmlformats-officedocument'
+                            '.wordprocessingml.footer+xml"/>'
+                            '</Types>'
+                        )
+                    zout.writestr(item, ct_xml.encode('utf-8'))
                 else:
-                    zout.writestr(item, zin.read(item.filename))
-            # Ajouter le fichier image
+                    zout.writestr(item, zin.read(fname))
+                written.add(fname)
+            # Ajouter footer1.xml
+            zout.writestr('word/footer1.xml', footer1_xml.encode('utf-8'))
+            # Ajouter signature si présente
             if sig_img_data:
                 zout.writestr(f'word/media/signature.{sig_ext}', sig_img_data)
 
