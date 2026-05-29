@@ -137,7 +137,13 @@
       {% if t.praticien_id == current_user.id %}
       <div style="display:flex;gap:4px;flex-shrink:0;">
         <button type="button"
-                onclick="ouvrirModalTache({{ t.id }}, {{ t.titre|tojson }}, {{ t.description|tojson }}, '{{ t.echeance or '' }}', '{{ t.priorite }}', {{ t.assigne_a or 'null' }})"
+                class="btn-edit-tache"
+                data-id="{{ t.id }}"
+                data-titre="{{ t.titre | e }}"
+                data-desc="{{ t.description | e }}"
+                data-echeance="{{ t.echeance or '' }}"
+                data-priorite="{{ t.priorite }}"
+                data-assigne="{{ t.assigne_a or '' }}"
                 style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--muted);">✎</button>
         <form method="POST" action="{{ url_for('tache_supprimer', tache_id=t.id) }}" style="margin:0;"
               onsubmit="return confirm('Supprimer ?')">
@@ -306,6 +312,20 @@ function ouvrirModalTache(id, titre, desc, echeance, priorite, assigneA) {
     form.action = '{{ url_for("tache_nouvelle") }}';
   }
 }
+
+// Édition tâche via data attributes
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-edit-tache');
+  if (!btn) return;
+  ouvrirModalTache(
+    btn.dataset.id,
+    btn.dataset.titre,
+    btn.dataset.desc,
+    btn.dataset.echeance,
+    btn.dataset.priorite,
+    btn.dataset.assigne || ''
+  );
+});
 
 // Feedback couleur sélectionnée
 document.querySelectorAll('.couleur-radio').forEach(r => {
