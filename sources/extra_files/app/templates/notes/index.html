@@ -171,7 +171,7 @@
 
 {# ── MODAL NOTE ── #}
 <div id="modal-note" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
-     z-index:1000;display:flex;align-items:center;justify-content:center;" class="modal-overlay">
+     z-index:1000;" class="modal-overlay">
   <div style="background:white;border-radius:12px;padding:24px;width:100%;max-width:480px;
               box-shadow:0 8px 32px rgba(0,0,0,.2);" onclick="event.stopPropagation()">
     <h3 id="modal-note-titre-h" style="margin:0 0 16px;font-size:16px;">Nouvelle note</h3>
@@ -210,7 +210,7 @@
 
 {# ── MODAL TACHE ── #}
 <div id="modal-tache" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
-     z-index:1000;align-items:center;justify-content:center;" class="modal-overlay">
+     z-index:1000;" class="modal-overlay">
   <div style="background:white;border-radius:12px;padding:24px;width:100%;max-width:480px;
               box-shadow:0 8px 32px rgba(0,0,0,.2);" onclick="event.stopPropagation()">
     <h3 id="modal-tache-titre-h" style="margin:0 0 16px;font-size:16px;">Nouvelle tâche</h3>
@@ -280,6 +280,8 @@ function ouvrirModalNote(id, titre, contenu, couleur) {
   const modal = document.getElementById('modal-note');
   const form  = document.getElementById('form-note');
   modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
   document.getElementById('note-titre').value   = titre   || '';
   document.getElementById('note-contenu').value = contenu || '';
   if (id) {
@@ -301,6 +303,8 @@ function ouvrirModalTache(id, titre, desc, echeance, priorite, assigneA) {
   const modal = document.getElementById('modal-tache');
   const form  = document.getElementById('form-tache');
   modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
   document.getElementById('tache-titre').value    = titre    || '';
   document.getElementById('tache-desc').value     = desc     || '';
   document.getElementById('tache-echeance').value = echeance || '';
