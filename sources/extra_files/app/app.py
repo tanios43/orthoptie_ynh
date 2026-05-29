@@ -6033,17 +6033,6 @@ def _generer_docx(consultation, modele, sections_incluses):
         '</w:p>'
         '</w:ftr>'
     )
-    # Activer pages paires/impaires dans settings.xml
-    settings_key = 'word/settings.xml'
-    if settings_key in all_files:
-        settings = all_files[settings_key].decode('utf-8')
-        if 'evenAndOddHeaders' not in settings:
-            settings = settings.replace(
-                '</w:settings>',
-                '<w:evenAndOddHeaders/></w:settings>'
-            )
-        all_files[settings_key] = settings.encode('utf-8')
-
     # Référencer le footer impair dans sectPr du document
     footer_ref = '<w:footerReference w:type="odd" r:id="rIdFooter1"/>'
     if footer_ref not in doc_xml:
@@ -6058,51 +6047,50 @@ def _generer_docx(consultation, modele, sections_incluses):
                 'gif': 'image/gif', 'webp': 'image/webp'}
     with zipfile.ZipFile(out_path, 'r') as zin:
         with zipfile.ZipFile(new_out, 'w', zipfile.ZIP_DEFLATED) as zout:
-            written = set()
             for item in zin.infolist():
                 fname = item.filename
                 if fname == 'word/document.xml':
                     zout.writestr(item, doc_xml.encode('utf-8'))
-                elif fname in all_files and fname != 'word/document.xml':
-                    # settings.xml mis à jour
-                    zout.writestr(item, all_files[fname])
+                elif fname == 'word/settings.xml':
+                    s = zin.read(fname).decode('utf-8')
+                    if 'evenAndOddHeaders' not in s:
+                        s = s.replace('</w:settings>', '<w:evenAndOddHeaders/></w:settings>')
+                    zout.writestr(item, s.encode('utf-8'))
                 elif fname == 'word/_rels/document.xml.rels':
-                    rels_xml = zin.read(fname).decode('utf-8')
-                    if sig_img_data and sig_rel_id:
-                        rels_xml = rels_xml.replace(
+                    rels = zin.read(fname).decode('utf-8')
+                    if sig_img_data and sig_rel_id and sig_rel_id not in rels:
+                        rels = rels.replace(
                             '</Relationships>',
                             f'<Relationship Id="{sig_rel_id}" '
                             f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
                             f'Target="media/signature.{sig_ext}"/>'
                             '</Relationships>'
                         )
-                    # Ajouter relation footer
-                    if 'rIdFooter1' not in rels_xml:
-                        rels_xml = rels_xml.replace(
+                    if 'rIdFooter1' not in rels:
+                        rels = rels.replace(
                             '</Relationships>',
                             '<Relationship Id="rIdFooter1" '
                             'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" '
                             'Target="footer1.xml"/>'
                             '</Relationships>'
                         )
-                    zout.writestr(item, rels_xml.encode('utf-8'))
+                    zout.writestr(item, rels.encode('utf-8'))
                 elif fname == '[Content_Types].xml':
-                    ct_xml = zin.read(fname).decode('utf-8')
-                    if 'footer1.xml' not in ct_xml:
-                        ct_xml = ct_xml.replace(
+                    ct = zin.read(fname).decode('utf-8')
+                    if 'footer1.xml' not in ct:
+                        ct = ct.replace(
                             '</Types>',
                             '<Override PartName="/word/footer1.xml" '
                             'ContentType="application/vnd.openxmlformats-officedocument'
                             '.wordprocessingml.footer+xml"/>'
                             '</Types>'
                         )
-                    zout.writestr(item, ct_xml.encode('utf-8'))
+                    zout.writestr(item, ct.encode('utf-8'))
                 else:
                     zout.writestr(item, zin.read(fname))
-                written.add(fname)
             # Ajouter footer1.xml
             zout.writestr('word/footer1.xml', footer1_xml.encode('utf-8'))
-            # Ajouter signature si présente
+            # Ajouter signature
             if sig_img_data:
                 zout.writestr(f'word/media/signature.{sig_ext}', sig_img_data)
 
