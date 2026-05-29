@@ -5808,11 +5808,44 @@ def _generer_docx(consultation, modele, sections_incluses):
             elif renouv: lignes.append(('', 'Non renouvelable'))
 
         else:
-            # Cas général
-            champs = sections_db.get(sec.type, {}).get('champs', [])
-            lignes = [(ch['label'], d[ch['name']])
-                      for ch in champs
-                      if ch['type'] != 'fichier' and d.get(ch['name'])]
+            # Cas général — on récupère aussi nb_colonnes et les types
+            sec_def  = sections_db.get(sec.type, {})
+            champs   = sec_def.get('champs', [])
+            nb_cols  = sec_def.get('nb_colonnes', 2) or 2
+            lignes   = []
+            # On construit des "rangées" de nb_cols cellules
+            row_cells = []
+            for ch in champs:
+                if ch['type'] == 'fichier':
+                    continue
+                if ch['type'] == 'spacer':
+                    row_cells.append(('', ''))  # cellule vide
+                    if len(row_cells) >= nb_cols:
+                        lignes.append(('__row__', row_cells))
+                        row_cells = []
+                    continue
+                if ch['type'] == 'separator':
+                    # Flush la rangée en cours
+                    if row_cells:
+                        while len(row_cells) < nb_cols:
+                            row_cells.append(('', ''))
+                        lignes.append(('__row__', row_cells))
+                        row_cells = []
+                    lignes.append(('__sep__', ch['label'] or ''))
+                    continue
+                val = d.get(ch['name'], '')
+                if val:
+                    row_cells.append((ch['label'], str(val)))
+                else:
+                    row_cells.append(('', ''))
+                if len(row_cells) >= nb_cols:
+                    lignes.append(('__row__', row_cells))
+                    row_cells = []
+            # Flush dernière rangée incomplète
+            if row_cells:
+                while len(row_cells) < nb_cols:
+                    row_cells.append(('', ''))
+                lignes.append(('__row__', row_cells))
 
         sections_data.append({
             'label': sec.label,
@@ -5863,20 +5896,72 @@ def _generer_docx(consultation, modele, sections_incluses):
                             + _md_runs(obs_line, size=20) + '</w:p>'
                         )
                 for label, valeur in sec['lignes']:
-                    valeur_lines = str(valeur).split('\n') if valeur else ['']
-                    for i, vline in enumerate(valeur_lines):
-                        if i == 0:
-                            body_paras.append(
-                                f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
-                                f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                                f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(label) + " : " if label.strip() else ""}</w:t></w:r>'
-                                + _md_runs(vline) + '</w:p>'
+                    if label == '__sep__':
+                        # Séparateur — ligne grise avec titre optionnel
+                        body_paras.append(
+                            f'<w:p><w:pPr><w:spacing w:before="120" w:after="40"/>'
+                            f'<w:pBdr><w:bottom w:val="single" w:sz="2" w:space="1" w:color="DDDDDD"/></w:pBdr>'
+                            f'</w:pPr>'
+                            + (f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                               f'<w:color w:val="888888"/><w:sz w:val="16"/></w:rPr>'
+                               f'<w:t>{esc(valeur)}</w:t></w:r>' if valeur else '')
+                            + '</w:p>'
+                        )
+                    elif label == '__row__':
+                        # Rangée de cellules — tableau Word
+                        cells = valeur  # liste de (label, val)
+                        nb    = len(cells)
+                        col_w = max(1, 9000 // nb)  # largeur en twentieths of a point
+
+                        def cell_xml(lbl, val):
+                            content = ''
+                            if lbl and val:
+                                content = (
+                                    f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                                    f'<w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">{esc(lbl)} : </w:t></w:r>'
+                                    + _md_runs(str(val), size=18)
+                                )
+                            elif val:
+                                content = _md_runs(str(val), size=18)
+                            return (
+                                f'<w:tc>'
+                                f'<w:tcPr><w:tcW w:w="{col_w}" w:type="dxa"/>'
+                                f'<w:tcBorders><w:top w:val="none"/><w:left w:val="none"/>'
+                                f'<w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>'
+                                f'</w:tcPr>'
+                                f'<w:p><w:pPr><w:spacing w:after="40"/></w:pPr>{content}</w:p>'
+                                f'</w:tc>'
                             )
-                        else:
+
+                        row_xml = ''.join(cell_xml(lbl, val) for lbl, val in cells)
+                        # Générer uniquement si au moins une cellule non vide
+                        if any(val for _, val in cells):
                             body_paras.append(
-                                f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
-                                + _md_runs(vline) + '</w:p>'
+                                f'<w:tbl>'
+                                f'<w:tblPr><w:tblW w:w="9000" w:type="dxa"/>'
+                                f'<w:tblBorders>'
+                                f'<w:top w:val="none"/><w:left w:val="none"/>'
+                                f'<w:bottom w:val="none"/><w:right w:val="none"/>'
+                                f'<w:insideH w:val="none"/><w:insideV w:val="none"/>'
+                                f'</w:tblBorders></w:tblPr>'
+                                f'<w:tr>{row_xml}</w:tr>'
+                                f'</w:tbl>'
                             )
+                    else:
+                        valeur_lines = str(valeur).split('\n') if valeur else ['']
+                        for i, vline in enumerate(valeur_lines):
+                            if i == 0:
+                                body_paras.append(
+                                    f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
+                                    f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                                    f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(label) + " : " if label.strip() else ""}</w:t></w:r>'
+                                    + _md_runs(vline) + '</w:p>'
+                                )
+                            else:
+                                body_paras.append(
+                                    f'<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'
+                                    + _md_runs(vline) + '</w:p>'
+                                )
 
     # Signature — prénom nom uniquement (sans titre)
     body_paras.append(
