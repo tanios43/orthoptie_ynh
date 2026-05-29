@@ -119,6 +119,15 @@
         <div style="font-size:11px;color:var(--muted);">{{ t.description[:80] }}</div>
         {% endif %}
       </div>
+      {# Patient lié #}
+      {% if t.patient %}
+      <a href="{{ url_for('patient_dossier', patient_id=t.patient.id) }}"
+         style="font-size:11px;color:var(--accent);text-decoration:none;flex-shrink:0;
+                white-space:nowrap;"
+         title="Ouvrir la fiche patient">
+        👤 {{ t.patient.prenom }} {{ t.patient.nom }}
+      </a>
+      {% endif %}
       {# Assigné à #}
       {% if t.assigne %}
       <span style="font-size:11px;color:var(--muted);flex-shrink:0;">

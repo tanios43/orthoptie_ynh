@@ -21,6 +21,7 @@
   <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
   <a href="{{ url_for('patient_modifier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm">✎ Modifier</a>
   <a href="{{ url_for('patient_dossier', patient_id=patient.id) }}" class="btn btn-secondary btn-sm" target="_blank">🖨 Imprimer le dossier</a>
+  <button type="button" onclick="ouvrirModalTachePatient()" class="btn btn-secondary btn-sm">+ Tâche</button>
   <a href="{{ url_for('consultation_nouvelle', patient_id=patient.id) }}" class="btn btn-primary btn-sm">+ Nouveau bilan</a>
   <div style="position:relative;display:inline-block;">
     <button onclick="toggleSuiviMenu()" class="btn btn-secondary btn-sm"
@@ -1000,4 +1001,72 @@ document.getElementById('modal-suppression').addEventListener('click', function(
   if (e.target === this) fermerModal();
 });
 </script>
+
+{# ── Modale tâche patient ── #}
+<div id="modal-tache-patient" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+     z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:12px;padding:24px;width:100%;max-width:440px;
+              box-shadow:0 8px 32px rgba(0,0,0,.2);" onclick="event.stopPropagation()">
+    <h3 style="margin:0 0 4px;font-size:16px;">✅ Nouvelle tâche</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+      Patient : {{ patient.prenom }} {{ patient.nom }}
+    </div>
+    <form method="POST" action="{{ url_for('tache_nouvelle') }}">
+      <input type="hidden" name="patient_id" value="{{ patient.id }}">
+      <input type="hidden" name="from_patient" value="1">
+      <div class="field-group">
+        <label class="field-label">Titre *</label>
+        <input type="text" name="titre" required placeholder="Que faut-il faire ?">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Description</label>
+        <textarea name="description" rows="2"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field-group">
+          <label class="field-label">Échéance</label>
+          <input type="date" name="echeance">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Priorité</label>
+          <select name="priorite">
+            <option value="basse">↓ Basse</option>
+            <option value="normale" selected>→ Normale</option>
+            <option value="haute">↑ Haute</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Assigner à</label>
+        <select name="assigne_a">
+          <option value="">— Moi uniquement —</option>
+          {% for p in praticiens %}
+          {% if p.id != current_user.id %}
+          <option value="{{ p.id }}">{{ p.prenom }} {{ p.nom }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button"
+                onclick="document.getElementById('modal-tache-patient').style.display='none'"
+                class="btn btn-secondary">Annuler</button>
+        <button type="submit" class="btn btn-primary">Créer la tâche</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function ouvrirModalTachePatient() {
+  const m = document.getElementById('modal-tache-patient');
+  m.style.display = 'flex';
+  m.style.alignItems = 'center';
+  m.style.justifyContent = 'center';
+}
+document.getElementById('modal-tache-patient').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+
 {% endblock %}

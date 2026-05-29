@@ -913,10 +913,12 @@ class Tache(db.Model):
     priorite     = db.Column(db.String(10), default='normale')  # basse, normale, haute
     statut       = db.Column(db.String(20), default='a_faire')  # a_faire, en_cours, termine
     assigne_a    = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    patient_id   = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=True)
     created_at   = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at   = db.Column(db.DateTime, default=datetime.utcnow)
     praticien    = db.relationship('Praticien', foreign_keys=[praticien_id])
     assigne      = db.relationship('Praticien', foreign_keys=[assigne_a])
+    patient      = db.relationship('Patient', foreign_keys=[patient_id])
 
 
 class NotePatient(db.Model):
@@ -1439,8 +1441,10 @@ def patient_detail(patient_id):
     for s in suivis_bv:
         timeline.append({'type': 'suivi_bv_reeds', 'date': s.derniere_seance_date, 'obj': s})
     timeline.sort(key=lambda x: x['date'], reverse=True)
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
     return render_template('patients/fiche.html', patient=patient,
-                           sections_def=sections, timeline=timeline)
+                           sections_def=sections, timeline=timeline,
+                           praticiens=praticiens)
 
 
 @app.route('/patient/<int:patient_id>/dossier')
@@ -2696,13 +2700,18 @@ def tache_nouvelle():
         try: echeance = datetime.strptime(request.form['echeance'], '%Y-%m-%d').date()
         except ValueError: pass
     assigne_a = request.form.get('assigne_a', type=int) or None
+    patient_id = request.form.get('patient_id', type=int) or None
     t = Tache(praticien_id=current_user.id,
               titre      =request.form.get('titre', '').strip(),
               description=request.form.get('description', '').strip(),
               echeance   =echeance,
               priorite   =request.form.get('priorite', 'normale'),
-              assigne_a  =assigne_a)
+              assigne_a  =assigne_a,
+              patient_id =patient_id)
     db.session.add(t); db.session.commit()
+    # Rediriger vers fiche patient si vient de là
+    if patient_id and request.form.get('from_patient'):
+        return redirect(url_for('patient_dossier', patient_id=patient_id))
     return redirect(url_for('notes_liste', onglet='taches'))
 
 

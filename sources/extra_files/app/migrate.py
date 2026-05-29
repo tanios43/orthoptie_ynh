@@ -222,6 +222,7 @@ if _db_path:
         "ALTER TABLE seance_bv ADD COLUMN av_od TEXT DEFAULT ''",
         "ALTER TABLE seance_bv ADD COLUMN av_og TEXT DEFAULT ''",
         "ALTER TABLE seance_bv ADD COLUMN av_notes TEXT DEFAULT ''",
+        "ALTER TABLE tache ADD COLUMN patient_id INTEGER REFERENCES patient(id)",
     ]
     for sql in _pre_migrations:
         try:
