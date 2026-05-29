@@ -47,6 +47,16 @@
                 <option value="0" {{ 'selected' if section.avec_observations == False }}>Masquer le champ</option>
               </select>
             </div>
+            <div class="field-group">
+              <label class="field-label">Colonnes</label>
+              <select name="nb_colonnes">
+                {% for n in [1, 2, 3, 4] %}
+                <option value="{{ n }}" {{ 'selected' if (section.nb_colonnes or 2) == n }}>
+                  {{ n }} colonne{{ 's' if n > 1 }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
             <div class="field-group" style="grid-column:1/-1;">
               <label class="field-label">
                 Observation par défaut

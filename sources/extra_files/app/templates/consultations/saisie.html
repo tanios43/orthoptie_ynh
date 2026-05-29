@@ -980,8 +980,8 @@ function renderSection(type, label, idx, titre, obs, donnees) {
   } else if (['acuite','swaine'].includes(type)) {
     champsHTML = odOgHTML(idx, def.champs, donnees, type);
   } else {
-    const grid = def.champs.length > 1 ? 'field-grid-2' : '';
-    champsHTML = `<div class="field-grid ${grid}" style="gap:12px;">
+    const cols = def.nb_colonnes || (def.champs.length > 1 ? 2 : 1);
+    champsHTML = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;">
       ${def.champs.map(c => champHTML(idx, c, donnees[c.name])).join('')}
     </div>`;
   }

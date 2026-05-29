@@ -1084,6 +1084,7 @@ class SectionDef(db.Model):
     obs_defaut       = db.Column(db.Text, default='')
     avec_observations = db.Column(db.Boolean, default=True)
     categorie        = db.Column(db.String(50), default='')  # catégorie visuelle
+    nb_colonnes      = db.Column(db.Integer, default=2)      # nb colonnes dans la grille
     champs     = db.relationship('ChampDef', backref='section',
                                order_by='ChampDef.ordre', cascade='all, delete-orphan')
     def to_dict(self):
@@ -1091,6 +1092,7 @@ class SectionDef(db.Model):
                 'obs_defaut': self.obs_defaut or '',
                 'avec_observations': self.avec_observations if self.avec_observations is not None else True,
                 'categorie': self.categorie or '',
+                'nb_colonnes': self.nb_colonnes or 2,
                 'champs': [c.to_dict() for c in self.champs if c.actif]}
 
 
@@ -4378,6 +4380,7 @@ def admin_section_modifier(section_id):
     s.obs_defaut        = request.form.get('obs_defaut', '').strip()
     s.avec_observations = request.form.get('avec_observations') == '1'
     s.categorie         = request.form.get('categorie', '').strip()
+    s.nb_colonnes       = int(request.form.get('nb_colonnes', 2) or 2)
     db.session.commit(); flash('Section mise à jour.', 'success')
     return redirect(url_for('admin_section_detail', section_id=section_id))
 
