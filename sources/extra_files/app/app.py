@@ -2711,7 +2711,7 @@ def tache_nouvelle():
     db.session.add(t); db.session.commit()
     # Rediriger vers fiche patient si vient de là
     if patient_id and request.form.get('from_patient'):
-        return redirect(url_for('patient_dossier', patient_id=patient_id))
+        return redirect(url_for('patient_detail', patient_id=patient_id))
     return redirect(url_for('notes_liste', onglet='taches'))
 
 

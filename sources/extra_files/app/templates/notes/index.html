@@ -121,7 +121,7 @@
       </div>
       {# Patient lié #}
       {% if t.patient %}
-      <a href="{{ url_for('patient_dossier', patient_id=t.patient.id) }}"
+      <a href="{{ url_for('patient_detail', patient_id=t.patient.id) }}"
          style="font-size:11px;color:var(--accent);text-decoration:none;flex-shrink:0;
                 white-space:nowrap;"
          title="Ouvrir la fiche patient">
