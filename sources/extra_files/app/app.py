@@ -5857,6 +5857,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
             'label': sec.label,
             'observations': sec.observations or '',
             'lignes': lignes,
+            'ordre': sec.ordre,
         })
 
     blocs_resolus = []
@@ -5874,6 +5875,90 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
     # ── Générer le XML des paragraphes du corps ───────────────────────
     def esc(t):
         return t.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    # Préparer le dict images par section_ordre
+    images_by_ordre = {}
+    img_rels_to_add = []
+    img_files_to_add = []
+    img_rel_counter = [1]
+
+    def _make_img_para(fid):
+        """Génère le XML d'une image et enregistre la relation."""
+        fic = FichierSection.query.get(fid)
+        if not fic: return None
+        img_path = os.path.join(
+            app.config['UPLOAD_FOLDER'], 'sections',
+            str(fic.consultation_id), fic.nom_stocke)
+        if not os.path.exists(img_path): return None
+        try:
+            from PIL import Image as PILImage
+            with PILImage.open(img_path) as im:
+                w_px, h_px = im.size
+            # Max 14cm large, 18cm haut
+            max_cx = 5040000  # 14cm en EMU
+            max_cy = 6480000  # 18cm en EMU
+            cx = min(max_cx, int(w_px * 9525))
+            cy = int(cx * h_px / w_px)
+            if cy > max_cy:
+                cy = max_cy
+                cx = int(cy * w_px / h_px)
+            rel_id  = f'rIdImg{img_rel_counter[0]}'
+            draw_id = img_rel_counter[0]
+            img_rel_counter[0] += 1
+            ext  = fic.nom_stocke.rsplit('.', 1)[-1].lower()
+            mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg',
+                    'gif':'image/gif','webp':'image/webp'}.get(ext,'image/png')
+            img_name = f'img_{fid}.{ext}'
+            with open(img_path, 'rb') as f:
+                img_data = f.read()
+            img_rels_to_add.append(
+                f'<Relationship Id="{rel_id}" '
+                f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+                f'Target="media/{img_name}"/>'
+            )
+            img_files_to_add.append((f'word/media/{img_name}', img_data))
+            titre = fic.titre or fic.nom_original
+            return (
+                f'<w:p><w:pPr><w:jc w:val="left"/><w:spacing w:before="60" w:after="40"/></w:pPr>'
+                f'<w:r>'
+                f'<w:drawing>'
+                f'<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
+                f' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                f'<wp:extent cx="{cx}" cy="{cy}"/>'
+                f'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+                f'<wp:docPr id="{draw_id}" name="{esc(titre)}"/>'
+                f'<wp:cNvGraphicFramePr>'
+                f'<a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>'
+                f'</wp:cNvGraphicFramePr>'
+                f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                f'<pic:nvPicPr>'
+                f'<pic:cNvPr id="{draw_id}" name="{esc(titre)}"/>'
+                f'<pic:cNvPicPr><a:picLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></pic:cNvPicPr>'
+                f'</pic:nvPicPr>'
+                f'<pic:blipFill>'
+                f'<a:blip xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" r:embed="{rel_id}"/>'
+                f'<a:stretch><a:fillRect/></a:stretch>'
+                f'</pic:blipFill>'
+                f'<pic:spPr>'
+                f'<a:xfrm xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                f'<a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+                f'<a:prstGeom xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" prst="rect"><a:avLst/></a:prstGeom>'
+                f'</pic:spPr>'
+                f'</pic:pic></a:graphicData></a:graphic>'
+                f'</wp:inline></w:drawing></w:r></w:p>'
+            )
+        except Exception as e:
+            app.logger.warning(f'Image {fid} non insérée: {e}')
+            return None
+
+    if images_ids:
+        # Indexer les images par section_ordre
+        for fid in images_ids:
+            fic = FichierSection.query.get(fid)
+            if fic:
+                images_by_ordre.setdefault(fic.section_ordre, []).append(fid)
 
     body_paras = []
     for bloc in blocs_resolus:
@@ -5969,6 +6054,14 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
                                     + _md_runs(vline) + '</w:p>'
                                 )
 
+                # Insérer les images liées à cette section
+                sec_ordre = sec.get('ordre')
+                if sec_ordre is not None and sec_ordre in images_by_ordre:
+                    for fid in images_by_ordre[sec_ordre]:
+                        img_para = _make_img_para(fid)
+                        if img_para:
+                            body_paras.append(img_para)
+
     # Signature — prénom nom uniquement (sans titre)
     body_paras.append(
         f'<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="720"/></w:pPr>'
@@ -5990,91 +6083,6 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
             '<w:t>Images</w:t></w:r></w:p>'
         )
         img_rel_counter = [1]
-        img_rels_to_add = []
-        img_files_to_add = []
-        img_ct_to_add = []
-
-        for fid in images_ids:
-            fic = FichierSection.query.get(fid)
-            if not fic: continue
-            img_path = os.path.join(
-                app.config['UPLOAD_FOLDER'], 'sections',
-                str(fic.consultation_id), fic.nom_stocke)
-            if not os.path.exists(img_path): continue
-            try:
-                from PIL import Image as PILImage
-                with PILImage.open(img_path) as im:
-                    w_px, h_px = im.size
-                # Max 14cm de large
-                max_emu = 5040000
-                ratio   = h_px / w_px if w_px else 1
-                cx      = min(max_emu, int(w_px * 9525))
-                cy      = int(cx * ratio)
-                rel_id  = f'rIdImg{img_rel_counter[0]}'
-                img_rel_counter[0] += 1
-                ext = fic.nom_stocke.rsplit('.', 1)[-1].lower()
-                mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg',
-                        'gif':'image/gif','webp':'image/webp'}.get(ext,'image/png')
-                img_name = f'img_{fid}.{ext}'
-                with open(img_path, 'rb') as f:
-                    img_data = f.read()
-                img_rels_to_add.append(
-                    f'<Relationship Id="{rel_id}" '
-                    f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
-                    f'Target="media/{img_name}"/>'
-                )
-                img_files_to_add.append((f'word/media/{img_name}', img_data))
-                img_ct_to_add.append(
-                    f'<Default Extension="{ext}" ContentType="{mime}"/>'
-                )
-                titre = fic.titre or fic.nom_original
-                draw_id = img_rel_counter[0]
-                img_paras.append(
-                    f'<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr>'
-                    f'<w:r>'
-                    f'<w:drawing>'
-                    f'<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
-                    f' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
-                    f' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
-                    f' xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-                    f'<wp:extent cx="{cx}" cy="{cy}"/>'
-                    f'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
-                    f'<wp:docPr id="{draw_id}" name="{esc(titre)}"/>'
-                    f'<wp:cNvGraphicFramePr>'
-                    f'<a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>'
-                    f'</wp:cNvGraphicFramePr>'
-                    f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
-                    f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-                    f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-                    f'<pic:nvPicPr>'
-                    f'<pic:cNvPr id="{draw_id}" name="{esc(titre)}"/>'
-                    f'<pic:cNvPicPr><a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr>'
-                    f'</pic:nvPicPr>'
-                    f'<pic:blipFill>'
-                    f'<a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="{rel_id}"/>'
-                    f'<a:stretch><a:fillRect/></a:stretch>'
-                    f'</pic:blipFill>'
-                    f'<pic:spPr bwMode="auto">'
-                    f'<a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
-                    f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
-                    f'<a:noFill/>'
-                    f'</pic:spPr>'
-                    f'</pic:pic></a:graphicData></a:graphic>'
-                    f'</wp:inline></w:drawing></w:r></w:p>'
-                )
-                if titre:
-                    img_paras.append(
-                        f'<w:p><w:pPr><w:jc w:val="center"/>'
-                        f'<w:spacing w:after="120"/></w:pPr>'
-                        f'<w:r><w:rPr><w:i/><w:sz w:val="16"/>'
-                        f'<w:color w:val="888888"/></w:rPr>'
-                        f'<w:t>{esc(titre)}</w:t></w:r></w:p>'
-                    )
-            except Exception as e:
-                app.logger.warning(f'Image {fid} non insérée: {e}')
-
-        body_xml = body_xml + '\n'.join(img_paras)
-    else:
         img_rels_to_add = []
         img_files_to_add = []
         img_ct_to_add = []
