@@ -2974,7 +2974,10 @@ def admin_sauvegarde_attente():
 def admin_trigger_restart():
     """Déclenche le redémarrage depuis JS après que la page d'attente est affichée."""
     try:
-        subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
+        if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
+            subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-fix-perms'])
+        else:
+            subprocess.Popen(['bash', '-c', 'sleep 2 && systemctl restart orthoptie 2>/dev/null || true'])
     except Exception:
         pass
     return '', 200
@@ -3072,8 +3075,15 @@ def admin_restaurer_nas():
                 db.engine.dispose()
             except Exception:
                 pass
-            # Lancer le redémarrage avec délai pour laisser la réponse HTTP partir
-            subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
+            # Corriger les permissions — utiliser fix-perms si disponible, sinon faire manuellement
+            data_dir_safe = data_dir.replace("'", "")
+            if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
+                subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
+            else:
+                subprocess.Popen(['bash', '-c',
+                    f"sleep 3 && chown -R orthoptie:orthoptie '{data_dir_safe}' 2>/dev/null; "
+                    f"chmod -R u+rwX,g+rX '{data_dir_safe}' 2>/dev/null; "
+                    f"systemctl restart orthoptie 2>/dev/null || true"])
             flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
@@ -3475,7 +3485,10 @@ def admin_sauvegarde_importer():
     except Exception:
         pass
     import subprocess
-    subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
+    if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
+        subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
+    else:
+        subprocess.Popen(['bash', '-c', 'sleep 3 && systemctl restart orthoptie 2>/dev/null || true'])
     flash('Restauration effectuée.', 'success')
     return redirect(url_for('admin_sauvegarde_attente'))
 
