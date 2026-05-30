@@ -2065,17 +2065,37 @@ document.addEventListener('paste', (e) => {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return false;
     const range = sel.getRangeAt(0);
-    // Récupérer le texte avant le curseur dans le noeud
     const container = range.startContainer;
-    if (container.nodeType !== Node.TEXT_NODE) return true;
-    const before = container.textContent.substring(0, range.startOffset);
-    if (!before.trim()) return true;
-    let i = before.length - 1;
-    while (i >= 0 && before[i] === ' ') i--;
-    if (i < 0) return true;
-    const last = before[i];
-    return last === '.' || last === '!' || last === '?';
-    // Note: \n dans contenteditable = nouveau noeud, donc début de noeud = début de ligne
+
+    if (container.nodeType === Node.TEXT_NODE) {
+      const before = container.textContent.substring(0, range.startOffset);
+      // Chercher le dernier caractère significatif dans ce noeud
+      let i = before.length - 1;
+      while (i >= 0 && before[i] === ' ') i--;
+      if (i >= 0) {
+        const last = before[i];
+        return last === '.' || last === '!' || last === '?';
+      }
+      // Noeud vide/espaces — remonter aux noeuds précédents
+      let prev = container.previousSibling;
+      while (prev) {
+        if (prev.nodeName === 'BR') return true; // saut de ligne = début de ligne
+        const t = prev.textContent || '';
+        let j = t.length - 1;
+        while (j >= 0 && t[j] === ' ') j--;
+        if (j >= 0) return t[j] === '.' || t[j] === '!' || t[j] === '?';
+        prev = prev.previousSibling;
+      }
+      return true; // début du champ
+    }
+    // Curseur sur un élément (pas noeud texte) — vérifier si après un BR
+    if (container.nodeType === Node.ELEMENT_NODE) {
+      const offset = range.startOffset;
+      if (offset === 0) return true;
+      const prevChild = container.childNodes[offset - 1];
+      if (prevChild && prevChild.nodeName === 'BR') return true;
+    }
+    return false;
   }
 
   // Handler pour input/textarea natifs
@@ -2098,25 +2118,7 @@ document.addEventListener('paste', (e) => {
     if (e.key.length !== 1 || !e.key.match(/[a-zA-ZÀ-ÿ]/)) return;
     const el = e.target;
     if (!el.isContentEditable) return;
-
-    // Début du noeud texte = début de ligne (après <br> ou début du div)
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
-    const container = range.startContainer;
-
-    // Vérifier si on est au début d'un noeud (= début de ligne après <br>)
-    const isLineStart = range.startOffset === 0 &&
-      (container === el ||
-       container.previousSibling === null ||
-       (container.previousSibling && container.previousSibling.nodeName === 'BR'));
-
-    let doCapitalize = isLineStart;
-    if (!doCapitalize && container.nodeType === Node.TEXT_NODE) {
-      doCapitalize = shouldCapitalizeContenteditable();
-    }
-    if (!doCapitalize) return;
-
+    if (!shouldCapitalizeContenteditable()) return;
     e.preventDefault();
     document.execCommand('insertText', false, e.key.toUpperCase());
     el.dispatchEvent(new Event('input', { bubbles: true }));
