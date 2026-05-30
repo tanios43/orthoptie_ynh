@@ -2387,10 +2387,14 @@ document.addEventListener('DOMContentLoaded', () => {
         sec.fichiers_sec.filter(f => f.champ_name !== 'wopi_doc').forEach(f => {
           const zone = el.querySelector(`[id^="pj-sec-preview-${idx}-"]`);
           if (!zone) return;
-          const wrap = document.createElement('div');
+          const wrap = document.createElement('a');
           wrap.id = 'ficsec-' + f.id;
           wrap.dataset.persisted = '1';
-          wrap.style.cssText = 'position:relative;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);width:72px;text-align:center;';
+          wrap.href = '/uploads/section/{{ consultation.id if consultation else 0 }}/' + f.nom_stocke;
+          wrap.target = '_blank';
+          wrap.style.cssText = 'position:relative;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);width:72px;text-align:center;display:inline-block;text-decoration:none;cursor:pointer;transition:border-color .15s;';
+          wrap.onmouseover = function() { this.style.borderColor = 'var(--accent)'; };
+          wrap.onmouseout  = function() { this.style.borderColor = 'var(--border)'; };
           if (f.type_fichier === 'image') {
             const img = document.createElement('img');
             img.src = '/uploads/section/{{ consultation.id if consultation else 0 }}/' + f.nom_stocke;
@@ -2410,7 +2414,7 @@ document.addEventListener('DOMContentLoaded', () => {
           btn.type = 'button';
           btn.innerHTML = '✕';
           btn.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:16px;height:16px;color:#fff;font-size:9px;cursor:pointer;line-height:1;padding:0;';
-          btn.onclick = () => supprimerFichierSection(f.id, 'ficsec-' + f.id);
+          btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); supprimerFichierSection(f.id, 'ficsec-' + f.id); };
           wrap.appendChild(btn);
           zone.appendChild(wrap);
         });
