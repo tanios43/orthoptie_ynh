@@ -5614,14 +5614,14 @@ def _generer_docx(consultation, modele, sections_incluses):
 
     # Zone adresse (Rectangle 1)
     doc_xml = sub(doc_xml, '130, Boulevard de la Paix', cab_rue)
-    # Remplacer "Résidence les jardinières" par une ligne vide pour maintenir l'alignement
+    # Supprimer le paragraphe "Résidence les jardinières" — deux formats possibles
     doc_xml = doc_xml.replace(
         '<w:p w14:paraId="28548EE2" w14:textId="77777777" w:rsidR="00E16D2D" w:rsidRPr="00204C39" w:rsidRDefault="00E16D2D" w:rsidP="00095667"><w:pPr><w:pStyle w:val="En-tte"/><w:rPr><w:color w:val="000000" w:themeColor="text1"/></w:rPr></w:pPr><w:r w:rsidRPr="00204C39"><w:rPr><w:color w:val="000000" w:themeColor="text1"/></w:rPr><w:t>Résidence les jardinières</w:t></w:r></w:p>',
-        '<w:p w14:paraId="28548EE2" w14:textId="77777777" w:rsidR="00E16D2D" w:rsidRPr="00204C39" w:rsidRDefault="00E16D2D" w:rsidP="00095667"><w:pPr><w:pStyle w:val="En-tte"/><w:rPr><w:color w:val="000000" w:themeColor="text1"/></w:rPr></w:pPr><w:r w:rsidRPr="00204C39"><w:rPr><w:color w:val="000000" w:themeColor="text1"/></w:rPr><w:t></w:t></w:r></w:p>')
+        '')
     # Format YunoHost (sans paraId, style Header)
     doc_xml = doc_xml.replace(
         '<w:p><w:pPr><w:pStyle w:val="Header"/><w:rPr><w:color w:themeColor="text1" w:val="000000"/></w:rPr></w:pPr><w:r><w:rPr><w:color w:themeColor="text1" w:val="000000"/></w:rPr><w:t>Résidence les jardinières</w:t></w:r></w:p>',
-        '<w:p><w:pPr><w:pStyle w:val="Header"/><w:rPr><w:color w:themeColor="text1" w:val="000000"/></w:rPr></w:pPr><w:r><w:rPr><w:color w:themeColor="text1" w:val="000000"/></w:rPr><w:t></w:t></w:r></w:p>')
+        '')
     doc_xml = sub(doc_xml, '43200 Yssingeaux', cab_cp_comm)
     doc_xml = sub(doc_xml, '04 71 59 01 38', cab_tel)
     doc_xml = sub(doc_xml, 'orthoptistes-yssingeaux@outlook.fr', cab_email)
