@@ -6072,21 +6072,6 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
 
     # ── Insérer le corps avant </w:body> ─────────────────────────────
     body_xml = '\n'.join(body_paras)
-
-    # ── Images sélectionnées ──────────────────────────────────────────
-    if images_ids:
-        img_paras = []
-        img_paras.append(
-            '<w:p><w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr>'
-            '<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-            '<w:sz w:val="20"/></w:rPr>'
-            '<w:t>Images</w:t></w:r></w:p>'
-        )
-        img_rel_counter = [1]
-        img_rels_to_add = []
-        img_files_to_add = []
-        img_ct_to_add = []
-
     doc_xml = doc_xml.replace('</w:body>', body_xml + '</w:body>')
 
     # ── Signature praticien ───────────────────────────────────────────
