@@ -2067,35 +2067,40 @@ document.addEventListener('paste', (e) => {
     const range = sel.getRangeAt(0);
     const container = range.startContainer;
 
-    if (container.nodeType === Node.TEXT_NODE) {
-      const before = container.textContent.substring(0, range.startOffset);
-      // Chercher le dernier caractère significatif dans ce noeud
-      let i = before.length - 1;
-      while (i >= 0 && before[i] === ' ') i--;
-      if (i >= 0) {
-        const last = before[i];
-        return last === '.' || last === '!' || last === '?';
-      }
-      // Noeud vide/espaces — remonter aux noeuds précédents
-      let prev = container.previousSibling;
-      while (prev) {
-        if (prev.nodeName === 'BR') return true; // saut de ligne = début de ligne
-        const t = prev.textContent || '';
-        let j = t.length - 1;
-        while (j >= 0 && t[j] === ' ') j--;
-        if (j >= 0) return t[j] === '.' || t[j] === '!' || t[j] === '?';
-        prev = prev.previousSibling;
-      }
-      return true; // début du champ
+    // Récupérer tout le texte brut avant le curseur dans le champ entier
+    // en parcourant les noeuds du div contenteditable
+    const el = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+    const root = el.closest('[contenteditable]');
+    if (!root) return false;
+
+    // Construire le texte avant le curseur via un range du début au curseur
+    const rangeToStart = document.createRange();
+    rangeToStart.setStart(root, 0);
+    rangeToStart.setEnd(range.startContainer, range.startOffset);
+
+    // Remplacer les <br> par \n dans le texte
+    let fullText = '';
+    const walker = document.createTreeWalker(
+      rangeToStart.cloneContents(),
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+      null
+    );
+    let node = walker.nextNode();
+    while (node) {
+      if (node.nodeType === Node.TEXT_NODE) fullText += node.textContent;
+      else if (node.nodeName === 'BR') fullText += '\n';
+      else if (node.nodeName === 'DIV' && fullText) fullText += '\n';
+      node = walker.nextNode();
     }
-    // Curseur sur un élément (pas noeud texte) — vérifier si après un BR
-    if (container.nodeType === Node.ELEMENT_NODE) {
-      const offset = range.startOffset;
-      if (offset === 0) return true;
-      const prevChild = container.childNodes[offset - 1];
-      if (prevChild && prevChild.nodeName === 'BR') return true;
-    }
-    return false;
+
+    if (!fullText.trim()) return true;
+    let i = fullText.length - 1;
+    while (i >= 0 && (fullText[i] === ' ' || fullText[i] === '\u00A0')) i--;
+    if (i < 0) return true;
+    const last = fullText[i];
+    return last === '.' || last === '!' || last === '?' || last === '\n';
   }
 
   // Handler pour input/textarea natifs
