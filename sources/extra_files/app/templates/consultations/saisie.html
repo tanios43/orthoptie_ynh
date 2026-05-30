@@ -2050,11 +2050,10 @@ document.addEventListener('paste', (e) => {
 (function() {
   function shouldCapitalize(el) {
     const v = el.value;
-    if (!v) return true; // début de champ vide
+    if (!v) return true;
     const pos = el.selectionStart || v.length;
     const before = v.substring(0, pos);
     if (!before.trim()) return true;
-    // Chercher le dernier caractère significatif (ignorer espaces mais pas \n)
     let i = before.length - 1;
     while (i >= 0 && before[i] === ' ') i--;
     if (i < 0) return true;
@@ -2062,25 +2061,69 @@ document.addEventListener('paste', (e) => {
     return last === '.' || last === '!' || last === '?' || last === '\n';
   }
 
-  function handleKeypress(e) {
-    // On agit sur la frappe d'une lettre
+  function shouldCapitalizeContenteditable() {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+    const range = sel.getRangeAt(0);
+    // Récupérer le texte avant le curseur dans le noeud
+    const container = range.startContainer;
+    if (container.nodeType !== Node.TEXT_NODE) return true;
+    const before = container.textContent.substring(0, range.startOffset);
+    if (!before.trim()) return true;
+    let i = before.length - 1;
+    while (i >= 0 && before[i] === ' ') i--;
+    if (i < 0) return true;
+    const last = before[i];
+    return last === '.' || last === '!' || last === '?';
+    // Note: \n dans contenteditable = nouveau noeud, donc début de noeud = début de ligne
+  }
+
+  // Handler pour input/textarea natifs
+  function handleKeypressNative(e) {
     if (e.key.length !== 1 || !e.key.match(/[a-zA-ZÀ-ÿ]/)) return;
     const el = e.target;
     if (!el.matches('input[type="text"], input[type="number"], textarea')) return;
     if (!shouldCapitalize(el)) return;
-
     e.preventDefault();
-    const upper = e.key.toUpperCase();
-    const start = el.selectionStart;
-    const end   = el.selectionEnd;
-    const v     = el.value;
-    el.value = v.substring(0, start) + upper + v.substring(end);
+    const upper  = e.key.toUpperCase();
+    const start  = el.selectionStart;
+    const end    = el.selectionEnd;
+    el.value     = el.value.substring(0, start) + upper + el.value.substring(end);
     el.selectionStart = el.selectionEnd = start + 1;
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  // Appliquer sur tous les champs existants et futurs (delegation)
-  document.addEventListener('keypress', handleKeypress, true);
+  // Handler pour contenteditable (champs wysiwyg multi-ligne)
+  function handleKeypressContenteditable(e) {
+    if (e.key.length !== 1 || !e.key.match(/[a-zA-ZÀ-ÿ]/)) return;
+    const el = e.target;
+    if (!el.isContentEditable) return;
+
+    // Début du noeud texte = début de ligne (après <br> ou début du div)
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const container = range.startContainer;
+
+    // Vérifier si on est au début d'un noeud (= début de ligne après <br>)
+    const isLineStart = range.startOffset === 0 &&
+      (container === el ||
+       container.previousSibling === null ||
+       (container.previousSibling && container.previousSibling.nodeName === 'BR'));
+
+    let doCapitalize = isLineStart;
+    if (!doCapitalize && container.nodeType === Node.TEXT_NODE) {
+      doCapitalize = shouldCapitalizeContenteditable();
+    }
+    if (!doCapitalize) return;
+
+    e.preventDefault();
+    document.execCommand('insertText', false, e.key.toUpperCase());
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  document.addEventListener('keypress', handleKeypressNative, true);
+  document.addEventListener('keypress', handleKeypressContenteditable, true);
 })();
 
 function autoResizeTA(el) {
