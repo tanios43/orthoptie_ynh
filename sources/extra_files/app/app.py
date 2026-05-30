@@ -5918,15 +5918,14 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
             )
             img_files_to_add.append((f'word/media/{img_name}', img_data))
             titre = fic.titre or fic.nom_original
-            # Namespaces déclarés une seule fois sur wp:inline
             NS_WP  = 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
-            NS_R   = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
             NS_A   = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
             NS_PIC = 'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'
+            NS_R   = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
             return (
                 f'<w:p><w:pPr><w:jc w:val="left"/><w:spacing w:before="60" w:after="40"/></w:pPr>'
                 f'<w:r><w:drawing>'
-                f'<wp:inline {NS_WP} {NS_R} {NS_A} {NS_PIC}>'
+                f'<wp:inline {NS_WP} {NS_A} {NS_PIC}>'
                 f'<wp:extent cx="{cx}" cy="{cy}"/>'
                 f'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
                 f'<wp:docPr id="{draw_id}" name="{esc(titre)}"/>'
@@ -5941,7 +5940,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
                 f'<pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr>'
                 f'</pic:nvPicPr>'
                 f'<pic:blipFill>'
-                f'<a:blip r:embed="{rel_id}"/>'
+                f'<a:blip {NS_R} r:embed="{rel_id}"/>'
                 f'<a:stretch><a:fillRect/></a:stretch>'
                 f'</pic:blipFill>'
                 f'<pic:spPr>'
