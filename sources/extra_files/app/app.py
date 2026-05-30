@@ -5307,10 +5307,11 @@ def generer_document(consultation_id):
     sections, _ = get_sections()
 
     if request.method == 'POST':
-        modele_id     = request.form.get('modele_id', type=int)
-        sections_sel  = request.form.getlist('sections_incluses[]')
+        modele_id      = request.form.get('modele_id', type=int)
+        sections_sel   = request.form.getlist('sections_incluses[]')
+        images_ids     = [int(i) for i in request.form.getlist('images_incluses[]') if i.isdigit()]
         modele = DocumentModele.query.get_or_404(modele_id)
-        docx_path = _generer_docx(c, modele, sections_sel)
+        docx_path = _generer_docx(c, modele, sections_sel, images_ids=images_ids)
         from flask import send_file
         nom_fichier = (f"{c.patient.nom}_{c.patient.prenom}_"
                        f"{c.date_consult.strftime('%Y%m%d')}_{modele.nom}.docx")
@@ -5540,7 +5541,7 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
     return new_out
 
 
-def _generer_docx(consultation, modele, sections_incluses):
+def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
     """
     Génère un .docx en clonant l'en-tête depuis le template fourni
     et en ajoutant le corps via Node.js/docx.
@@ -5978,6 +5979,91 @@ def _generer_docx(consultation, modele, sections_incluses):
 
     # ── Insérer le corps avant </w:body> ─────────────────────────────
     body_xml = '\n'.join(body_paras)
+
+    # ── Images sélectionnées ──────────────────────────────────────────
+    if images_ids:
+        img_paras = []
+        img_paras.append(
+            '<w:p><w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr>'
+            '<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+            '<w:sz w:val="20"/></w:rPr>'
+            '<w:t>Images</w:t></w:r></w:p>'
+        )
+        img_rel_counter = [1]
+        img_rels_to_add = []
+        img_files_to_add = []
+        img_ct_to_add = []
+
+        for fid in images_ids:
+            fic = FichierSection.query.get(fid)
+            if not fic: continue
+            img_path = os.path.join(
+                app.config['UPLOAD_FOLDER'], str(fic.consultation_id), fic.nom_stocke)
+            if not os.path.exists(img_path): continue
+            try:
+                from PIL import Image as PILImage
+                with PILImage.open(img_path) as im:
+                    w_px, h_px = im.size
+                # Max 14cm de large
+                max_emu = 5040000
+                ratio   = h_px / w_px if w_px else 1
+                cx      = min(max_emu, int(w_px * 9525))
+                cy      = int(cx * ratio)
+                rel_id  = f'rIdImg{img_rel_counter[0]}'
+                img_rel_counter[0] += 1
+                ext = fic.nom_stocke.rsplit('.', 1)[-1].lower()
+                mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg',
+                        'gif':'image/gif','webp':'image/webp'}.get(ext,'image/png')
+                img_name = f'img_{fid}.{ext}'
+                with open(img_path, 'rb') as f:
+                    img_data = f.read()
+                img_rels_to_add.append(
+                    f'<Relationship Id="{rel_id}" '
+                    f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+                    f'Target="media/{img_name}"/>'
+                )
+                img_files_to_add.append((f'word/media/{img_name}', img_data))
+                img_ct_to_add.append(
+                    f'<Default Extension="{ext}" ContentType="{mime}"/>'
+                )
+                titre = fic.titre or fic.nom_original
+                img_paras.append(
+                    f'<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr>'
+                    f'<w:r><w:rPr/><w:drawing>'
+                    f'<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+                    f'<wp:extent cx="{cx}" cy="{cy}"/>'
+                    f'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+                    f'<wp:docPr id="{img_rel_counter[0]}" name="{esc(titre)}"/>'
+                    f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                    f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                    f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                    f'<pic:nvPicPr><pic:cNvPr id="{img_rel_counter[0]}" name="{esc(titre)}"/>'
+                    f'<pic:cNvPicPr/></pic:nvPicPr>'
+                    f'<pic:blipFill><a:blip r:embed="{rel_id}"/>'
+                    f'<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+                    f'<pic:spPr><a:xfrm><a:off x="0" y="0"/>'
+                    f'<a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+                    f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+                    f'</pic:spPr></pic:pic></a:graphicData></a:graphic>'
+                    f'</wp:inline></w:drawing></w:r></w:p>'
+                )
+                if titre:
+                    img_paras.append(
+                        f'<w:p><w:pPr><w:jc w:val="center"/>'
+                        f'<w:spacing w:after="120"/></w:pPr>'
+                        f'<w:r><w:rPr><w:i/><w:sz w:val="16"/>'
+                        f'<w:color w:val="888888"/></w:rPr>'
+                        f'<w:t>{esc(titre)}</w:t></w:r></w:p>'
+                    )
+            except Exception as e:
+                app.logger.warning(f'Image {fid} non insérée: {e}')
+
+        body_xml = body_xml + '\n'.join(img_paras)
+    else:
+        img_rels_to_add = []
+        img_files_to_add = []
+        img_ct_to_add = []
+
     doc_xml = doc_xml.replace('</w:body>', body_xml + '</w:body>')
 
     # ── Signature praticien ───────────────────────────────────────────
@@ -6098,6 +6184,10 @@ def _generer_docx(consultation, modele, sections_incluses):
                             'Target="footer3.xml"/>'
                             '</Relationships>'
                         )
+                    # Ajouter les relations images
+                    for img_rel in img_rels_to_add:
+                        if img_rel.split('Id="')[1].split('"')[0] not in rels:
+                            rels = rels.replace('</Relationships>', img_rel + '</Relationships>')
                     zout.writestr(item, rels.encode('utf-8'))
                 elif fname == '[Content_Types].xml':
                     ct = zin.read(fname).decode('utf-8')
@@ -6122,6 +6212,9 @@ def _generer_docx(consultation, modele, sections_incluses):
             zout.writestr('word/footer1.xml', footer_odd_xml.encode('utf-8'))   # impair : flèche
             zout.writestr('word/footer2.xml', footer_empty_xml.encode('utf-8')) # défaut : vide
             zout.writestr('word/footer3.xml', footer_empty_xml.encode('utf-8')) # pair : vide
+            # Ajouter les images sélectionnées
+            for img_fname, img_data in img_files_to_add:
+                zout.writestr(img_fname, img_data)
             # Ajouter signature
             if sig_img_data:
                 zout.writestr(f'word/media/signature.{sig_ext}', sig_img_data)

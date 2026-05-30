@@ -114,22 +114,45 @@
       <div style="padding:8px 16px;">
         {% for sec in consultation.sections %}
         {% if sec.type not in ['courrier', 'ordonnance'] %}
-        <label style="display:flex;align-items:center;gap:10px;padding:8px 0;
-                       border-bottom:1px solid var(--border);cursor:pointer;">
-          <input type="checkbox" name="sections_incluses[]" value="{{ sec.type }}"
-                 style="width:15px;height:15px;accent-color:var(--accent);"
-                 {% set selected = request.args.getlist('sections_incluses[]') %}
-                 {% if selected %}
-                   {% if sec.type in selected %}checked{% endif %}
-                 {% elif section_origine and sec.type == section_origine %}checked
-                 {% elif not section_origine %}checked{% endif %}>
-          <span style="font-size:13px;">{{ sec.label }}</span>
-          {% if sec.observations %}
-          <span class="text-sm text-muted" style="font-style:italic;">
-            — {{ sec.observations[:50] }}{% if sec.observations|length > 50 %}…{% endif %}
-          </span>
+        {% set fics_images = consultation.fichiers_sec
+            | selectattr('section_ordre', 'equalto', sec.ordre)
+            | selectattr('type_fichier', 'in', ['jpg','jpeg','png','gif','webp','image'])
+            | list %}
+        <div style="border-bottom:1px solid var(--border);padding:8px 0;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" name="sections_incluses[]" value="{{ sec.type }}"
+                   style="width:15px;height:15px;accent-color:var(--accent);"
+                   {% set selected = request.args.getlist('sections_incluses[]') %}
+                   {% if selected %}
+                     {% if sec.type in selected %}checked{% endif %}
+                   {% elif section_origine and sec.type == section_origine %}checked
+                   {% elif not section_origine %}checked{% endif %}>
+            <span style="font-size:13px;">{{ sec.label }}</span>
+            {% if sec.observations %}
+            <span class="text-sm text-muted" style="font-style:italic;">
+              — {{ sec.observations[:50] }}{% if sec.observations|length > 50 %}…{% endif %}
+            </span>
+            {% endif %}
+          </label>
+          {% if fics_images %}
+          <div style="margin-left:25px;margin-top:4px;display:flex;flex-wrap:wrap;gap:8px;">
+            {% for f in fics_images %}
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;
+                           background:var(--bg);border:1px solid var(--border);
+                           border-radius:7px;padding:4px 8px;">
+              <input type="checkbox" name="images_incluses[]"
+                     value="{{ f.id }}"
+                     style="width:13px;height:13px;accent-color:var(--accent);">
+              <img src="{{ url_for('uploaded_file_section', consultation_id=consultation.id, filename=f.nom_stocke) }}"
+                   style="width:36px;height:28px;object-fit:cover;border-radius:4px;">
+              <span style="font-size:11px;color:var(--muted);">
+                {{ f.titre or f.nom_original }}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
           {% endif %}
-        </label>
+        </div>
         {% endif %}
         {% endfor %}
       </div>
