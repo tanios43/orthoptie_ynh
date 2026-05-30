@@ -5998,7 +5998,8 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
             fic = FichierSection.query.get(fid)
             if not fic: continue
             img_path = os.path.join(
-                app.config['UPLOAD_FOLDER'], str(fic.consultation_id), fic.nom_stocke)
+                app.config['UPLOAD_FOLDER'], 'sections',
+                str(fic.consultation_id), fic.nom_stocke)
             if not os.path.exists(img_path): continue
             try:
                 from PIL import Image as PILImage
