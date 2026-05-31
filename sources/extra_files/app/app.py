@@ -5962,11 +5962,23 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
             return None
 
     if images_ids:
-        # Indexer les images par section_ordre
+        # Indexer les images par ordre de section dans CETTE consultation
+        # On cherche quelle section a le même ordre que section_ordre du fichier
+        # Si pas trouvé, on essaie de matcher par type via la section du bilan
         for fid in images_ids:
             fic = FichierSection.query.get(fid)
-            if fic:
-                images_by_ordre.setdefault(fic.section_ordre, []).append(fid)
+            if not fic: continue
+            # Chercher la section correspondante dans cette consultation
+            sec_match = next(
+                (s for s in consultation.sections if s.ordre == fic.section_ordre),
+                None
+            )
+            if sec_match:
+                images_by_ordre.setdefault(sec_match.ordre, []).append(fid)
+            else:
+                # L'ordre a changé - chercher par champ_name ou mettre en fin de doc
+                # Mettre l'image à la fin (ordre -1)
+                images_by_ordre.setdefault(-1, []).append(fid)
 
     body_paras = []
     for bloc in blocs_resolus:
@@ -6079,6 +6091,13 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
     )
 
     # ── Insérer le corps avant </w:body> ─────────────────────────────
+    # Ajouter les images orphelines (section_ordre ne correspond plus)
+    if -1 in images_by_ordre:
+        for fid in images_by_ordre[-1]:
+            img_para = _make_img_para(fid)
+            if img_para:
+                body_paras.append(img_para)
+
     body_xml = '\n'.join(body_paras)
     doc_xml = doc_xml.replace('</w:body>', body_xml + '</w:body>')
 
