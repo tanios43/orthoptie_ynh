@@ -2630,16 +2630,13 @@ def message_nouveau():
 
 
 
-@app.route('/notes', methods=['GET'])
-@login_required
 @app.route('/repondeur', methods=['GET', 'POST'])
 @login_required
 def repondeur():
-    # Trouver le cabinet du praticien connecté
+    """Bloc-notes répondeur partagé par cabinet."""
     pc = PraticienCabinet.query.filter_by(praticien_id=current_user.id).first()
     cabinet = Cabinet.query.get(pc.cabinet_id) if pc else None
     if not cabinet:
-        # Fallback : premier cabinet actif
         cabinet = Cabinet.query.filter_by(actif=True).first()
     if request.method == 'POST':
         cabinet.repondeur = request.form.get('repondeur', '')
@@ -2651,6 +2648,8 @@ def repondeur():
     return render_template('repondeur/index.html', cabinet=cabinet)
 
 
+@app.route('/notes', methods=['GET'])
+@login_required
 def notes_liste():
     onglet = request.args.get('onglet', 'notes')
     notes = Note.query.filter_by(praticien_id=current_user.id)\
