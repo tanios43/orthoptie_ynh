@@ -2634,18 +2634,28 @@ def message_nouveau():
 @login_required
 def repondeur():
     """Bloc-notes répondeur partagé par cabinet."""
-    pc = PraticienCabinet.query.filter_by(praticien_id=current_user.id).first()
-    cabinet = Cabinet.query.get(pc.cabinet_id) if pc else None
-    if not cabinet:
-        cabinet = Cabinet.query.filter_by(actif=True).first()
+    # Tous les cabinets du praticien connecté
+    pcs = PraticienCabinet.query.filter_by(praticien_id=current_user.id).all()
+    cabinets = [Cabinet.query.get(pc.cabinet_id) for pc in pcs if Cabinet.query.get(pc.cabinet_id)]
+    if not cabinets:
+        cabinets = Cabinet.query.filter_by(actif=True).all()
+
+    # Cabinet sélectionné (par défaut le premier)
+    cabinet_id = request.args.get('cabinet_id', type=int) or \
+                 request.form.get('cabinet_id', type=int) or \
+                 (cabinets[0].id if cabinets else None)
+    cabinet = next((c for c in cabinets if c.id == cabinet_id), cabinets[0] if cabinets else None)
+
     if request.method == 'POST':
-        cabinet.repondeur = request.form.get('repondeur', '')
-        cabinet.repondeur_updated_by = current_user.prenom + ' ' + current_user.nom
-        cabinet.repondeur_updated_at = datetime.utcnow()
-        db.session.commit()
-        flash('✅ Répondeur mis à jour.', 'success')
-        return redirect(url_for('repondeur'))
-    return render_template('repondeur/index.html', cabinet=cabinet)
+        if cabinet:
+            cabinet.repondeur = request.form.get('repondeur', '')
+            cabinet.repondeur_updated_by = current_user.prenom + ' ' + current_user.nom
+            cabinet.repondeur_updated_at = datetime.utcnow()
+            db.session.commit()
+            flash('✅ Répondeur mis à jour.', 'success')
+        return redirect(url_for('repondeur', cabinet_id=cabinet_id))
+    return render_template('repondeur/index.html', cabinet=cabinet,
+                           cabinets=cabinets, cabinet_id=cabinet_id)
 
 
 @app.route('/notes', methods=['GET'])
