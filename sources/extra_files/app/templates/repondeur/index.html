@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Répondeur{% endblock %}
+{% block page_title %}📞 Répondeur — {{ cabinet.nom if cabinet else '' }}{% endblock %}
+
+{% block topbar_actions %}
+  <button type="submit" form="form-repondeur" class="btn btn-primary btn-sm">💾 Enregistrer</button>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;">
+
+  {% if cabinet and cabinet.repondeur_updated_at %}
+  <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+    Dernière modification par <strong>{{ cabinet.repondeur_updated_by }}</strong>
+    le {{ cabinet.repondeur_updated_at | localtime }} à {{ cabinet.repondeur_updated_at | localhour }}
+  </div>
+  {% endif %}
+
+  <form id="form-repondeur" method="POST">
+    <div class="card">
+      <div class="card-body" style="padding:0;">
+        <textarea
+          name="repondeur"
+          id="repondeur-text"
+          style="width:100%;min-height:60vh;padding:20px;font-size:14px;
+                 line-height:1.7;border:none;border-radius:12px;resize:vertical;
+                 background:var(--surface);color:var(--text);outline:none;
+                 font-family:inherit;box-sizing:border-box;"
+          placeholder="Saisissez ici les messages à transmettre depuis le répondeur…"
+          autofocus
+        >{{ cabinet.repondeur or '' }}</textarea>
+      </div>
+    </div>
+  </form>
+
+  <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+    <button type="button" onclick="copierTexte()"
+            class="btn btn-secondary btn-sm" id="btn-copier">
+      📋 Copier le texte
+    </button>
+    <button type="button" onclick="viderTexte()"
+            class="btn btn-secondary btn-sm"
+            style="color:#c0392b;"
+            onclick="return confirm('Vider le répondeur ?')">
+      🗑 Vider
+    </button>
+    <span id="copy-feedback" style="font-size:12px;color:var(--muted);display:none;">
+      ✅ Copié !
+    </span>
+  </div>
+
+</div>
+
+<script>
+function copierTexte() {
+  const txt = document.getElementById('repondeur-text').value;
+  if (!txt) return;
+  navigator.clipboard.writeText(txt).then(() => {
+    const fb = document.getElementById('copy-feedback');
+    fb.style.display = 'inline';
+    setTimeout(() => fb.style.display = 'none', 2000);
+  });
+}
+
+function viderTexte() {
+  if (!confirm('Vider le contenu du répondeur ?')) return;
+  document.getElementById('repondeur-text').value = '';
+  document.getElementById('form-repondeur').submit();
+}
+
+// Sauvegarde auto Ctrl+S
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    document.getElementById('form-repondeur').submit();
+  }
+});
+</script>
+{% endblock %}

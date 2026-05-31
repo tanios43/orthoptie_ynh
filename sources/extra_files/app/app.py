@@ -993,6 +993,9 @@ class Cabinet(db.Model):
     email       = db.Column(db.String(200))
     couleur     = db.Column(db.String(7), default='#1C2B3A')
     actif       = db.Column(db.Boolean, default=True)
+    repondeur            = db.Column(db.Text, default='')
+    repondeur_updated_by = db.Column(db.String(100), default='')
+    repondeur_updated_at = db.Column(db.DateTime, nullable=True)
 
     praticiens  = db.relationship('PraticienCabinet', backref='cabinet',
                                   cascade='all, delete-orphan')
@@ -2629,6 +2632,25 @@ def message_nouveau():
 
 @app.route('/notes', methods=['GET'])
 @login_required
+@app.route('/repondeur', methods=['GET', 'POST'])
+@login_required
+def repondeur():
+    # Trouver le cabinet du praticien connecté
+    pc = PraticienCabinet.query.filter_by(praticien_id=current_user.id).first()
+    cabinet = Cabinet.query.get(pc.cabinet_id) if pc else None
+    if not cabinet:
+        # Fallback : premier cabinet actif
+        cabinet = Cabinet.query.filter_by(actif=True).first()
+    if request.method == 'POST':
+        cabinet.repondeur = request.form.get('repondeur', '')
+        cabinet.repondeur_updated_by = current_user.prenom + ' ' + current_user.nom
+        cabinet.repondeur_updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('✅ Répondeur mis à jour.', 'success')
+        return redirect(url_for('repondeur'))
+    return render_template('repondeur/index.html', cabinet=cabinet)
+
+
 def notes_liste():
     onglet = request.args.get('onglet', 'notes')
     notes = Note.query.filter_by(praticien_id=current_user.id)\
