@@ -17,6 +17,19 @@ if [ -d "$YNH_APP_BASEDIR/sources/extra_files/app" ]; then
     cp -r "$YNH_APP_BASEDIR/sources/extra_files/app/." "$install_dir/"
 fi
 
+# Enregistrer le logo via l'API YunoHost (portail + admin)
+if [ -f "$YNH_APP_BASEDIR/doc/LOGO.png" ]; then
+    cp "$YNH_APP_BASEDIR/doc/LOGO.png" /usr/share/yunohost/portal/customassets/${app}.png 2>/dev/null || true
+    python3 - <<PYEOF
+from yunohost.permission import _update_app_permission_setting
+try:
+    with open('$YNH_APP_BASEDIR/doc/LOGO.png', 'rb') as f:
+        _update_app_permission_setting('${app}.main', logo=f)
+except Exception as e:
+    print(f"Logo update skipped: {e}")
+PYEOF
+fi
+
 #=================================================
 # UPDATE DEPENDENCIES
 #=================================================

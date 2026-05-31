@@ -93,6 +93,19 @@ python3 -c "import secrets; print(secrets.token_hex(32))" > "$install_dir/.secre
 chmod 600 "$install_dir/.secret_key"
 chown "$app:$app" "$install_dir/.secret_key"
 
+# Enregistrer le logo via l'API YunoHost (portail + admin)
+if [ -f "$install_dir/doc/LOGO.png" ]; then
+    cp "$install_dir/doc/LOGO.png" /usr/share/yunohost/portal/customassets/${app}.png 2>/dev/null || true
+    python3 - <<PYEOF
+from yunohost.permission import _update_app_permission_setting
+try:
+    with open('$install_dir/doc/LOGO.png', 'rb') as f:
+        _update_app_permission_setting('${app}.main', logo=f)
+except Exception as e:
+    print(f"Logo update skipped: {e}")
+PYEOF
+fi
+
 chown -R "$app:www-data" "$install_dir"
 chown -R "$app:$app" "$data_dir"
 chmod -R o-rwx "$install_dir"
