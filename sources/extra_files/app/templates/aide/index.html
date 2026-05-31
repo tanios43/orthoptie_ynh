@@ -48,6 +48,7 @@
     <a href="#suivi-bv">Basse vision</a>
     <div class="nav-group">Communication</div>
     <a href="#messagerie">Messagerie</a>
+    <a href="#notes-taches">Notes & Tâches</a>
     <a href="#notes-patient">Notes partagées</a>
     <div class="nav-group">Configuration</div>
     <a href="#admin-sections">Sections et champs</a>
@@ -91,7 +92,7 @@
       <h2>👥 Liste des patients</h2>
       <p>La page d'accueil affiche vos patients avec la date de dernière activité (bilans et suivis confondus). Cliquez sur un patient pour ouvrir sa fiche.</p>
       <h3>Recherche</h3>
-      <p>Utilisez la barre <strong>Recherche</strong> pour trouver un patient par nom, prénom ou date de naissance. Les résultats affichent l'âge du patient à la date du jour.</p>
+      <p>Utilisez la barre <strong>Recherche</strong> pour trouver un patient par nom, prénom, date de naissance ou numéro de téléphone. Les résultats affichent l'âge du patient à la date du jour.</p>
     </section>
 
     {# ── FICHE PATIENT ── #}
@@ -108,6 +109,8 @@
       <p>La timeline affiche bilans et suivis triés du plus récent au plus ancien. Cliquez sur un bilan pour le déplier et voir le résumé des sections.</p>
       <h3>Pièces jointes depuis la timeline</h3>
       <p>Si un bilan possède des pièces jointes globales, un badge 📎 avec leur nombre apparaît dans sa barre de titre. Cliquez dessus pour afficher la liste des fichiers directement sous le bilan. Les PDF et images s'ouvrent dans l'onglet ; les autres formats se téléchargent.</p>
+      <h3>Créer une tâche liée au patient</h3>
+      <p>Le bouton <strong>+ Tâche</strong> en haut de la fiche ouvre une modale pour créer une tâche directement associée à ce patient. La tâche apparaît dans la page <strong>Notes & Tâches</strong> avec un lien 👤 qui ramène vers cette fiche.</p>
       <div class="tip">💡 Cliquez sur l'icône 🗑 pour supprimer un suivi (action irréversible).</div>
       <h3>Ajouter un suivi</h3>
       <p>Le bouton <strong>+ Nouveau suivi</strong> ouvre un menu déroulant :</p>
@@ -186,6 +189,12 @@
     <section class="aide-section" id="mise-en-forme">
       <h2>✨ Mise en forme du texte</h2>
       <p>Dans les champs texte libre, une barre <strong>B / I / U</strong> permet de mettre en forme. Dans les tableaux de suivi, une barre flottante apparaît au-dessus du champ actif.</p>
+      <p><strong>Majuscules automatiques</strong> : la première lettre est automatiquement mise en majuscule dans les situations suivantes :</p>
+      <ul>
+        <li>En début de champ vide.</li>
+        <li>Après un point, un point d'exclamation ou un point d'interrogation (suivi d'un espace).</li>
+        <li>En début de nouvelle ligne (après <span class="kbd">Entrée</span>).</li>
+      </ul>
       <div class="tip">💡 La mise en forme est conservée dans les documents Word générés.</div>
     </section>
 
@@ -194,8 +203,14 @@
       <h2>📄 Documents Word (Collabora)</h2>
       <p>Les sections <strong>Courrier médecin</strong>, <strong>Ordonnance</strong> et <strong>Ordonnance de lunettes</strong> permettent de générer et d'éditer des documents Word via Collabora.</p>
       <div class="step"><div class="step-num">1</div><p>Cliquez sur <strong>Générer le document</strong> dans la section concernée.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Modifiez le document dans Collabora, puis enregistrez (<span class="kbd">Ctrl</span>+<span class="kbd">S</span>).</p></div>
-      <div class="step"><div class="step-num">3</div><p>Le document apparaît en pièce jointe de la section. Cliquez dessus pour le rouvrir.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Sur la page de génération, sélectionnez les sections à inclure, le modèle de document, et éventuellement les images des pièces jointes à insérer.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Cliquez sur <strong>Générer et ouvrir dans Collabora</strong>. Le document s'ouvre avec la mise en forme en colonnes identique à la page d'édition du bilan.</p></div>
+      <div class="step"><div class="step-num">4</div><p>Modifiez le document dans Collabora, puis enregistrez (<span class="kbd">Ctrl</span>+<span class="kbd">S</span>).</p></div>
+      <div class="step"><div class="step-num">5</div><p>Le document apparaît en pièce jointe de la section. Cliquez dessus pour le rouvrir.</p></div>
+      <h3>Insertion d'images</h3>
+      <p>Si une section sélectionnée possède des pièces jointes de type image, des miniatures apparaissent avec une case à cocher. Cochez les images à insérer — elles apparaîtront dans le document après la section correspondante.</p>
+      <h3>Pièces jointes de sections</h3>
+      <p>Les fichiers uploadés dans les champs <code>fichier</code> d'une section sont cliquables directement depuis la page d'édition du bilan, avant et après enregistrement.</p>
       <div class="warn">⚠️ Ne fermez pas Collabora sans avoir enregistré.</div>
     </section>
 
@@ -231,7 +246,32 @@
       <h2>💬 Messagerie</h2>
       <p>Messages directs entre praticiens du cabinet. Un badge rouge indique les messages non lus (mis à jour toutes les 30 secondes).</p>
       <div class="step"><div class="step-num">1</div><p>Cliquez sur <strong>💬 Messages</strong> dans la navigation.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Choisissez un destinataire, rédigez votre message et cliquez sur <strong>Envoyer</strong> (ou <span class="kbd">Ctrl</span>+<span class="kbd">Entrée</span>).</p></div>
+      <div class="step"><div class="step-num">2</div><p>Créez une nouvelle conversation en sélectionnant un ou plusieurs praticiens.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Rédigez votre message et cliquez sur <strong>Envoyer</strong> (ou <span class="kbd">Ctrl</span>+<span class="kbd">Entrée</span>).</p></div>
+    </section>
+
+    {# ── NOTES & TÂCHES ── #}
+    <section class="aide-section" id="notes-taches">
+      <h2>📝 Notes & Tâches</h2>
+      <p>Accessible via <strong>Notes & Tâches</strong> dans la navigation. Badge orange indique le nombre de tâches actives.</p>
+      <h3>Notes</h3>
+      <p>Post-its colorés personnels (visibles uniquement par vous). Créez une note, choisissez une couleur, épinglez les importantes en haut. Les post-its s'adaptent automatiquement à la taille du texte.</p>
+      <ul>
+        <li>Cliquez sur un post-it pour le modifier.</li>
+        <li>🗑 pour supprimer.</li>
+        <li>📌 pour épingler/désépingler.</li>
+      </ul>
+      <h3>Tâches</h3>
+      <p>Tâches avec priorité, échéance et assignation à un praticien.</p>
+      <ul>
+        <li><strong>Priorité</strong> : basse ↓ / normale → / haute ↑</li>
+        <li><strong>Assigner</strong> : la tâche apparaît aussi dans la liste du praticien assigné.</li>
+        <li><strong>Lien patient</strong> : si créée depuis une fiche patient, un lien 👤 apparaît sur la tâche.</li>
+        <li><strong>Modifier / Supprimer</strong> : autorisé pour le créateur ET le praticien assigné.</li>
+      </ul>
+      <h3>Créer une tâche liée à un patient</h3>
+      <p>Depuis la fiche d'un patient, cliquez sur <strong>+ Tâche</strong> dans la barre du haut. La tâche créée sera automatiquement liée à ce patient.</p>
+      <div class="tip">💡 Statuts disponibles : À faire, En cours, Terminée.</div>
     </section>
 
     {# ── NOTES PARTAGÉES ── #}
@@ -245,7 +285,31 @@
       <h2>⚙️ Sections et champs</h2>
       <p>Accessible via <strong>Sections du bilan</strong> dans la navigation (tous les praticiens).</p>
       <h3>Modifier une section</h3>
-      <p>Cliquez sur une section pour modifier son nom, sa catégorie, son statut, ses observations par défaut et ses champs.</p>
+      <p>Cliquez sur une section pour modifier son nom, sa catégorie, son statut, ses observations par défaut, le nombre de colonnes et ses champs.</p>
+      <h3>Nombre de colonnes</h3>
+      <p>Chaque section peut afficher ses champs sur <strong>1, 2, 3 ou 4 colonnes</strong>. Ce réglage s'applique à la fois dans l'édition du bilan et dans les documents Word générés.</p>
+      <h3>Types de champs</h3>
+      <div class="two-col">
+        <div>
+          <p><strong>Champs de saisie</strong></p>
+          <ul>
+            <li><code>text</code> — texte libre (1 ligne)</li>
+            <li><code>textarea</code> — texte multilignes</li>
+            <li><code>number</code> — valeur numérique</li>
+            <li><code>select</code> — liste déroulante</li>
+            <li><code>sph</code> — sphère (±)</li>
+            <li><code>fichier</code> — pièce jointe</li>
+          </ul>
+        </div>
+        <div>
+          <p><strong>Mise en page</strong></p>
+          <ul>
+            <li><code>spacer</code> — cellule vide (pour décaler les champs suivants dans la grille)</li>
+            <li><code>separator</code> — ligne horizontale avec titre optionnel (pour grouper visuellement les champs)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tip">💡 Les types <strong>spacer</strong> et <strong>separator</strong> n'apparaissent pas dans les courriers si aucun champ n'est rempli autour d'eux.</div>
       <h3>Export / Import</h3>
       <p>Bouton <strong>📤 Exporter toutes les sections</strong> → fichier JSON. À l'import : sections natives mises à jour (champs ajoutés sans suppression) ; sections personnalisées ajoutées ou remplacées selon le mode. Utile pour transférer une configuration entre serveurs.</p>
     </section>
