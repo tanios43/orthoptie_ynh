@@ -5941,7 +5941,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
                 f'<wp:cNvGraphicFramePr/>'
                 f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
                 f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-                f'<pic:pic>'
+                f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
                 f'<pic:nvPicPr>'
                 f'<pic:cNvPr id="{draw_id}" name="{esc(titre)}"/>'
                 f'<pic:cNvPicPr/>'
