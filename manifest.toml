@@ -48,4 +48,4 @@ ram.runtime = "100M"
     main.default = 5001
 
     [resources.apt]
-    packages = "python3, python3-pip, python3-venv, libreoffice, poppler-utils"
+    packages = "python3, python3-pip, python3-venv, libreoffice, poppler-utils, rsync, sqlite3"
