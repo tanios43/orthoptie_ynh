@@ -6751,7 +6751,8 @@ def editer_collabora(consultation_id):
                            nom_document=nom_custom)
         return redirect(f"{base_url}&{sections_args}")
 
-    docx_path = _generer_docx(c, modele, sections_sel)
+    images_ids  = [int(i) for i in request.args.getlist('images_incluses[]') if i.isdigit()]
+    docx_path = _generer_docx(c, modele, sections_sel, images_ids=images_ids)
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
     shutil.copy2(docx_path, permanent_path)
 
