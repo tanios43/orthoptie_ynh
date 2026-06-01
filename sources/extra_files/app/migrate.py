@@ -339,9 +339,14 @@ with app.app_context():
 
     try:
         with db.engine.connect() as conn:
-            conn.execute(db.text("UPDATE praticien SET role='admin' WHERE id=(SELECT MIN(id) FROM praticien)"))
-            conn.commit()
-        print("OK      : premier praticien passe admin")
+            result = conn.execute(db.text("SELECT COUNT(*) FROM praticien WHERE role='admin'"))
+            nb_admins = result.scalar()
+            if nb_admins == 0:
+                conn.execute(db.text("UPDATE praticien SET role='admin' WHERE id=(SELECT MIN(id) FROM praticien)"))
+                conn.commit()
+                print("OK      : premier praticien passe admin (aucun admin existant)")
+            else:
+                print(f"OK      : {nb_admins} admin(s) existant(s), pas de modification")
     except Exception as e:
         print(f"ERREUR  : admin — {e}")
 
