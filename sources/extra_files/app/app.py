@@ -6037,9 +6037,17 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
                 )
                 if sec['observations']:
                     for obs_line in sec['observations'].split('\n'):
+                        if not obs_line.strip():
+                            continue
                         body_paras.append(
-                            f'<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
-                            + _md_runs(obs_line, size=20) + '</w:p>'
+                            f'<w:p><w:pPr><w:spacing w:after="40"/></w:pPr>'
+                            f'<w:r><w:rPr>'
+                            f'<w:i/><w:iCs/>'
+                            f'<w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                            f'<w:sz w:val="16"/><w:szCs w:val="16"/>'
+                            f'<w:color w:val="555555"/>'
+                            f'</w:rPr><w:t xml:space="preserve">{esc(obs_line)}</w:t></w:r>'
+                            f'</w:p>'
                         )
                 for label, valeur in sec['lignes']:
                     if label == '__sep__':
