@@ -633,6 +633,8 @@ function champHTML(idx, champ, val) {
       </span>
     </div>`;
   }
+
+  if (champ.type === 'separator') {
     return `<div style="grid-column:1/-1;margin:4px 0 2px;padding-bottom:6px;
                          border-bottom:1px solid var(--border);">
       ${champ.label ? `<span style="font-size:12px;font-weight:600;color:var(--muted);
