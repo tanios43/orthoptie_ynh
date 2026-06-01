@@ -4307,6 +4307,7 @@ def admin_sections_importer():
                     existing.obs_defaut        = s_data.get('obs_defaut', existing.obs_defaut)
                     existing.avec_observations = s_data.get('avec_observations', existing.avec_observations)
                     existing.categorie         = s_data.get('categorie', existing.categorie)
+                    existing.nb_colonnes       = s_data.get('nb_colonnes', existing.nb_colonnes or 2)
                     # Ajouter les champs manquants (sans supprimer les existants)
                     existing_names = {c.name for c in existing.champs}
                     for i, c_data in enumerate(s_data.get('champs', [])):
@@ -4327,6 +4328,7 @@ def admin_sections_importer():
                     existing.obs_defaut        = s_data.get('obs_defaut', '')
                     existing.avec_observations = s_data.get('avec_observations', True)
                     existing.categorie         = s_data.get('categorie', '')
+                    existing.nb_colonnes       = s_data.get('nb_colonnes', 2)
                     existing.actif             = s_data.get('actif', True)
                     # Remplacer les champs
                     for c in list(existing.champs):
@@ -4353,11 +4355,12 @@ def admin_sections_importer():
                     type_key         = type_key,
                     label            = s_data.get('label', type_key),
                     ordre            = s_data.get('ordre', 99),
-                    builtin          = False,  # jamais recrée comme native
+                    builtin          = False,
                     actif            = s_data.get('actif', True),
                     obs_defaut       = s_data.get('obs_defaut', ''),
                     avec_observations= s_data.get('avec_observations', True),
                     categorie        = s_data.get('categorie', ''),
+                    nb_colonnes      = s_data.get('nb_colonnes', 2),
                 )
                 db.session.add(ns)
                 db.session.flush()
