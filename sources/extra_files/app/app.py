@@ -4258,6 +4258,7 @@ def admin_sections_exporter():
             'obs_defaut':        s.obs_defaut or '',
             'avec_observations': s.avec_observations,
             'categorie':         s.categorie or '',
+            'nb_colonnes':       s.nb_colonnes or 2,
             'champs': [{
                 'name':    c.name,
                 'label':   c.label,
