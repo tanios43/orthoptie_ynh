@@ -5892,6 +5892,10 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
                     flush_pending()
                     lignes.append(('__sep__', ch['label'] or ''))
                     continue
+                if ch['type'] == 'subtitle':
+                    flush_pending()
+                    lignes.append(('__subtitle__', ch['label'] or ''))
+                    continue
                 val = d.get(ch['name'], '')
                 pending_cells.append((ch['label'], str(val) if val else ''))
 
@@ -6048,6 +6052,14 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
                                f'<w:color w:val="888888"/><w:sz w:val="16"/></w:rPr>'
                                f'<w:t>{esc(valeur)}</w:t></w:r>' if valeur else '')
                             + '</w:p>'
+                        )
+                    elif label == '__subtitle__':
+                        # Sous-titre — texte gras sans ligne
+                        body_paras.append(
+                            f'<w:p><w:pPr><w:spacing w:before="120" w:after="40"/></w:pPr>'
+                            f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                            f'<w:sz w:val="18"/><w:color w:val="333333"/></w:rPr>'
+                            f'<w:t>{esc(valeur)}</w:t></w:r></w:p>'
                         )
                     elif label == '__row__':
                         # Rangée de cellules — tableau Word

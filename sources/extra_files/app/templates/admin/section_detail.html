@@ -123,7 +123,7 @@
               <div class="field-group">
                 <label class="field-label">Type</label>
                 <select name="type">
-                  {% for t in ['text','textarea','number','select','sph','fichier','spacer','separator'] %}
+                  {% for t in ['text','textarea','number','select','sph','fichier','spacer','separator','subtitle'] %}
                   <option value="{{ t }}" {{ 'selected' if champ.type == t }}>{{ t }}</option>
                   {% endfor %}
                 </select>
@@ -215,6 +215,7 @@
               <optgroup label="Mise en page">
                 <option value="spacer">Espaceur (cellule vide)</option>
                 <option value="separator">Séparateur (ligne + titre)</option>
+                <option value="subtitle">Sous-titre (titre seul, sans ligne)</option>
               </optgroup>
             </select>
           </div>

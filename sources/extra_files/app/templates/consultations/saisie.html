@@ -625,7 +625,14 @@ function champHTML(idx, champ, val) {
     return `<div class="field-group" aria-hidden="true" style="visibility:hidden;"></div>`;
   }
 
-  if (champ.type === 'separator') {
+  if (champ.type === 'subtitle') {
+    return `<div style="grid-column:1/-1;margin:8px 0 2px;">
+      <span style="font-size:12px;font-weight:700;color:var(--text);
+                   text-transform:uppercase;letter-spacing:.5px;">
+        ${champ.label || ''}
+      </span>
+    </div>`;
+  }
     return `<div style="grid-column:1/-1;margin:4px 0 2px;padding-bottom:6px;
                          border-bottom:1px solid var(--border);">
       ${champ.label ? `<span style="font-size:12px;font-weight:600;color:var(--muted);
@@ -1547,7 +1554,7 @@ function afficherHistoriqueSection(data, typeKey, sectionIdx) {
     const d = entry.donnees;
     const col = getSectionColor(typeKey);
     let champsHtml = champs
-      .filter(c => c.type !== 'fichier' && c.type !== 'spacer' && c.type !== 'separator' && d[c.name])
+      .filter(c => c.type !== 'fichier' && c.type !== 'spacer' && c.type !== 'separator' && c.type !== 'subtitle' && d[c.name])
       .map(c => `<div style="display:flex;justify-content:space-between;
                               padding:3px 0;font-size:12px;
                               border-bottom:1px solid var(--border);">

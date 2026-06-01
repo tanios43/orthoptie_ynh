@@ -241,7 +241,11 @@
           {% for champ in champs %}
             {% if champ.type == 'spacer' %}
               <div style="visibility:hidden;"></div>
-            {% elif champ.type == 'separator' %}
+            {% elif champ.type == 'subtitle' %}
+              <div style="grid-column:1/-1;margin:8px 0 2px;">
+                <span style="font-size:12px;font-weight:700;color:var(--text);
+                              text-transform:uppercase;letter-spacing:.5px;">{{ champ.label }}</span>
+              </div>
               <div style="grid-column:1/-1;margin:4px 0 2px;padding-bottom:6px;
                            border-bottom:1px solid var(--border);">
                 {% if champ.label %}
