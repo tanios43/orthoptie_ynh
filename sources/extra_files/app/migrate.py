@@ -357,15 +357,18 @@ with app.app_context():
             return
         existing = [c.name for c in sec.champs]
         max_ordre = max((c.ordre for c in sec.champs), default=0)
-        for name, label in labels:
+        for item in labels:
+            name, label = item[0], item[1]
+            champ_type = item[2] if len(item) > 2 else 'number'
             if name not in existing:
                 max_ordre += 1
-                db.session.add(ChampDef(section_id=sec.id, name=name, label=label, type='number', ordre=max_ordre))
+                db.session.add(ChampDef(section_id=sec.id, name=name, label=label, type=champ_type, ordre=max_ordre))
                 print(f"OK      : {label} dans {type_key}")
             else:
                 print(f"Present : {label} dans {type_key}")
 
-    add_champs('correction_portee', [('od_add', 'Add OD'), ('og_add', 'Add OG')])
+    add_champs('correction_portee', [('od_add', 'Add OD'), ('og_add', 'Add OG'),
+                                     ('prisme_od', 'Prisme OD', 'text'), ('prisme_og', 'Prisme OG', 'text')])
     add_champs('refraction_subj',   [('od_add', 'Add OD'), ('og_add', 'Add OG')])
     db.session.commit()
     # classe_profession sur consultation
