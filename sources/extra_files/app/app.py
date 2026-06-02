@@ -5787,8 +5787,19 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
         if sec.type in ('refraction_obj', 'correction_portee'):
             od = fmt_refraction(d, 'od')
             og = fmt_refraction(d, 'og')
-            if od or og:
-                lignes.append(('', f'{od}  /  {og}'))
+            od_add = fmt_sph(d.get('od_add', ''))
+            og_add = fmt_sph(d.get('og_add', ''))
+            od_line = od
+            og_line = og
+            if od_add: od_line += f'   Add {od_add}'
+            if og_add: og_line += f'   Add {og_add}'
+            if od_line or og_line:
+                lignes.append(('', f'OD : {od_line}  /  OG : {og_line}'))
+            if sec.type == 'correction_portee':
+                prisme_od = d.get('prisme_od', '')
+                prisme_og = d.get('prisme_og', '')
+                if prisme_od or prisme_og:
+                    lignes.append(('Prisme', f'OD : {prisme_od or "—"}  /  OG : {prisme_og or "—"}'))
 
         elif sec.type == 'refraction_subj':
             # Format OD : sph(cyl)axe° = AV loin   Add = AV près
