@@ -46,6 +46,13 @@ def log_acces(action, patient_id=None, consultation_id=None, detail=''):
 
 
 @app.template_global()
+def now():
+    """Date/heure locale courante pour les templates Jinja."""
+    from datetime import datetime as _dt
+    return _dt.now()
+
+
+@app.template_global()
 def age_a_la_date(date_naissance, date_ref=None):
     """Retourne l'âge sous la forme 'X ans Y mois' pour les templates Jinja."""
     if not date_naissance:

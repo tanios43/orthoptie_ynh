@@ -15,7 +15,28 @@
 
 
 {% block title %}{{ patient.nom }} {{ patient.prenom }}{% endblock %}
-{% block page_title %}{{ patient.nom }} {{ patient.prenom }}{% endblock %}
+{% block page_title %}
+  {{ patient.nom }} {{ patient.prenom }}
+  {% if patient.date_naissance %}
+    {% set today = now() %}
+    {% if patient.date_naissance.month == today.month and patient.date_naissance.day == today.day %}
+    <span style="display:inline-flex;align-items:center;gap:6px;
+                 background:linear-gradient(135deg,#f9c74f,#f3722c);
+                 color:white;font-size:14px;font-weight:600;
+                 padding:4px 12px;border-radius:20px;vertical-align:middle;
+                 box-shadow:0 2px 8px rgba(243,114,44,.4);
+                 animation:birthday-pulse 1.5s ease-in-out infinite;">
+      🎂 Bon anniversaire !
+    </span>
+    <style>
+    @keyframes birthday-pulse {
+      0%,100% { transform:scale(1); box-shadow:0 2px 8px rgba(243,114,44,.4); }
+      50%      { transform:scale(1.04); box-shadow:0 4px 16px rgba(243,114,44,.6); }
+    }
+    </style>
+    {% endif %}
+  {% endif %}
+{% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Patients</a>
