@@ -476,6 +476,32 @@ with app.app_context():
             else:
                 print(f"ERREUR  : journal_acces.{col} — {e}")
 
+    # Créer la section frontofocometrie si absente
+    try:
+        from app import BUILTIN_SECTIONS
+        existing_keys = {s.type_key for s in SectionDef.query.all()}
+        for type_key, label, champs in BUILTIN_SECTIONS:
+            if type_key == 'frontofocometrie' and type_key not in existing_keys:
+                # Trouver l'ordre max existant
+                max_ordre = db.session.query(db.func.max(SectionDef.ordre)).scalar() or 0
+                # Insérer après correction_portee
+                cp = SectionDef.query.filter_by(type_key='correction_portee').first()
+                ordre = (cp.ordre + 1) if cp else max_ordre + 1
+                s = SectionDef(type_key=type_key, label=label, ordre=ordre,
+                               builtin=True, actif=True, categorie='refraction')
+                db.session.add(s)
+                db.session.flush()
+                for i, (cname, clabel, ctype, copts) in enumerate(champs):
+                    c = ChampDef(section_id=s.id, name=cname, label=clabel,
+                                 type=ctype, ordre=i, actif=True)
+                    db.session.add(c)
+                db.session.commit()
+                print(f"OK      : section frontofocometrie créée")
+            elif type_key == 'frontofocometrie':
+                print(f"Present : section frontofocometrie")
+    except Exception as e:
+        print(f"ERREUR  : frontofocometrie — {e}")
+
     # Initialiser les catégories des sections builtin
     try:
         from app import BUILTIN_CATEGORIES
