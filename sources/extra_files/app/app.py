@@ -410,6 +410,7 @@ def suivi_amblyopie_list_filter(patient_id):
 
 BUILTIN_CATEGORIES = {
     'anam': 'anamnese', 'correction_portee': 'refraction',
+    'frontofocometrie': 'refraction',
     'refraction_obj': 'refraction', 'refraction_subj': 'refraction',
     'acuite': 'acuite', 'swaine': 'acuite',
     'stereoscopie': 'stereoscopie',
@@ -4698,7 +4699,8 @@ def admin_modele_supprimer(modele_id):
 
 BUILTIN_SECTIONS = [
     ('anam','Anamnèse',[('entretien','Entretien','textarea',[]),('plan_general','Plan général','textarea',[]),('antecedents','Antécédents','textarea',[])]),
-    ('correction_portee','Correction portée',[('od_sph','OD sphère','sph',[]),('od_cyl','OD cylindre','text',[]),('od_axe','OD axe','number',[]),('od_add','Add OD','number',[]),('og_sph','OG sphère','sph',[]),('og_cyl','OG cylindre','text',[]),('og_axe','OG axe','number',[]),('og_add','Add OG','number',[])]),
+    ('correction_portee','Correction portée',[('od_sph','OD sphère','sph',[]),('od_cyl','OD cylindre','text',[]),('od_axe','OD axe','number',[]),('od_add','Add OD','number',[]),('og_sph','OG sphère','sph',[]),('og_cyl','OG cylindre','text',[]),('og_axe','OG axe','number',[]),('og_add','Add OG','number',[]),('prisme_od','Prisme OD','text',[]),('prisme_og','Prisme OG','text',[])]),
+    ('frontofocometrie','Frontofocométrie',[('od_sph','OD sphère','sph',[]),('od_cyl','OD cylindre','text',[]),('od_axe','OD axe','number',[]),('od_add','Add OD','number',[]),('og_sph','OG sphère','sph',[]),('og_cyl','OG cylindre','text',[]),('og_axe','OG axe','number',[]),('og_add','Add OG','number',[]),('prisme_od','Prisme OD','text',[]),('prisme_og','Prisme OG','text',[])]),
     ('acuite','Acuité visuelle',[
         ('av_bino','Binoculaire','select',['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10']),
         ('av_correction','Correction','select',['sans correction','avec correction habituelle','avec correction optimale','avec addition']),
@@ -5791,7 +5793,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
         d = sec.get_donnees()
         lignes = []
 
-        if sec.type in ('refraction_obj', 'correction_portee'):
+        if sec.type in ('refraction_obj', 'correction_portee', 'frontofocometrie'):
             od = fmt_refraction(d, 'od')
             og = fmt_refraction(d, 'og')
             od_add = fmt_sph(d.get('od_add', ''))
@@ -5802,7 +5804,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
             if og_add: og_line += f'   Add {og_add}'
             if od_line or og_line:
                 lignes.append(('', f'OD : {od_line}  /  OG : {og_line}'))
-            if sec.type == 'correction_portee':
+            if sec.type in ('correction_portee', 'frontofocometrie'):
                 prisme_od = d.get('prisme_od', '')
                 prisme_og = d.get('prisme_og', '')
                 if prisme_od or prisme_og:

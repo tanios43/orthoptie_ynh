@@ -369,6 +369,8 @@ with app.app_context():
 
     add_champs('correction_portee', [('od_add', 'Add OD'), ('og_add', 'Add OG'),
                                      ('prisme_od', 'Prisme OD', 'text'), ('prisme_og', 'Prisme OG', 'text')])
+    add_champs('frontofocometrie',  [('od_add', 'Add OD'), ('og_add', 'Add OG'),
+                                     ('prisme_od', 'Prisme OD', 'text'), ('prisme_og', 'Prisme OG', 'text')])
     add_champs('refraction_subj',   [('od_add', 'Add OD'), ('og_add', 'Add OG')])
     db.session.commit()
     # classe_profession sur consultation

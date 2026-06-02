@@ -278,7 +278,7 @@
                 {% for sec in c.sections %}
                   {% set d = sec.get_donnees() %}
                   {% set col = section_style(sec.type, sec.categorie if sec.categorie is defined else '') %}
-                  {% if sec.type in ['refraction_obj','refraction_subj','correction_portee'] %}
+                  {% if sec.type in ['refraction_obj','refraction_subj','correction_portee','frontofocometrie'] %}
                     {% set od = (d.get('od_sph','') ~ ('(' ~ d.get('od_cyl','') ~ ')' if d.get('od_cyl')) ~ (d.get('od_axe','') ~ '°' if d.get('od_axe'))) %}
                     {% set og = (d.get('og_sph','') ~ ('(' ~ d.get('og_cyl','') ~ ')' if d.get('og_cyl')) ~ (d.get('og_axe','') ~ '°' if d.get('og_axe'))) %}
                     {% if od or og %}
@@ -396,7 +396,7 @@
                     {{ sec.observations }}
                   </div>
                   {% endif %}
-                  {% if sec.type in ['correction_portee','refraction_obj','refraction_subj'] %}
+                  {% if sec.type in ['correction_portee','frontofocometrie','refraction_obj','refraction_subj'] %}
                   <table style="width:100%;border-collapse:collapse;font-size:11px;">
                     <thead>
                       <tr>
@@ -412,7 +412,7 @@
                     <tbody>
                       <tr style="border-top:0.5px solid var(--border);">
                         <td style="padding:3px 4px;color:var(--muted);font-size:10px;">
-                          {% if sec.type == 'correction_portee' %}Portée{% elif sec.type == 'refraction_obj' %}Obj.{% else %}Subj.{% endif %}
+                          {% if sec.type == 'correction_portee' %}Portée{% elif sec.type == 'frontofocometrie' %}Frontofoco.{% elif sec.type == 'refraction_obj' %}Obj.{% else %}Subj.{% endif %}
                         </td>
                         <td style="padding:3px 4px;font-family:monospace;">{{ sph_f(d.get('od_sph')) }}</td>
                         <td style="padding:3px 4px;font-family:monospace;">{{ d.get('od_cyl','—') }}</td>
@@ -428,7 +428,7 @@
                         <td colspan="3" style="padding:3px 4px;">{{ d.get('og_add','—') }}</td>
                       </tr>
                       {% endif %}
-                      {% if sec.type == 'correction_portee' and (d.get('prisme_od') or d.get('prisme_og')) %}
+                      {% if sec.type in ['correction_portee','frontofocometrie'] and (d.get('prisme_od') or d.get('prisme_og')) %}
                       <tr style="border-top:0.5px solid var(--border);">
                         <td style="padding:3px 4px;color:var(--muted);font-size:10px;">Prisme</td>
                         <td colspan="3" style="padding:3px 4px;">{{ d.get('prisme_od','—') }}</td>

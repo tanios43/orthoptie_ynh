@@ -129,7 +129,7 @@
         {% if sec.observations %}<div style="margin-top:14px;"></div>{% endif %}
 
         {# ── RÉFRACTION (correction portée / objective / subjective) ── #}
-        {% if sec.type in ['correction_portee','refraction_obj','refraction_subj'] %}
+        {% if sec.type in ['correction_portee','frontofocometrie','refraction_obj','refraction_subj'] %}
           <table class="od-og-table">
             <colgroup>
               <col style="width:18%">
@@ -154,6 +154,7 @@
               <tr>
                 <td><small class="text-muted">
                   {% if sec.type == 'correction_portee' %}Portée
+                  {% elif sec.type == 'frontofocometrie' %}Frontofoco.
                   {% elif sec.type == 'refraction_obj' %}Objectif
                   {% else %}Subjectif{% endif %}
                 </small></td>
@@ -164,14 +165,14 @@
                 <td style="font-family:monospace;">{{ d.get('og_cyl','—') }}</td>
                 <td>{{ axe(d.get('og_axe')) }}</td>
               </tr>
-              {% if sec.type in ['correction_portee','refraction_subj'] and (d.get('od_add') or d.get('og_add')) %}
+              {% if sec.type in ['correction_portee','frontofocometrie','refraction_subj'] and (d.get('od_add') or d.get('og_add')) %}
               <tr>
                 <td class="text-muted text-sm">Addition</td>
                 <td colspan="3">{{ d.get('od_add','—') }}</td>
                 <td colspan="3">{{ d.get('og_add','—') }}</td>
               </tr>
               {% endif %}
-              {% if sec.type == 'correction_portee' and (d.get('prisme_od') or d.get('prisme_og')) %}
+              {% if sec.type in ['correction_portee','frontofocometrie'] and (d.get('prisme_od') or d.get('prisme_og')) %}
               <tr>
                 <td class="text-muted text-sm">Prisme</td>
                 <td colspan="3">{{ d.get('prisme_od','—') }}</td>

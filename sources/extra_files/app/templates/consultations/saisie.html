@@ -186,7 +186,7 @@
                         margin-bottom:5px;white-space:pre-wrap;">{{ sec.observations }}</div>
             {% endif %}
 
-            {% if sec.type in ['correction_portee','refraction_obj','refraction_subj'] %}
+            {% if sec.type in ['correction_portee','frontofocometrie','refraction_obj','refraction_subj'] %}
             <table style="width:100%;border-collapse:collapse;font-size:11px;">
               <thead>
                 <tr>
@@ -991,7 +991,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
     </div>`;
 
   // Grouper les champs réfraction en tableau OD/OG si c'est une réfraction
-  } else if (['correction_portee','refraction_obj','refraction_subj'].includes(type)) {
+  } else if (['correction_portee','frontofocometrie','refraction_obj','refraction_subj'].includes(type)) {
     champsHTML = refractionHTML(idx, type, donnees);
   } else if (['acuite','swaine'].includes(type)) {
     champsHTML = odOgHTML(idx, def.champs, donnees, type);
@@ -1223,7 +1223,7 @@ function refractionHTML(idx, type, donnees) {
 
   const dataRow = `<tr>
     <td style="padding:4px 6px;font-size:12px;color:var(--muted);font-weight:500;">
-      ${type==='correction_portee'?'Correction portée':type==='refraction_obj'?'Objectif':'Subjectif'}
+      ${type==='correction_portee'?'Correction portée':type==='frontofocometrie'?'Frontofocométrie':type==='refraction_obj'?'Objectif':'Subjectif'}
     </td>
     <td style="padding:4px 6px;">${p('od_sph', d.od_sph, 'sph')}</td>
     <td style="padding:4px 6px;">${p('od_cyl', d.od_cyl, 'cyl')}</td>
@@ -1232,7 +1232,7 @@ function refractionHTML(idx, type, donnees) {
     <td style="padding:4px 6px;">${p('og_cyl', d.og_cyl, 'cyl')}</td>
     <td style="padding:4px 6px;">${p('og_axe', d.og_axe, 'axe')}</td>
   </tr>
-  ${['correction_portee','refraction_subj'].includes(type) ? `<tr>
+  ${['correction_portee','frontofocometrie','refraction_subj'].includes(type) ? `<tr>
     <td style="padding:4px 6px;font-size:12px;color:var(--muted);">Addition</td>
     <td colspan="3" style="padding:4px 6px;">
       <input type="text" name="champ__${idx}__od_add"
@@ -1247,7 +1247,7 @@ function refractionHTML(idx, type, donnees) {
              onblur="formatSignedFloat(this)">
     </td>
   </tr>` : ''}
-  ${type === 'correction_portee' ? `<tr>
+  ${(type === 'correction_portee' || type === 'frontofocometrie') ? `<tr>
     <td style="padding:4px 6px;font-size:12px;color:var(--muted);">Prisme</td>
     <td colspan="3" style="padding:4px 6px;">
       <input type="text" name="champ__${idx}__prisme_od"
