@@ -218,6 +218,13 @@
                   <td colspan="3" style="padding:3px 4px;">{{ d.get('og_add','—') }}</td>
                 </tr>
                 {% endif %}
+                {% if sec.type == 'correction_portee' and (d.get('prisme_od') or d.get('prisme_og')) %}
+                <tr style="border-top:0.5px solid var(--border);">
+                  <td style="padding:3px 4px;color:var(--muted);font-size:10px;">Prisme</td>
+                  <td colspan="3" style="padding:3px 4px;">{{ d.get('prisme_od','—') }}</td>
+                  <td colspan="3" style="padding:3px 4px;">{{ d.get('prisme_og','—') }}</td>
+                </tr>
+                {% endif %}
                 {% if sec.type == 'refraction_subj' %}
                 {% if d.get('od_av_loin') or d.get('og_av_loin') %}
                 <tr style="border-top:0.5px dashed var(--border);">
