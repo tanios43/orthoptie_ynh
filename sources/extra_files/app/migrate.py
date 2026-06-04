@@ -227,6 +227,17 @@ if _db_path:
         "ALTER TABLE cabinet ADD COLUMN repondeur TEXT DEFAULT ''",
         "ALTER TABLE cabinet ADD COLUMN repondeur_updated_by TEXT DEFAULT ''",
         "ALTER TABLE cabinet ADD COLUMN repondeur_updated_at DATETIME",
+        """CREATE TABLE IF NOT EXISTS favori (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            praticien_id INTEGER NOT NULL REFERENCES praticien(id),
+            nom TEXT NOT NULL,
+            url TEXT NOT NULL,
+            categorie TEXT DEFAULT '',
+            couleur TEXT DEFAULT '#f0f4ff',
+            favicon_url TEXT DEFAULT '',
+            ordre INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
     ]
     for sql in _pre_migrations:
         try:

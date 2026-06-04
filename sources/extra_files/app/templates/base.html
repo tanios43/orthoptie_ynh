@@ -419,6 +419,11 @@
       <span><span class="icon">📞</span> Répondeur</span>
     </a>
 
+    <a href="{{ url_for('favoris') }}"
+       class="nav-item {% if request.endpoint == 'favoris' %}active{% endif %}">
+      <span><span class="icon">🔖</span> Mes favoris</span>
+    </a>
+
     <div class="nav-section"><span>Actions</span></div>
     <a href="{{ url_for('patient_nouveau') }}"
        class="nav-item {% if request.endpoint == 'patient_nouveau' %}active{% endif %}">

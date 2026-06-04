@@ -910,7 +910,18 @@ class Note(db.Model):
     praticien    = db.relationship('Praticien', foreign_keys=[praticien_id])
 
 
-class Tache(db.Model):
+class Favori(db.Model):
+    __tablename__ = 'favori'
+    id           = db.Column(db.Integer, primary_key=True)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=False)
+    nom          = db.Column(db.String(100), nullable=False)
+    url          = db.Column(db.String(500), nullable=False)
+    categorie    = db.Column(db.String(100), default='')
+    couleur      = db.Column(db.String(7), default='#f0f4ff')
+    favicon_url  = db.Column(db.String(500), default='')
+    ordre        = db.Column(db.Integer, default=0)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    praticien    = db.relationship('Praticien', foreign_keys=[praticien_id])
     """Tâche personnelle ou partagée."""
     __tablename__ = 'tache'
     id           = db.Column(db.Integer, primary_key=True)
@@ -2636,6 +2647,91 @@ def message_nouveau():
     from flask import redirect as _redirect
     return _redirect(url_for('messages_nouvelle_conversation'))
 
+
+
+@app.route('/favoris')
+@login_required
+def favoris():
+    favs = Favori.query.filter_by(praticien_id=current_user.id).order_by(Favori.categorie, Favori.ordre).all()
+    # Grouper par catégorie
+    groupes = {}
+    for f in favs:
+        cat = f.categorie or 'Sans catégorie'
+        groupes.setdefault(cat, []).append(f)
+    return render_template('favoris/index.html', groupes=groupes)
+
+
+@app.route('/favoris/nouveau', methods=['POST'])
+@login_required
+def favori_nouveau():
+    url = request.form.get('url', '').strip()
+    if url and not url.startswith('http'):
+        url = 'https://' + url
+    nom = request.form.get('nom', '').strip() or url
+    # Favicon auto via Google S2
+    from urllib.parse import urlparse
+    try:
+        domain = urlparse(url).netloc
+        favicon_url = f'https://www.google.com/s2/favicons?domain={domain}&sz=64'
+    except Exception:
+        favicon_url = ''
+    f = Favori(
+        praticien_id=current_user.id,
+        nom=nom,
+        url=url,
+        categorie=request.form.get('categorie', '').strip(),
+        couleur=request.form.get('couleur', '#f0f4ff'),
+        favicon_url=favicon_url,
+        ordre=Favori.query.filter_by(praticien_id=current_user.id).count()
+    )
+    db.session.add(f)
+    db.session.commit()
+    return redirect(url_for('favoris'))
+
+
+@app.route('/favoris/<int:favori_id>/modifier', methods=['POST'])
+@login_required
+def favori_modifier(favori_id):
+    f = Favori.query.get_or_404(favori_id)
+    if f.praticien_id != current_user.id: abort(403)
+    url = request.form.get('url', '').strip()
+    if url and not url.startswith('http'):
+        url = 'https://' + url
+    f.nom       = request.form.get('nom', '').strip() or url
+    f.url       = url
+    f.categorie = request.form.get('categorie', '').strip()
+    f.couleur   = request.form.get('couleur', '#f0f4ff')
+    # Rafraîchir le favicon si l'URL a changé
+    from urllib.parse import urlparse
+    try:
+        domain = urlparse(url).netloc
+        f.favicon_url = f'https://www.google.com/s2/favicons?domain={domain}&sz=64'
+    except Exception:
+        pass
+    db.session.commit()
+    return redirect(url_for('favoris'))
+
+
+@app.route('/favoris/<int:favori_id>/supprimer', methods=['POST'])
+@login_required
+def favori_supprimer(favori_id):
+    f = Favori.query.get_or_404(favori_id)
+    if f.praticien_id != current_user.id: abort(403)
+    db.session.delete(f)
+    db.session.commit()
+    return redirect(url_for('favoris'))
+
+
+@app.route('/favoris/reordonner', methods=['POST'])
+@login_required
+def favoris_reordonner():
+    ids = request.json.get('ids', [])
+    for i, fid in enumerate(ids):
+        f = Favori.query.get(fid)
+        if f and f.praticien_id == current_user.id:
+            f.ordre = i
+    db.session.commit()
+    return '', 204
 
 
 @app.route('/repondeur', methods=['GET', 'POST'])

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Mes favoris{% endblock %}
+{% block page_title %}🔖 Mes favoris{% endblock %}
+
+{% block topbar_actions %}
+  <button type="button" onclick="ouvrirModalNouveauFavori()" class="btn btn-primary btn-sm">+ Ajouter</button>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;">
+
+{% if not groupes %}
+<div style="text-align:center;padding:60px 20px;color:var(--muted);">
+  <div style="font-size:48px;margin-bottom:16px;">🔖</div>
+  <div style="font-size:16px;margin-bottom:8px;">Aucun favori pour l'instant</div>
+  <div style="font-size:13px;margin-bottom:24px;">Ajoutez des liens vers les sites web utiles à votre pratique.</div>
+  <button onclick="ouvrirModalNouveauFavori()" class="btn btn-primary">+ Ajouter un favori</button>
+</div>
+{% endif %}
+
+{% for categorie, favs in groupes.items() %}
+<div style="margin-bottom:32px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+    <h3 style="margin:0;font-size:14px;font-weight:700;color:var(--muted);
+               text-transform:uppercase;letter-spacing:.5px;">{{ categorie }}</h3>
+    <div style="flex:1;height:1px;background:var(--border);"></div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:12px;">
+    {% for f in favs %}
+    <div class="favori-card" data-id="{{ f.id }}"
+         style="background:{{ f.couleur }};border:1px solid rgba(0,0,0,.08);
+                border-radius:12px;padding:12px 14px;width:160px;
+                display:flex;flex-direction:column;gap:8px;
+                box-shadow:0 1px 4px rgba(0,0,0,.06);
+                transition:box-shadow .15s,transform .15s;cursor:grab;">
+      <a href="{{ f.url }}" target="_blank" rel="noopener"
+         style="text-decoration:none;display:flex;flex-direction:column;gap:8px;flex:1;"
+         onclick="event.stopPropagation()">
+        <div style="display:flex;align-items:center;gap:8px;">
+          {% if f.favicon_url %}
+          <img src="{{ f.favicon_url }}" width="24" height="24"
+               style="border-radius:4px;flex-shrink:0;"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div style="display:none;width:24px;height:24px;border-radius:4px;
+                       background:rgba(0,0,0,.1);align-items:center;justify-content:center;
+                       font-size:12px;">🌐</div>
+          {% else %}
+          <div style="width:24px;height:24px;border-radius:4px;
+                       background:rgba(0,0,0,.1);display:flex;align-items:center;
+                       justify-content:center;font-size:12px;">🌐</div>
+          {% endif %}
+          <div style="font-size:13px;font-weight:600;color:#1a1a2e;
+                       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                       flex:1;">{{ f.nom }}</div>
+        </div>
+        <div style="font-size:10px;color:rgba(0,0,0,.4);overflow:hidden;
+                     text-overflow:ellipsis;white-space:nowrap;">
+          {{ f.url | replace('https://','') | replace('http://','') | truncate(30) }}
+        </div>
+      </a>
+      <div style="display:flex;justify-content:flex-end;gap:4px;">
+        <button type="button"
+                onclick="ouvrirModalModifierFavori({{ f.id }}, '{{ f.nom|e }}', '{{ f.url|e }}', '{{ f.categorie|e }}', '{{ f.couleur }}')"
+                style="background:none;border:none;cursor:pointer;font-size:12px;
+                        color:rgba(0,0,0,.4);padding:2px 4px;border-radius:4px;"
+                title="Modifier">✎</button>
+        <form method="POST" action="{{ url_for('favori_supprimer', favori_id=f.id) }}"
+              style="margin:0;" onsubmit="return confirm('Supprimer ce favori ?')">
+          <button type="submit"
+                  style="background:none;border:none;cursor:pointer;font-size:12px;
+                          color:rgba(0,0,0,.3);padding:2px 4px;border-radius:4px;"
+                  title="Supprimer">🗑</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+</div>
+
+{# ── Modale nouveau favori ── #}
+<div id="modal-favori" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+     z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:12px;padding:24px;width:100%;max-width:420px;
+              box-shadow:0 8px 32px rgba(0,0,0,.2);" onclick="event.stopPropagation()">
+    <h3 id="modal-favori-titre" style="margin:0 0 16px;font-size:16px;">🔖 Nouveau favori</h3>
+    <form id="form-favori" method="POST" action="{{ url_for('favori_nouveau') }}">
+      <input type="hidden" id="favori-id" name="_id" value="">
+      <div class="field-group">
+        <label class="field-label">URL *</label>
+        <input type="text" name="url" id="favori-url" required
+               placeholder="https://exemple.com"
+               oninput="previewFavicon(this.value)">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin:-4px 0 12px;">
+        <img id="favicon-preview" src="" width="20" height="20"
+             style="border-radius:3px;display:none;"
+             onerror="this.style.display='none'">
+        <span id="favicon-domain" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Nom affiché</label>
+        <input type="text" name="nom" id="favori-nom" placeholder="Laisser vide pour utiliser l'URL">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Catégorie</label>
+        <input type="text" name="categorie" id="favori-categorie"
+               placeholder="ex: Références, Outils, Fournisseurs…"
+               list="dl-categories">
+        <datalist id="dl-categories">
+          {% set cats = groupes.keys() | list %}
+          {% for cat in cats %}
+          {% if cat != 'Sans catégorie' %}
+          <option value="{{ cat }}">
+          {% endif %}
+          {% endfor %}
+        </datalist>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Couleur de fond</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% for col in ['#f0f4ff','#f0fff4','#fff9f0','#fff0f0','#f5f0ff','#f0fbff','#fffef0','#f5f5f5'] %}
+          <label style="cursor:pointer;">
+            <input type="radio" name="couleur" value="{{ col }}"
+                   style="display:none;" class="radio-couleur"
+                   {% if loop.first %}checked{% endif %}>
+            <div class="color-swatch" style="width:28px;height:28px;border-radius:6px;
+                 background:{{ col }};border:2px solid transparent;transition:border-color .1s;"
+                 onclick="selectCouleur('{{ col }}', this)"></div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" onclick="fermerModalFavori()" class="btn btn-secondary">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Sélection couleur
+function selectCouleur(val, el) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.style.borderColor = 'transparent');
+  el.style.borderColor = '#333';
+  document.querySelectorAll('.radio-couleur').forEach(r => { if(r.value===val) r.checked=true; });
+}
+// Marquer la première couleur au chargement
+document.querySelectorAll('.color-swatch')[0]?.style.setProperty('border-color','#333');
+
+// Preview favicon
+let _faviconTimer;
+function previewFavicon(url) {
+  clearTimeout(_faviconTimer);
+  _faviconTimer = setTimeout(() => {
+    if (!url) return;
+    if (!url.startsWith('http')) url = 'https://' + url;
+    try {
+      const domain = new URL(url).hostname;
+      const img = document.getElementById('favicon-preview');
+      img.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      img.style.display = 'inline';
+      document.getElementById('favicon-domain').textContent = domain;
+    } catch(e) {}
+  }, 600);
+}
+
+function ouvrirModalNouveauFavori() {
+  document.getElementById('modal-favori-titre').textContent = '🔖 Nouveau favori';
+  document.getElementById('form-favori').action = '{{ url_for("favori_nouveau") }}';
+  document.getElementById('favori-url').value = '';
+  document.getElementById('favori-nom').value = '';
+  document.getElementById('favori-categorie').value = '';
+  document.getElementById('favicon-preview').style.display = 'none';
+  document.getElementById('favicon-domain').textContent = '';
+  document.getElementById('modal-favori').style.display = 'flex';
+}
+
+function ouvrirModalModifierFavori(id, nom, url, cat, couleur) {
+  document.getElementById('modal-favori-titre').textContent = '✎ Modifier le favori';
+  document.getElementById('form-favori').action = `/favoris/${id}/modifier`;
+  document.getElementById('favori-url').value = url;
+  document.getElementById('favori-nom').value = nom;
+  document.getElementById('favori-categorie').value = cat;
+  previewFavicon(url);
+  // Sélectionner la bonne couleur
+  document.querySelectorAll('.radio-couleur').forEach(r => {
+    if (r.value === couleur) {
+      r.checked = true;
+      r.nextElementSibling.style.borderColor = '#333';
+    } else {
+      r.nextElementSibling.style.borderColor = 'transparent';
+    }
+  });
+  document.getElementById('modal-favori').style.display = 'flex';
+}
+
+function fermerModalFavori() {
+  document.getElementById('modal-favori').style.display = 'none';
+}
+
+document.getElementById('modal-favori').addEventListener('click', function(e) {
+  if (e.target === this) fermerModalFavori();
+});
+</script>
+{% endblock %}
