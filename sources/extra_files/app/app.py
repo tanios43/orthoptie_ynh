@@ -922,6 +922,9 @@ class Favori(db.Model):
     ordre        = db.Column(db.Integer, default=0)
     created_at   = db.Column(db.DateTime, default=datetime.utcnow)
     praticien    = db.relationship('Praticien', foreign_keys=[praticien_id])
+
+
+class Tache(db.Model):
     """Tâche personnelle ou partagée."""
     __tablename__ = 'tache'
     id           = db.Column(db.Integer, primary_key=True)
