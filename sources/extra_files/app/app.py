@@ -479,6 +479,7 @@ _use_encrypted = bool(_db_key and _os.path.exists(_db_enc_path) and _os.path.get
 if _use_encrypted:
     try:
         import sqlcipher3 as _sqlcipher3
+        from sqlalchemy.pool import NullPool
         _enc_path = _db_enc_path
         _enc_key  = _db_key
         def _sqlcipher_creator():
@@ -494,7 +495,8 @@ if _use_encrypted:
         app.config['SQLALCHEMY_DATABASE_URI']   = 'sqlite+pysqlite:///:memory:'
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             'creator': _sqlcipher_creator,
-            'connect_args': {}
+            'connect_args': {},
+            'poolclass': NullPool
         }
         print("INFO: Base de données chiffrée (SQLCipher AES-256) activée")
     except ImportError:
