@@ -9,7 +9,7 @@ Lancement :
     python app.py  →  http://localhost:5000
 """
 
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify, session, after_this_request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import datetime, date
@@ -508,14 +508,6 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Veuillez vous connecter.'
-
-@app.teardown_appcontext
-def _handle_teardown(exc):
-    """Ignore les erreurs de connexion fermée lors du teardown."""
-    try:
-        db.session.remove()
-    except Exception:
-        pass
 
 # ============================================================
 # MODÈLES
@@ -3793,7 +3785,32 @@ def admin_sauvegarde_importer():
 
     shutil.rmtree(tmpdir, ignore_errors=True)
 
-    shutil.rmtree(tmpdir, ignore_errors=True)
+    # Planifier la copie APRÈS que la réponse est envoyée
+    enc_src  = db_tmp
+    enc_dst  = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+    fix_perms_script = '/usr/local/bin/orthoptie-fix-perms'
+    tmpdir_to_clean  = tmpdir
+
+    @after_this_request
+    def _do_restore(response):
+        try:
+            import shutil as _shutil, subprocess as _sub, pwd, grp
+            _shutil.copy2(enc_src, enc_dst)
+            try:
+                uid = pwd.getpwnam('orthoptie').pw_uid
+                gid = grp.getgrnam('orthoptie').gr_gid
+                os.chown(enc_dst, uid, gid)
+                os.chmod(enc_dst, 0o660)
+            except Exception:
+                pass
+            _shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
+            if os.path.exists(fix_perms_script):
+                _sub.Popen(['bash', '-c', f'sleep 5 && sudo {fix_perms_script}'])
+            else:
+                _sub.Popen(['bash', '-c', 'sleep 5 && systemctl restart orthoptie 2>/dev/null || true'])
+        except Exception:
+            pass
+        return response
 
     flash('✅ Restauration effectuée.', 'success')
     return redirect(url_for('admin_sauvegarde_attente', restart='1'))
