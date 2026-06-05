@@ -3251,13 +3251,22 @@ def admin_restaurer_nas():
                 db.engine.dispose()
             except Exception:
                 pass
+            # Supprimer la base chiffrée pour forcer re-chiffrement après restauration
+            db_enc = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+            if os.path.exists(db_enc):
+                os.remove(db_enc)
+            encrypt_script = os.path.join(os.path.dirname(__file__), 'encrypt_db.py')
+            venv_python    = os.path.join(os.path.dirname(__file__), 'venv', 'bin', 'python3')
             # Corriger les permissions — utiliser fix-perms si disponible, sinon faire manuellement
             data_dir_safe = data_dir.replace("'", "")
             if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
-                subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
+                subprocess.Popen(['bash', '-c',
+                    f'sleep 3 && {venv_python} {encrypt_script} 2>/dev/null; '
+                    f'sleep 2 && sudo /usr/local/bin/orthoptie-fix-perms'])
             else:
                 subprocess.Popen(['bash', '-c',
-                    f"sleep 3 && chown -R orthoptie:orthoptie '{data_dir_safe}' 2>/dev/null; "
+                    f"sleep 3 && {venv_python} {encrypt_script} 2>/dev/null; "
+                    f"chown -R orthoptie:orthoptie '{data_dir_safe}' 2>/dev/null; "
                     f"chmod -R u+rwX,g+rX '{data_dir_safe}' 2>/dev/null; "
                     f"systemctl restart orthoptie 2>/dev/null || true"])
             flash('✅ Restauration depuis le NAS réussie.', 'success')
@@ -3660,6 +3669,19 @@ def admin_sauvegarde_importer():
         db.engine.dispose()
     except Exception:
         pass
+
+    # Si SQLCipher actif, supprimer l'ancienne base chiffrée et re-chiffrer depuis la base restaurée
+    data_dir = app.config.get('DATA_FOLDER', os.path.dirname(db_path))
+    db_enc   = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+    if os.path.exists(db_enc):
+        os.remove(db_enc)
+    # Re-chiffrer en background après redémarrage
+    import subprocess
+    encrypt_script = os.path.join(os.path.dirname(__file__), 'encrypt_db.py')
+    if os.path.exists(encrypt_script):
+        subprocess.Popen(['bash', '-c',
+            f'sleep 3 && {os.path.join(os.path.dirname(__file__), "venv", "bin", "python3")} {encrypt_script} && '
+            f'systemctl restart orthoptie 2>/dev/null || true'])
     import subprocess
     if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
         subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
