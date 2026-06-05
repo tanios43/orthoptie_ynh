@@ -17,8 +17,15 @@ log "=== Démarrage sauvegarde ==="
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/orthoptie_backup_${DATE}.tar.gz"
 
+# Choisir la base à sauvegarder : enc.db en priorité, sinon db standard
+if [ -f "${DATA_DIR}/orthoptie_v2.enc.db" ] && [ -s "${DATA_DIR}/orthoptie_v2.enc.db" ]; then
+    DB_FILE="orthoptie_v2.enc.db"
+else
+    DB_FILE="orthoptie_v2.db"
+fi
+
 tar -czf "${BACKUP_FILE}" -C "${DATA_DIR}" \
-    "orthoptie_v2.db" \
+    "${DB_FILE}" \
     "uploads" \
     $([ -d "${DATA_DIR}/ssh" ] && echo "ssh") \
     $([ -f "${DATA_DIR}/sftp_config.sh" ] && echo "sftp_config.sh") \
@@ -52,10 +59,15 @@ if [ -f "${SFTP_CONFIG}" ]; then
 
         SSH_OPTS="-i ${SSH_KEY} -p ${SFTP_PORT:-22} -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30"
 
-        # Base de données (petit fichier, transféré entièrement chaque nuit)
+        # Base de données — enc.db en priorité, sinon db standard
+        if [ -f "${DATA_DIR}/orthoptie_v2.enc.db" ] && [ -s "${DATA_DIR}/orthoptie_v2.enc.db" ]; then
+            NAS_DB_FILE="${DATA_DIR}/orthoptie_v2.enc.db"
+        else
+            NAS_DB_FILE="${DATA_DIR}/orthoptie_v2.db"
+        fi
         rsync -az --timeout=120 \
             -e "ssh ${SSH_OPTS}" \
-            "${DATA_DIR}/orthoptie_v2.db" \
+            "${NAS_DB_FILE}" \
             "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/db/"
         DB_STATUS=$?
 
