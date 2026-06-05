@@ -3787,10 +3787,7 @@ def admin_sauvegarde_importer():
 
     shutil.rmtree(tmpdir, ignore_errors=True)
 
-    try:
-        db.engine.dispose()
-    except Exception:
-        pass
+    shutil.rmtree(tmpdir, ignore_errors=True)
 
     flash('✅ Restauration effectuée.', 'success')
     return redirect(url_for('admin_sauvegarde_attente', restart='1'))
