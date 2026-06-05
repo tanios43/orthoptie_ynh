@@ -9,6 +9,10 @@ ynh_script_progression --message="Installation des dépendances Python..." --wei
 python3 -m venv "$install_dir/venv"
 "$install_dir/venv/bin/pip" install --upgrade pip --quiet
 "$install_dir/venv/bin/pip" install flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug --quiet
+# Installer sqlcipher3 si libsqlcipher est disponible
+if dpkg -l libsqlcipher0 2>/dev/null | grep -q "^ii"; then
+    "$install_dir/venv/bin/pip" install sqlcipher3 --quiet 2>/dev/null || true
+fi
 
 #=================================================
 # COPY APP FILES

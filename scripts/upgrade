@@ -36,6 +36,10 @@ fi
 ynh_script_progression --message="Mise à jour des dépendances..." --weight=3
 
 "$install_dir/venv/bin/pip" install --upgrade flask flask-login flask-sqlalchemy flask-wtf pillow gunicorn werkzeug --quiet
+# Installer sqlcipher3 si libsqlcipher est disponible
+if dpkg -l libsqlcipher0 2>/dev/null | grep -q "^ii"; then
+    "$install_dir/venv/bin/pip" install sqlcipher3 --quiet 2>/dev/null || true
+fi
 
 #=================================================
 # CREATE LOG DIRECTORY
