@@ -3276,7 +3276,24 @@ def admin_restaurer_nas():
         flash('❌ Timeout — connexion trop lente.', 'danger')
     except Exception as e:
         flash(f'❌ Erreur : {e}', 'danger')
-    return redirect(url_for('admin_sauvegarde_attente'))
+
+    _page_attente = '''<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="8;url=/">
+<title>Restauration effectuée</title>
+<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
+height:100vh;margin:0;background:#f0f4ff;}
+.box{text-align:center;padding:40px;background:white;border-radius:16px;
+box-shadow:0 4px 24px rgba(0,0,0,.1);}
+.spinner{width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#4a7bd4;
+border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body><div class="box">
+<div class="spinner"></div>
+<h2>✅ Restauration effectuée</h2>
+<p>L\'application redémarre, veuillez patienter…</p>
+<p style="color:#888;font-size:13px;">Redirection automatique dans quelques secondes.</p>
+</div></body></html>'''
+    return _page_attente, 200
 
 
 @app.route('/admin/sauvegarde/lancer', methods=['POST'])
@@ -3678,10 +3695,31 @@ def admin_sauvegarde_importer():
     # Re-chiffrer en background après redémarrage
     import subprocess
     encrypt_script = os.path.join(os.path.dirname(__file__), 'encrypt_db.py')
+    venv_python    = os.path.join(os.path.dirname(__file__), 'venv', 'bin', 'python3')
     if os.path.exists(encrypt_script):
         subprocess.Popen(['bash', '-c',
-            f'sleep 3 && {os.path.join(os.path.dirname(__file__), "venv", "bin", "python3")} {encrypt_script} && '
-            f'systemctl restart orthoptie 2>/dev/null || true'])
+            f'sleep 2 && {venv_python} {encrypt_script} 2>/dev/null; '
+            f'sleep 1 && systemctl restart orthoptie 2>/dev/null || true'])
+
+    shutil.rmtree(tmpdir, ignore_errors=True)
+
+    # Retourner une page statique — évite le 500 pendant le redémarrage
+    return '''<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="8;url=/">
+<title>Restauration effectuée</title>
+<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
+height:100vh;margin:0;background:#f0f4ff;}
+.box{text-align:center;padding:40px;background:white;border-radius:16px;
+box-shadow:0 4px 24px rgba(0,0,0,.1);}
+.spinner{width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#4a7bd4;
+border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body><div class="box">
+<div class="spinner"></div>
+<h2>✅ Restauration effectuée</h2>
+<p>L'application redémarre, veuillez patienter…</p>
+<p style="color:#888;font-size:13px;">Redirection automatique dans quelques secondes.</p>
+</div></body></html>''', 200
     import subprocess
     if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
         subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
