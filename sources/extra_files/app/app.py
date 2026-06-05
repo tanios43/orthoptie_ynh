@@ -3782,35 +3782,37 @@ def admin_sauvegarde_importer():
         flash(f'❌ Erreur extraction : {e}', 'danger')
         return redirect(url_for('admin_sauvegarde'))
 
-    # Appliquer la nouvelle base atomiquement — pas de restart, pas de downtime
+    # Copier enc.db puis redémarrer avec délai (même approche qu'avant le chiffrement)
     db_enc_path = os.path.join(data_dir, 'orthoptie_v2.enc.db')
     is_already_encrypted = db_tmp.endswith('.enc.db')
+
+    if is_already_encrypted and os.path.exists(db_tmp) and os.path.getsize(db_tmp) > 0:
+        shutil.copy2(db_tmp, db_enc_path)
+        try:
+            import pwd, grp
+            uid = pwd.getpwnam('orthoptie').pw_uid
+            gid = grp.getgrnam('orthoptie').gr_gid
+            os.chown(db_enc_path, uid, gid)
+            os.chmod(db_enc_path, 0o660)
+        except Exception:
+            pass
+
+    shutil.rmtree(tmpdir, ignore_errors=True)
 
     try:
         db.engine.dispose()
     except Exception:
         pass
 
-    if is_already_encrypted and os.path.exists(db_tmp) and os.path.getsize(db_tmp) > 0:
-        db_tmp_final = db_enc_path + '.new'
-        shutil.copy2(db_tmp, db_tmp_final)
-        try:
-            import pwd, grp
-            uid = pwd.getpwnam('orthoptie').pw_uid
-            gid = grp.getgrnam('orthoptie').gr_gid
-            os.chown(db_tmp_final, uid, gid)
-            os.chmod(db_tmp_final, 0o660)
-        except Exception:
-            pass
-        os.replace(db_tmp_final, db_enc_path)
-        try:
-            db.engine.dispose()
-        except Exception:
-            pass
+    # Redémarrer avec délai — même approche qu'avant le chiffrement
+    if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
+        import subprocess
+        subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
+    else:
+        import subprocess
+        subprocess.Popen(['bash', '-c', 'sleep 5 && systemctl restart orthoptie 2>/dev/null || true'])
 
-    shutil.rmtree(tmpdir, ignore_errors=True)
-    flash('✅ Restauration effectuée. Reconnectez-vous.', 'success')
-    return redirect(url_for('login'))
+    return redirect(url_for('admin_sauvegarde_attente'))
 
 
 @app.route('/session/ping', methods=['POST'])
