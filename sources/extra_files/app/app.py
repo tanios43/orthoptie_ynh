@@ -474,7 +474,7 @@ if _os.path.exists(_db_key_file):
 
 _data_folder  = app.config['DATA_FOLDER']
 _db_enc_path  = _os.path.join(_data_folder, 'orthoptie_v2.enc.db')
-_use_encrypted = bool(_db_key and _os.path.exists(_db_enc_path))
+_use_encrypted = bool(_db_key and _os.path.exists(_db_enc_path) and _os.path.getsize(_db_enc_path) > 0)
 
 if _use_encrypted:
     try:
@@ -3251,14 +3251,68 @@ def admin_restaurer_nas():
                 db.engine.dispose()
             except Exception:
                 pass
+            # Chiffrer directement depuis la base restaurée
+            db_std      = os.path.join(data_dir, 'orthoptie_v2.db')
             db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
             install_dir = os.path.dirname(__file__)
-            if os.path.exists(db_enc):
-                os.remove(db_enc)
-            cmd = f'/usr/local/bin/orthoptie-restore-restart {data_dir} {install_dir}\n'
+            key_file    = os.path.join(install_dir, '.db_key')
+            if os.path.exists(db_std) and os.path.exists(key_file):
+                try:
+                    import sqlcipher3, sqlite3, pwd, grp
+                    with open(key_file) as kf:
+                        key = kf.read().strip()
+                    SKIP = {'sqlite_sequence','sqlite_stat1','sqlite_stat2',
+                            'sqlite_stat3','sqlite_stat4'}
+                    if os.path.exists(db_enc):
+                        os.remove(db_enc)
+                    src = sqlite3.connect(db_std)
+                    dst = sqlcipher3.connect(db_enc)
+                    dst.executescript(f"""
+                        PRAGMA key='{key}';
+                        PRAGMA cipher_page_size=4096;
+                        PRAGMA kdf_iter=64000;
+                        PRAGMA cipher_hmac_algorithm=HMAC_SHA512;
+                        PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;
+                    """)
+                    tables = src.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                    ).fetchall()
+                    for (table,) in tables:
+                        if table in SKIP: continue
+                        schema = src.execute(
+                            "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+                            (table,)
+                        ).fetchone()
+                        if schema and schema[0]:
+                            dst.execute(schema[0])
+                        rows = src.execute(f"SELECT * FROM {table}").fetchall()
+                        if rows:
+                            ph = ','.join(['?'] * len(rows[0]))
+                            dst.executemany(f"INSERT INTO {table} VALUES ({ph})", rows)
+                    for (idx,) in src.execute(
+                        "SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL"
+                    ).fetchall():
+                        try: dst.execute(idx)
+                        except Exception: pass
+                    dst.commit()
+                    dst.close()
+                    src.close()
+                    # Permissions
+                    try:
+                        uid = pwd.getpwnam('orthoptie').pw_uid
+                        gid = grp.getgrnam('orthoptie').gr_gid
+                        os.chown(db_enc, uid, gid)
+                        os.chmod(db_enc, 0o660)
+                    except Exception:
+                        pass
+                    # Supprimer la base en clair
+                    os.remove(db_std)
+                except ImportError:
+                    pass
+            # Redémarrer via at
+            cmd = 'systemctl restart orthoptie\n'
             subprocess.run(['at', 'now'], input=cmd.encode(),
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
     except subprocess.TimeoutExpired:
@@ -3615,85 +3669,137 @@ def admin_sauvegarde_exporter():
 @app.route('/admin/sauvegarde/importer', methods=['POST'])
 @login_required
 def admin_sauvegarde_importer():
-    """Restaure depuis un zip de sauvegarde."""
+    """Restaure depuis un zip de sauvegarde — écrit directement dans enc.db."""
     if current_user.role != 'admin':
         return 'Accès refusé', 403
-    import zipfile as zf, shutil
+    import tempfile, shutil, subprocess
+
     f = request.files.get('fichier') or request.files.get('backup_file')
     if not f or not (f.filename.endswith('.zip') or f.filename.endswith('.tar.gz')):
         flash('Fichier invalide — zip ou tar.gz requis.', 'danger')
         return redirect(url_for('admin_sauvegarde'))
 
-    # Confirmation optionnelle
     confirmation = request.form.get('confirmation', 'oui').strip().lower()
     if confirmation not in ('oui', 'yes', ''):
         flash('Vous devez taper "oui" pour confirmer la restauration.', 'warning')
         return redirect(url_for('admin_sauvegarde'))
 
-    import tempfile, shutil
-    tmpdir = tempfile.mkdtemp()
+    tmpdir      = tempfile.mkdtemp()
     backup_path = os.path.join(tmpdir, 'restore_file')
     f.save(backup_path)
 
-    db_path     = os.path.join(app.instance_path, 'orthoptie_v2.db')
     uploads_dir = app.config['UPLOAD_FOLDER']
+    data_dir    = app.config['DATA_FOLDER']
+    install_dir = os.path.dirname(__file__)
+    db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+    db_tmp      = os.path.join(tmpdir, 'orthoptie_v2.db')  # base temporaire en clair
 
-    if f.filename.endswith('.tar.gz'):
-        import tarfile
-        with tarfile.open(backup_path, 'r:gz') as tar:
-            members = tar.getnames()
-            # DB
-            db_member = next((m for m in members if m.endswith('orthoptie_v2.db')), None)
-            if db_member:
-                tar.extract(db_member, tmpdir)
-                shutil.copy2(os.path.join(tmpdir, db_member), db_path)
-            # Uploads
-            for member in tar.getmembers():
-                if 'uploads/' in member.name and member.isfile():
-                    tar.extract(member, tmpdir)
-                    rel = member.name.split('uploads/', 1)[1]
-                    dest = os.path.join(uploads_dir, rel)
-                    os.makedirs(os.path.dirname(dest), exist_ok=True)
-                    shutil.copy2(os.path.join(tmpdir, member.name), dest)
-    else:
-        import zipfile as zf
-        with zf.ZipFile(backup_path, 'r') as z:
-            names = z.namelist()
-            if 'orthoptie_v2.db' in names:
-                z.extract('orthoptie_v2.db', tmpdir)
-                shutil.copy2(os.path.join(tmpdir, 'orthoptie_v2.db'), db_path)
-            for name in names:
-                if name.startswith('uploads/'):
-                    z.extract(name, tmpdir)
-                    dest = os.path.join(uploads_dir, os.path.relpath(name, 'uploads'))
-                    os.makedirs(os.path.dirname(dest), exist_ok=True)
-                    src = os.path.join(tmpdir, name)
-                    if os.path.isfile(src):
-                        shutil.copy2(src, dest)
+    try:
+        # ── Extraire la DB et les uploads ────────────────────────────────
+        if f.filename.endswith('.tar.gz'):
+            import tarfile
+            with tarfile.open(backup_path, 'r:gz') as tar:
+                members = tar.getnames()
+                db_member = next((m for m in members if m.endswith('orthoptie_v2.db')), None)
+                if db_member:
+                    tar.extract(db_member, tmpdir)
+                    extracted = os.path.join(tmpdir, db_member)
+                    if extracted != db_tmp:
+                        shutil.copy2(extracted, db_tmp)
+                for member in tar.getmembers():
+                    if 'uploads/' in member.name and member.isfile():
+                        tar.extract(member, tmpdir)
+                        rel  = member.name.split('uploads/', 1)[1]
+                        dest = os.path.join(uploads_dir, rel)
+                        os.makedirs(os.path.dirname(dest), exist_ok=True)
+                        shutil.copy2(os.path.join(tmpdir, member.name), dest)
+        else:
+            import zipfile as zf
+            with zf.ZipFile(backup_path, 'r') as z:
+                names = z.namelist()
+                if 'orthoptie_v2.db' in names:
+                    z.extract('orthoptie_v2.db', tmpdir)
+                for name in names:
+                    if name.startswith('uploads/'):
+                        z.extract(name, tmpdir)
+                        dest = os.path.join(uploads_dir, os.path.relpath(name, 'uploads'))
+                        os.makedirs(os.path.dirname(dest), exist_ok=True)
+                        src = os.path.join(tmpdir, name)
+                        if os.path.isfile(src):
+                            shutil.copy2(src, dest)
+
+        # ── Chiffrer directement depuis db_tmp vers enc.db ───────────────
+        if os.path.exists(db_tmp) and os.path.getsize(db_tmp) > 0:
+            key_file = os.path.join(install_dir, '.db_key')
+            if os.path.exists(key_file):
+                try:
+                    import sqlcipher3, sqlite3, pwd, grp
+                    with open(key_file) as kf:
+                        key = kf.read().strip()
+                    SKIP = {'sqlite_sequence','sqlite_stat1','sqlite_stat2',
+                            'sqlite_stat3','sqlite_stat4'}
+                    # Supprimer enc.db existante
+                    if os.path.exists(db_enc):
+                        os.remove(db_enc)
+                    src = sqlite3.connect(db_tmp)
+                    dst = sqlcipher3.connect(db_enc)
+                    dst.executescript(f"""
+                        PRAGMA key='{key}';
+                        PRAGMA cipher_page_size=4096;
+                        PRAGMA kdf_iter=64000;
+                        PRAGMA cipher_hmac_algorithm=HMAC_SHA512;
+                        PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;
+                    """)
+                    tables = src.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                    ).fetchall()
+                    for (table,) in tables:
+                        if table in SKIP: continue
+                        schema = src.execute(
+                            "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+                            (table,)
+                        ).fetchone()
+                        if schema and schema[0]:
+                            dst.execute(schema[0])
+                        rows = src.execute(f"SELECT * FROM {table}").fetchall()
+                        if rows:
+                            ph = ','.join(['?'] * len(rows[0]))
+                            dst.executemany(f"INSERT INTO {table} VALUES ({ph})", rows)
+                    for (idx,) in src.execute(
+                        "SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL"
+                    ).fetchall():
+                        try: dst.execute(idx)
+                        except Exception: pass
+                    dst.commit()
+                    dst.close()
+                    src.close()
+                    # Corriger les permissions
+                    try:
+                        uid = pwd.getpwnam('orthoptie').pw_uid
+                        gid = grp.getgrnam('orthoptie').gr_gid
+                        os.chown(db_enc, uid, gid)
+                        os.chmod(db_enc, 0o660)
+                    except Exception:
+                        pass
+                except ImportError:
+                    pass  # sqlcipher3 non dispo, on ne chiffre pas
+
+    finally:
+        # Supprimer IMMÉDIATEMENT la base temporaire en clair
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
     try:
         db.engine.dispose()
     except Exception:
         pass
 
-    data_dir    = app.config.get('DATA_FOLDER', os.path.dirname(db_path))
-    db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
-    install_dir = os.path.dirname(__file__)
-
-    # Supprimer la base chiffrée maintenant (dans ce worker)
-    if os.path.exists(db_enc):
-        os.remove(db_enc)
-
-    # Lancer via 'at now' — complètement indépendant de gunicorn, contourne use_pty
-    import subprocess
-    cmd = f'/usr/local/bin/orthoptie-restore-restart {data_dir} {install_dir}\n'
+    # Redémarrer via 'at' pour que tous les workers rechargent la nouvelle enc.db
+    cmd = f'systemctl restart orthoptie\n'
     subprocess.run(['at', 'now'], input=cmd.encode(),
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    shutil.rmtree(tmpdir, ignore_errors=True)
-
     return '''<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="15;url=/">
+<meta http-equiv="refresh" content="12;url=/">
 <title>Restauration effectuée</title>
 <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
 height:100vh;margin:0;background:#f0f4ff;}
@@ -3708,11 +3814,6 @@ border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
 <p>L'application redémarre, veuillez patienter…</p>
 <p style="color:#888;font-size:13px;">Redirection automatique dans quelques secondes.</p>
 </div></body></html>''', 200
-    import subprocess
-    if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
-        subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
-    else:
-        subprocess.Popen(['bash', '-c', 'sleep 3 && systemctl restart orthoptie 2>/dev/null || true'])
     flash('Restauration effectuée.', 'success')
     return redirect(url_for('admin_sauvegarde_attente'))
 

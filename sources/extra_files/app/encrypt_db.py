@@ -1,8 +1,11 @@
 """
 Chiffrement de la base SQLite vers SQLCipher AES-256.
-- Si enc.db existe déjà : ne fait rien (idempotent)
-- Si enc.db absente et db standard présente : chiffre et supprime la standard
-- Si ni l'une ni l'autre : crée une base chiffrée vide (nouvelle installation)
+Logique :
+- enc.db présente et non vide → rien à faire (idempotent)
+- enc.db absente/vide + db standard présente → chiffrer (sans supprimer la standard)
+- nouvelle installation → créer enc.db vide (db.create_all() la remplira)
+
+La base standard n'est JAMAIS supprimée — elle sert de source pour les restaurations.
 """
 import os, sys, sqlite3
 
@@ -24,7 +27,7 @@ if not os.path.exists(key_file):
 with open(key_file) as f:
     key = f.read().strip()
 
-# Base chiffrée déjà présente — ne rien faire
+# Base chiffrée déjà présente et non vide → rien à faire
 if os.path.exists(db_enc) and os.path.getsize(db_enc) > 0:
     print("INFO encrypt_db: base chiffrée déjà présente, rien à faire")
     sys.exit(0)
@@ -47,18 +50,22 @@ def fix_permissions(path):
     except Exception as e:
         print(f"INFO encrypt_db: permissions non corrigées — {e}")
 
-def create_encrypted(src_path=None):
-    """Crée la base chiffrée depuis src_path (ou vide si None)."""
-    dst = sqlcipher3.connect(db_enc)
-    dst.executescript(f"""
-        PRAGMA key='{key}';
-        PRAGMA cipher_page_size=4096;
-        PRAGMA kdf_iter=64000;
-        PRAGMA cipher_hmac_algorithm=HMAC_SHA512;
-        PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;
-    """)
-    if src_path:
-        src = sqlite3.connect(src_path)
+# Supprimer enc.db vide si elle existe
+if os.path.exists(db_enc):
+    os.remove(db_enc)
+
+try:
+    if os.path.exists(db_std) and os.path.getsize(db_std) > 0:
+        # Chiffrer depuis la base standard (sans la supprimer)
+        src = sqlite3.connect(db_std)
+        dst = sqlcipher3.connect(db_enc)
+        dst.executescript(f"""
+            PRAGMA key='{key}';
+            PRAGMA cipher_page_size=4096;
+            PRAGMA kdf_iter=64000;
+            PRAGMA cipher_hmac_algorithm=HMAC_SHA512;
+            PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;
+        """)
         tables = src.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         for (table,) in tables:
             if table in SKIP: continue
@@ -76,26 +83,28 @@ def create_encrypted(src_path=None):
         ).fetchall():
             try: dst.execute(idx_sql)
             except Exception: pass
+        dst.commit()
+        dst.close()
         src.close()
-    dst.commit()
-    dst.close()
-
-try:
-    if os.path.exists(db_std) and os.path.getsize(db_std) > 0:
-        # Chiffrer depuis la base standard existante
-        create_encrypted(db_std)
         # Vérifier
         conn = sqlcipher3.connect(db_enc)
         conn.executescript(f"PRAGMA key='{key}'; PRAGMA cipher_page_size=4096; PRAGMA kdf_iter=64000;")
         nb = conn.execute("SELECT COUNT(*) FROM patient").fetchone()[0]
         conn.close()
         fix_permissions(db_enc)
-        # Supprimer la base standard
-        os.remove(db_std)
-        print(f"INFO encrypt_db: base chiffrée créée depuis base standard — {nb} patients ✓")
+        print(f"INFO encrypt_db: base chiffrée créée — {nb} patients ✓")
     else:
-        # Nouvelle installation — créer base chiffrée vide (tables créées par db.create_all après)
-        create_encrypted(None)
+        # Nouvelle installation — enc.db vide, db.create_all() la remplira
+        dst = sqlcipher3.connect(db_enc)
+        dst.executescript(f"""
+            PRAGMA key='{key}';
+            PRAGMA cipher_page_size=4096;
+            PRAGMA kdf_iter=64000;
+            PRAGMA cipher_hmac_algorithm=HMAC_SHA512;
+            PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;
+        """)
+        dst.commit()
+        dst.close()
         fix_permissions(db_enc)
         print("INFO encrypt_db: base chiffrée vide créée (nouvelle installation)")
 
