@@ -3812,7 +3812,36 @@ def admin_sauvegarde_importer():
         import subprocess
         subprocess.Popen(['bash', '-c', 'sleep 5 && systemctl restart orthoptie 2>/dev/null || true'])
 
-    return render_template('admin/restauration_attente.html', restart=True)
+    from flask import make_response
+    resp = make_response('''<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Restauration en cours…</title>
+<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;
+justify-content:center;min-height:100vh;margin:0;background:#f5f5f5;}
+.box{background:white;border-radius:12px;padding:40px 48px;
+box-shadow:0 4px 24px rgba(0,0,0,.1);text-align:center;max-width:420px;}
+.spinner{width:48px;height:48px;border:4px solid #e0e0e0;border-top-color:#534AB7;
+border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body><div class="box">
+<div class="spinner"></div>
+<h2>Restauration en cours…</h2>
+<p style="color:#666;font-size:13px;">Redémarrage du service en cours.<br>
+Vous serez redirigé automatiquement.</p>
+</div>
+<script>
+var attempts=0;
+setTimeout(function check(){
+  attempts++;
+  fetch('/login',{method:'HEAD',cache:'no-store'})
+    .then(function(r){
+      if(r.ok||r.status===200||r.status===302){window.location.href='/login';}
+      else{setTimeout(check,1000);}
+    }).catch(function(){setTimeout(check,1000);});
+  if(attempts>60){window.location.href='/login';}
+},6000);
+</script></div></body></html>''', 200)
+    resp.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return resp
 
 
 @app.route('/session/ping', methods=['POST'])
