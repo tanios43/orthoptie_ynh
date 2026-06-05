@@ -3138,6 +3138,21 @@ def admin_envoyer_sauvegarde_distante():
 
 
 
+@app.route('/admin/sauvegarde/do-restart', methods=['POST'])
+@login_required
+def admin_sauvegarde_do_restart():
+    """Déclenche le redémarrage du service après restauration."""
+    import subprocess
+    subprocess.Popen(
+        ['sudo', '/bin/systemctl', 'restart', 'orthoptie'],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True
+    )
+    return '', 204
+
+
 @app.route('/admin/sauvegarde/attente')
 @login_required
 def admin_sauvegarde_attente():
@@ -3844,12 +3859,18 @@ border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
 <p>L'application redémarre, veuillez patienter…</p>
 </div>
 <script>
-setTimeout(function check() {
-  fetch('/').then(function(r) {
-    if (r.redirected || r.ok) { window.location.href = '/'; }
-    else { setTimeout(check, 2000); }
-  }).catch(function() { setTimeout(check, 2000); });
-}, 70000);
+// Attendre 3s que la page soit bien rendue, puis déclencher le restart
+setTimeout(function() {
+  fetch('/admin/sauvegarde/do-restart', {method:'POST', credentials:'include'})
+    .catch(function(){});
+  // Puis vérifier toutes les 2s que le service répond
+  setTimeout(function check() {
+    fetch('/').then(function(r) {
+      if (r.redirected || r.ok) { window.location.href = '/'; }
+      else { setTimeout(check, 2000); }
+    }).catch(function() { setTimeout(check, 2000); });
+  }, 5000);
+}, 3000);
 </script>
 </body></html>''', 200
     flash('Restauration effectuée.', 'success')

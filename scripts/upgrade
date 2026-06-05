@@ -130,6 +130,8 @@ echo "$app ALL=(root) NOPASSWD: /usr/local/bin/orthoptie-fix-perms" \
     >> "/etc/sudoers.d/orthoptie-fix-perms"
 echo "$app ALL=(root) NOPASSWD: /usr/local/bin/orthoptie-restore-restart" \
     >> "/etc/sudoers.d/orthoptie-fix-perms"
+echo "$app ALL=(root) NOPASSWD: /bin/systemctl restart $app" \
+    >> "/etc/sudoers.d/orthoptie-fix-perms"
 chmod 440 "/etc/sudoers.d/orthoptie-fix-perms"
 
 #=================================================
