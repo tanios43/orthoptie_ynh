@@ -3321,7 +3321,7 @@ def admin_restaurer_nas():
         flash(f'❌ Erreur : {e}', 'danger')
 
     _page_attente = '''<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="8;url=/">
+<meta http-equiv="refresh" content="20;url=/">
 <title>Restauration effectuée</title>
 <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
 height:100vh;margin:0;background:#f0f4ff;}
@@ -3335,7 +3335,16 @@ border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
 <h2>✅ Restauration effectuée</h2>
 <p>L\'application redémarre, veuillez patienter…</p>
 <p style="color:#888;font-size:13px;">Redirection automatique dans quelques secondes.</p>
-</div></body></html>'''
+</div>
+<script>
+setTimeout(function check() {
+  fetch(\'/\').then(function(r) {
+    if (r.ok || r.status === 302) { window.location.href = \'/\'; }
+    else { setTimeout(check, 2000); }
+  }).catch(function() { setTimeout(check, 2000); });
+}, 5000);
+</script>
+</body></html>'''
     return _page_attente, 200
 
 
@@ -3799,7 +3808,7 @@ def admin_sauvegarde_importer():
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     return '''<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="12;url=/">
+<meta http-equiv="refresh" content="20;url=/">
 <title>Restauration effectuée</title>
 <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
 height:100vh;margin:0;background:#f0f4ff;}
@@ -3813,7 +3822,18 @@ border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
 <h2>✅ Restauration effectuée</h2>
 <p>L'application redémarre, veuillez patienter…</p>
 <p style="color:#888;font-size:13px;">Redirection automatique dans quelques secondes.</p>
-</div></body></html>''', 200
+<p style="color:#888;font-size:11px;margin-top:8px;">Si la page ne se charge pas, attendez encore quelques secondes et rafraîchissez.</p>
+</div>
+<script>
+// Vérifier que le service est bien reparti avant de rediriger
+setTimeout(function check() {
+  fetch('/').then(function(r) {
+    if (r.ok || r.status === 302) { window.location.href = '/'; }
+    else { setTimeout(check, 2000); }
+  }).catch(function() { setTimeout(check, 2000); });
+}, 5000);
+</script>
+</body></html>''', 200
     flash('Restauration effectuée.', 'success')
     return redirect(url_for('admin_sauvegarde_attente'))
 
