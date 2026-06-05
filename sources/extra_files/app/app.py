@@ -3807,10 +3807,10 @@ def admin_sauvegarde_importer():
     # Redémarrer avec délai — même approche qu'avant le chiffrement
     if os.path.exists('/usr/local/bin/orthoptie-fix-perms'):
         import subprocess
-        subprocess.Popen(['bash', '-c', 'sleep 5 && sudo /usr/local/bin/orthoptie-fix-perms'])
+        subprocess.Popen(['bash', '-c', 'sleep 30 && sudo /usr/local/bin/orthoptie-fix-perms'])
     else:
         import subprocess
-        subprocess.Popen(['bash', '-c', 'sleep 5 && systemctl restart orthoptie 2>/dev/null || true'])
+        subprocess.Popen(['bash', '-c', 'sleep 30 && systemctl restart orthoptie 2>/dev/null || true'])
 
     from flask import make_response
     resp = make_response('''<!DOCTYPE html><html><head><meta charset="utf-8">
