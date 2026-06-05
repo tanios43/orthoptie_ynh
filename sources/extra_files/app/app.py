@@ -3255,13 +3255,10 @@ def admin_restaurer_nas():
             install_dir = os.path.dirname(__file__)
             if os.path.exists(db_enc):
                 os.remove(db_enc)
-            subprocess.Popen(
-                ['sudo', '/usr/local/bin/orthoptie-restore-restart', data_dir, install_dir],
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True
-            )
+            cmd = f'/usr/local/bin/orthoptie-restore-restart {data_dir} {install_dir}'
+            subprocess.Popen(['at', 'now'], input=cmd.encode(),
+                             stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
             flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
@@ -3688,15 +3685,12 @@ def admin_sauvegarde_importer():
     if os.path.exists(db_enc):
         os.remove(db_enc)
 
-    # Lancer le script sudo complètement détaché du processus Flask
+    # Lancer via 'at' — complètement indépendant de gunicorn, contourne use_pty
     import subprocess
-    subprocess.Popen(
-        ['sudo', '/usr/local/bin/orthoptie-restore-restart', data_dir, install_dir],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True  # détache du groupe de processus Flask/gunicorn
-    )
+    cmd = f'/usr/local/bin/orthoptie-restore-restart {data_dir} {install_dir}'
+    subprocess.Popen(['at', 'now'], input=cmd.encode(),
+                     stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL)
 
     shutil.rmtree(tmpdir, ignore_errors=True)
 
