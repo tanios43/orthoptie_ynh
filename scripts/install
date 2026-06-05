@@ -77,7 +77,9 @@ yunohost service add "$app" --description="Dossiers Patients Orthoptie" --log="/
 ynh_script_progression --message="Initialisation de la base de données..." --weight=2
 
 pushd "$install_dir"
-    # Créer toutes les tables d'abord
+    # Supprimer toute base chiffrée résiduelle pour forcer une recréation propre
+    rm -f "$data_dir/orthoptie_v2.enc.db"
+    # Créer toutes les tables dans la base standard
     "$install_dir/venv/bin/python3" -c "from app import app, db
 with app.app_context():
     db.create_all()
@@ -87,9 +89,9 @@ with app.app_context():
     "$install_dir/venv/bin/python3" "$install_dir/migrate.py"
 popd
 
-# Chiffrer la base avec SQLCipher si disponible
+# Chiffrer la base avec SQLCipher si disponible (après que les tables sont créées)
 if "$install_dir/venv/bin/python3" -c "import sqlcipher3" 2>/dev/null; then
-    "$install_dir/venv/bin/python3" "$install_dir/encrypt_db.py" 2>/dev/null || true
+    "$install_dir/venv/bin/python3" "$install_dir/encrypt_db.py" || true
 fi
 
 #=================================================

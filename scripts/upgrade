@@ -71,9 +71,8 @@ with app.app_context():
 popd
 
 # Chiffrer la base si SQLCipher disponible et base non encore chiffrée
-if [ -f "$install_dir/venv/lib/python3.11/site-packages/sqlcipher3/__init__.py" ] || \
-   "$install_dir/venv/bin/python3" -c "import sqlcipher3" 2>/dev/null; then
-    "$install_dir/venv/bin/python3" "$install_dir/encrypt_db.py" 2>/dev/null || true
+if "$install_dir/venv/bin/python3" -c "import sqlcipher3" 2>/dev/null; then
+    "$install_dir/venv/bin/python3" "$install_dir/encrypt_db.py" || true
 fi
 
 #=================================================
