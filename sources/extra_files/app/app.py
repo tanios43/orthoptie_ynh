@@ -3255,8 +3255,13 @@ def admin_restaurer_nas():
             install_dir = os.path.dirname(__file__)
             if os.path.exists(db_enc):
                 os.remove(db_enc)
-            subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-restore-restart',
-                               data_dir, install_dir])
+            subprocess.Popen(
+                ['sudo', '/usr/local/bin/orthoptie-restore-restart', data_dir, install_dir],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
             flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
@@ -3683,10 +3688,15 @@ def admin_sauvegarde_importer():
     if os.path.exists(db_enc):
         os.remove(db_enc)
 
-    # Lancer le script sudo qui arrête TOUS les workers, re-chiffre, redémarre
+    # Lancer le script sudo complètement détaché du processus Flask
     import subprocess
-    subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-restore-restart',
-                      data_dir, install_dir])
+    subprocess.Popen(
+        ['sudo', '/usr/local/bin/orthoptie-restore-restart', data_dir, install_dir],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True  # détache du groupe de processus Flask/gunicorn
+    )
 
     shutil.rmtree(tmpdir, ignore_errors=True)
 
