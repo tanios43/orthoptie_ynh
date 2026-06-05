@@ -3251,15 +3251,20 @@ def admin_restaurer_nas():
                 db.engine.dispose()
             except Exception:
                 pass
-            # Re-chiffrer synchrone puis redémarrer
             db_enc = os.path.join(data_dir, 'orthoptie_v2.enc.db')
             if os.path.exists(db_enc):
                 os.remove(db_enc)
-            encrypt_script = os.path.join(os.path.dirname(__file__), 'encrypt_db.py')
-            venv_python    = os.path.join(os.path.dirname(__file__), 'venv', 'bin', 'python3')
-            if os.path.exists(encrypt_script):
-                subprocess.run([venv_python, encrypt_script], timeout=120)
-            subprocess.Popen(['bash', '-c', 'sleep 1 && systemctl restart orthoptie 2>/dev/null || true'])
+            install_dir    = os.path.dirname(__file__)
+            restore_script = os.path.join(install_dir, 'restore_and_restart.sh')
+            if os.path.exists(restore_script):
+                subprocess.Popen(['bash', restore_script, data_dir, install_dir])
+            else:
+                venv_python    = os.path.join(install_dir, 'venv', 'bin', 'python3')
+                encrypt_script = os.path.join(install_dir, 'encrypt_db.py')
+                subprocess.Popen(['bash', '-c',
+                    f'systemctl stop orthoptie 2>/dev/null; '
+                    f'{venv_python} {encrypt_script} 2>/dev/null; '
+                    f'systemctl start orthoptie 2>/dev/null'])
             flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
@@ -3678,28 +3683,32 @@ def admin_sauvegarde_importer():
     except Exception:
         pass
 
-    # Arrêter le service, re-chiffrer, redémarrer — évite les accès concurrents
     data_dir = app.config.get('DATA_FOLDER', os.path.dirname(db_path))
     db_enc   = os.path.join(data_dir, 'orthoptie_v2.enc.db')
-    encrypt_script = os.path.join(os.path.dirname(__file__), 'encrypt_db.py')
-    venv_python    = os.path.join(os.path.dirname(__file__), 'venv', 'bin', 'python3')
+    install_dir = os.path.dirname(__file__)
+    restore_script = os.path.join(install_dir, 'restore_and_restart.sh')
 
-    # Supprimer la base chiffrée obsolète
+    # Supprimer la base chiffrée maintenant (dans ce worker)
     if os.path.exists(db_enc):
         os.remove(db_enc)
 
-    # Re-chiffrer synchrone MAINTENANT (avant le retour HTTP, dans ce worker)
-    if os.path.exists(encrypt_script):
-        import subprocess
-        subprocess.run([venv_python, encrypt_script], timeout=120)
-
-    # Redémarrer le service en arrière-plan
-    subprocess.Popen(['bash', '-c', 'sleep 1 && systemctl restart orthoptie 2>/dev/null || true'])
+    # Lancer le script shell qui arrête TOUS les workers, re-chiffre, redémarre
+    import subprocess
+    if os.path.exists(restore_script):
+        subprocess.Popen(['bash', restore_script, data_dir, install_dir])
+    else:
+        # Fallback
+        venv_python = os.path.join(install_dir, 'venv', 'bin', 'python3')
+        encrypt_script = os.path.join(install_dir, 'encrypt_db.py')
+        subprocess.Popen(['bash', '-c',
+            f'systemctl stop orthoptie 2>/dev/null; '
+            f'{venv_python} {encrypt_script} 2>/dev/null; '
+            f'systemctl start orthoptie 2>/dev/null'])
 
     shutil.rmtree(tmpdir, ignore_errors=True)
 
     return '''<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="10;url=/">
+<meta http-equiv="refresh" content="12;url=/">
 <title>Restauration effectuée</title>
 <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
 height:100vh;margin:0;background:#f0f4ff;}
