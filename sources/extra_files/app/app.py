@@ -3812,7 +3812,7 @@ def admin_sauvegarde_importer():
         import subprocess
         subprocess.Popen(['bash', '-c', 'sleep 5 && systemctl restart orthoptie 2>/dev/null || true'])
 
-    return redirect(url_for('admin_sauvegarde_attente'))
+    return render_template('admin/restauration_attente.html', restart=True)
 
 
 @app.route('/session/ping', methods=['POST'])
