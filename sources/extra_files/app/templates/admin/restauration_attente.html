@@ -41,6 +41,12 @@
   ];
   steps.forEach(([delay, msg]) => setTimeout(() => el.textContent = msg, delay));
 
+  // Déclencher le redémarrage depuis cette page (nouvelle requête HTTP)
+  setTimeout(() => {
+    fetch('/admin/sauvegarde/trigger-restart', { method: 'POST', credentials: 'include' })
+      .catch(() => {});
+  }, 1000);
+
   // Tester la disponibilité toutes les secondes à partir de 6s
   let attempts = 0;
   setTimeout(() => {
