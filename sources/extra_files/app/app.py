@@ -3678,7 +3678,7 @@ def admin_sauvegarde_exporter():
 @app.route('/admin/sauvegarde/importer', methods=['POST'])
 @login_required
 def admin_sauvegarde_importer():
-    """Restaure depuis un zip de sauvegarde — écrit directement dans enc.db."""
+    """Restaure depuis un zip de sauvegarde — chiffrement en arrière-plan."""
     if current_user.role != 'admin':
         return 'Accès refusé', 403
     import tempfile, shutil, subprocess
@@ -3700,11 +3700,10 @@ def admin_sauvegarde_importer():
     uploads_dir = app.config['UPLOAD_FOLDER']
     data_dir    = app.config['DATA_FOLDER']
     install_dir = os.path.dirname(__file__)
-    db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
-    db_tmp      = os.path.join(tmpdir, 'orthoptie_v2.db')  # base temporaire en clair
+    db_tmp      = os.path.join(tmpdir, 'orthoptie_v2.db')
 
+    # Extraire la DB et les uploads
     try:
-        # ── Extraire la DB et les uploads ────────────────────────────────
         if f.filename.endswith('.tar.gz'):
             import tarfile
             with tarfile.open(backup_path, 'r:gz') as tar:
@@ -3714,7 +3713,7 @@ def admin_sauvegarde_importer():
                     tar.extract(db_member, tmpdir)
                     extracted = os.path.join(tmpdir, db_member)
                     if extracted != db_tmp:
-                        shutil.copy2(extracted, db_tmp)
+                        shutil.move(extracted, db_tmp)
                 for member in tar.getmembers():
                     if 'uploads/' in member.name and member.isfile():
                         tar.extract(member, tmpdir)
@@ -3736,80 +3735,72 @@ def admin_sauvegarde_importer():
                         src = os.path.join(tmpdir, name)
                         if os.path.isfile(src):
                             shutil.copy2(src, dest)
-
-        # ── Chiffrer directement depuis db_tmp vers enc.db ───────────────
-        if os.path.exists(db_tmp) and os.path.getsize(db_tmp) > 0:
-            key_file = os.path.join(install_dir, '.db_key')
-            if os.path.exists(key_file):
-                try:
-                    import sqlcipher3, sqlite3, pwd, grp
-                    with open(key_file) as kf:
-                        key = kf.read().strip()
-                    SKIP = {'sqlite_sequence','sqlite_stat1','sqlite_stat2',
-                            'sqlite_stat3','sqlite_stat4'}
-                    # Supprimer enc.db existante
-                    if os.path.exists(db_enc):
-                        os.remove(db_enc)
-                    src = sqlite3.connect(db_tmp)
-                    dst = sqlcipher3.connect(db_enc)
-                    dst.executescript(f"""
-                        PRAGMA key='{key}';
-                        PRAGMA cipher_page_size=4096;
-                        PRAGMA kdf_iter=64000;
-                        PRAGMA cipher_hmac_algorithm=HMAC_SHA512;
-                        PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;
-                    """)
-                    tables = src.execute(
-                        "SELECT name FROM sqlite_master WHERE type='table'"
-                    ).fetchall()
-                    for (table,) in tables:
-                        if table in SKIP: continue
-                        schema = src.execute(
-                            "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
-                            (table,)
-                        ).fetchone()
-                        if schema and schema[0]:
-                            dst.execute(schema[0])
-                        rows = src.execute(f"SELECT * FROM {table}").fetchall()
-                        if rows:
-                            ph = ','.join(['?'] * len(rows[0]))
-                            dst.executemany(f"INSERT INTO {table} VALUES ({ph})", rows)
-                    for (idx,) in src.execute(
-                        "SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL"
-                    ).fetchall():
-                        try: dst.execute(idx)
-                        except Exception: pass
-                    dst.commit()
-                    dst.close()
-                    src.close()
-                    # Corriger les permissions
-                    try:
-                        uid = pwd.getpwnam('orthoptie').pw_uid
-                        gid = grp.getgrnam('orthoptie').gr_gid
-                        os.chown(db_enc, uid, gid)
-                        os.chmod(db_enc, 0o660)
-                    except Exception:
-                        pass
-                except ImportError:
-                    pass  # sqlcipher3 non dispo, on ne chiffre pas
-
-    finally:
-        # Supprimer IMMÉDIATEMENT la base temporaire en clair
+    except Exception as e:
         shutil.rmtree(tmpdir, ignore_errors=True)
+        flash(f'❌ Erreur extraction : {e}', 'danger')
+        return redirect(url_for('admin_sauvegarde'))
+
+    # Lancer le chiffrement + redémarrage via 'at' (arrière-plan complet)
+    script = f"""#!/bin/bash
+DB_TMP="{db_tmp}"
+DB_ENC="{os.path.join(data_dir, 'orthoptie_v2.enc.db')}"
+KEY_FILE="{os.path.join(install_dir, '.db_key')}"
+PYTHON="{os.path.join(install_dir, 'venv', 'bin', 'python3')}"
+TMPDIR="{tmpdir}"
+
+systemctl stop orthoptie 2>/dev/null || true
+sleep 1
+
+if [ -f "$DB_TMP" ] && [ -f "$KEY_FILE" ]; then
+    rm -f "$DB_ENC"
+    "$PYTHON" - "$DB_TMP" "$DB_ENC" "$KEY_FILE" << 'PYEOF'
+import sys, sqlite3, os
+try:
+    import sqlcipher3
+    db_tmp, db_enc, key_file = sys.argv[1], sys.argv[2], sys.argv[3]
+    with open(key_file) as f: key = f.read().strip()
+    SKIP = {{'sqlite_sequence','sqlite_stat1','sqlite_stat2','sqlite_stat3','sqlite_stat4'}}
+    src = sqlite3.connect(db_tmp)
+    dst = sqlcipher3.connect(db_enc)
+    dst.executescript(f"PRAGMA key='{{key}}'; PRAGMA cipher_page_size=4096; PRAGMA kdf_iter=64000; PRAGMA cipher_hmac_algorithm=HMAC_SHA512; PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;")
+    for (table,) in src.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall():
+        if table in SKIP: continue
+        s = src.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
+        if s and s[0]: dst.execute(s[0])
+        rows = src.execute(f"SELECT * FROM {{table}}").fetchall()
+        if rows: dst.executemany(f"INSERT INTO {{table}} VALUES ({{','.join(['?']*len(rows[0]))}})", rows)
+    for (i,) in src.execute("SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL").fetchall():
+        try: dst.execute(i)
+        except: pass
+    dst.commit(); dst.close(); src.close()
+    import pwd, grp
+    uid = pwd.getpwnam('orthoptie').pw_uid
+    gid = grp.getgrnam('orthoptie').gr_gid
+    os.chown(db_enc, uid, gid); os.chmod(db_enc, 0o660)
+    print("OK")
+except Exception as e:
+    print(f"ERR: {{e}}")
+PYEOF
+fi
+
+rm -rf "$TMPDIR"
+systemctl start orthoptie 2>/dev/null || true
+"""
+    script_path = os.path.join(tmpdir, 'do_restore.sh')
+    with open(script_path, 'w') as sf:
+        sf.write(script)
+    os.chmod(script_path, 0o755)
 
     try:
         db.engine.dispose()
     except Exception:
         pass
 
-    # Redémarrer via 'at' pour que tous les workers rechargent la nouvelle enc.db
-    cmd = f'systemctl restart orthoptie\n'
-    subprocess.run(['at', 'now'], input=cmd.encode(),
+    subprocess.run(['at', 'now'], input=f'bash {script_path}\n'.encode(),
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     return '''<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="20;url=/">
-<title>Restauration effectuée</title>
+<title>Restauration en cours</title>
 <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
 height:100vh;margin:0;background:#f0f4ff;}
 .box{text-align:center;padding:40px;background:white;border-radius:16px;
@@ -3819,19 +3810,16 @@ border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style></head><body><div class="box">
 <div class="spinner"></div>
-<h2>✅ Restauration effectuée</h2>
+<h2>✅ Restauration en cours</h2>
 <p>L'application redémarre, veuillez patienter…</p>
-<p style="color:#888;font-size:13px;">Redirection automatique dans quelques secondes.</p>
-<p style="color:#888;font-size:11px;margin-top:8px;">Si la page ne se charge pas, attendez encore quelques secondes et rafraîchissez.</p>
 </div>
 <script>
-// Vérifier que le service est bien reparti avant de rediriger
 setTimeout(function check() {
   fetch('/').then(function(r) {
-    if (r.ok || r.status === 302) { window.location.href = '/'; }
+    if (r.redirected || r.ok) { window.location.href = '/'; }
     else { setTimeout(check, 2000); }
   }).catch(function() { setTimeout(check, 2000); });
-}, 5000);
+}, 8000);
 </script>
 </body></html>''', 200
     flash('Restauration effectuée.', 'success')
