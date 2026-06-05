@@ -3262,72 +3262,51 @@ def admin_restaurer_nas():
         if r.returncode != 0: errors.append(f'uploads: {r.stderr.strip()}')
 
         if not errors:
-            try:
-                db.engine.dispose()
-            except Exception:
-                pass
-            # Chiffrer directement depuis la base restaurée
-            db_std      = os.path.join(data_dir, 'orthoptie_v2.db')
-            db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
-            install_dir = os.path.dirname(__file__)
-            key_file    = os.path.join(install_dir, '.db_key')
-            if os.path.exists(db_std) and os.path.exists(key_file):
+            db_std_path = os.path.join(data_dir, 'orthoptie_v2.db')
+            db_enc_path = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+            install_dir_nas = os.path.dirname(__file__)
+            key_file_nas = os.path.join(install_dir_nas, '.db_key')
+            fix_perms_nas = '/usr/local/bin/orthoptie-fix-perms'
+
+            @after_this_request
+            def _do_nas_restore(response):
                 try:
-                    import sqlcipher3, sqlite3, pwd, grp
-                    with open(key_file) as kf:
-                        key = kf.read().strip()
-                    SKIP = {'sqlite_sequence','sqlite_stat1','sqlite_stat2',
-                            'sqlite_stat3','sqlite_stat4'}
-                    if os.path.exists(db_enc):
-                        os.remove(db_enc)
-                    src = sqlite3.connect(db_std)
-                    dst = sqlcipher3.connect(db_enc)
-                    dst.executescript(f"""
-                        PRAGMA key='{key}';
-                        PRAGMA cipher_page_size=4096;
-                        PRAGMA kdf_iter=64000;
-                        PRAGMA cipher_hmac_algorithm=HMAC_SHA512;
-                        PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;
-                    """)
-                    tables = src.execute(
-                        "SELECT name FROM sqlite_master WHERE type='table'"
-                    ).fetchall()
-                    for (table,) in tables:
-                        if table in SKIP: continue
-                        schema = src.execute(
-                            "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
-                            (table,)
-                        ).fetchone()
-                        if schema and schema[0]:
-                            dst.execute(schema[0])
-                        rows = src.execute(f"SELECT * FROM {table}").fetchall()
-                        if rows:
-                            ph = ','.join(['?'] * len(rows[0]))
-                            dst.executemany(f"INSERT INTO {table} VALUES ({ph})", rows)
-                    for (idx,) in src.execute(
-                        "SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL"
-                    ).fetchall():
-                        try: dst.execute(idx)
-                        except Exception: pass
-                    dst.commit()
-                    dst.close()
-                    src.close()
-                    # Permissions
+                    import shutil as _sh, pwd, grp
+                    if os.path.exists(db_std_path) and os.path.getsize(db_std_path) > 0 and os.path.exists(key_file_nas):
+                        import sqlcipher3 as _sc, sqlite3 as _sq
+                        with open(key_file_nas) as kf: key = kf.read().strip()
+                        SKIP = {'sqlite_sequence','sqlite_stat1','sqlite_stat2','sqlite_stat3','sqlite_stat4'}
+                        if os.path.exists(db_enc_path): os.remove(db_enc_path)
+                        src = _sq.connect(db_std_path)
+                        dst = _sc.connect(db_enc_path)
+                        dst.executescript(f"PRAGMA key='{key}'; PRAGMA cipher_page_size=4096; PRAGMA kdf_iter=64000; PRAGMA cipher_hmac_algorithm=HMAC_SHA512; PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;")
+                        for (table,) in src.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall():
+                            if table in SKIP: continue
+                            s = src.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
+                            if s and s[0]: dst.execute(s[0])
+                            rows = src.execute(f"SELECT * FROM {table}").fetchall()
+                            if rows: dst.executemany(f"INSERT INTO {table} VALUES ({','.join(['?']*len(rows[0]))})", rows)
+                        for (i,) in src.execute("SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL").fetchall():
+                            try: dst.execute(i)
+                            except: pass
+                        dst.commit(); dst.close(); src.close()
+                        os.remove(db_std_path)
                     try:
                         uid = pwd.getpwnam('orthoptie').pw_uid
                         gid = grp.getgrnam('orthoptie').gr_gid
-                        os.chown(db_enc, uid, gid)
-                        os.chmod(db_enc, 0o660)
-                    except Exception:
-                        pass
-                    # Supprimer la base en clair
-                    os.remove(db_std)
-                except ImportError:
+                        os.chown(db_enc_path, uid, gid)
+                        os.chmod(db_enc_path, 0o660)
+                    except Exception: pass
+                    import subprocess as _sub
+                    if os.path.exists(fix_perms_nas):
+                        _sub.Popen(['bash', '-c', f'sleep 5 && sudo {fix_perms_nas}'])
+                    else:
+                        _sub.Popen(['bash', '-c', 'sleep 5 && systemctl restart orthoptie 2>/dev/null || true'])
+                except Exception:
                     pass
-            # Redémarrer via at
-            cmd = 'systemctl restart orthoptie\n'
-            subprocess.run(['at', 'now'], input=cmd.encode(),
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return response
+
+            flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
     except subprocess.TimeoutExpired:
