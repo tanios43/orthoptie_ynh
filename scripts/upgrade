@@ -63,9 +63,7 @@ fi
 ynh_script_progression --message="Migration de la base de données..." --weight=2
 
 pushd "$install_dir"
-    # Supprimer la base chiffrée pour forcer db.create_all() sur la base standard
-    # puis re-chiffrer depuis la base standard (qui contient les vraies données)
-    rm -f "$data_dir/orthoptie_v2.enc.db"
+    # db.create_all() utilise la base chiffrée si elle existe, sinon la standard
     "$install_dir/venv/bin/python3" -c "from app import app, db
 with app.app_context():
     db.create_all()
@@ -73,7 +71,8 @@ with app.app_context():
     "$install_dir/venv/bin/python3" "$install_dir/migrate.py"
 popd
 
-# Chiffrer la base si SQLCipher disponible et base non encore chiffrée
+# Si base non chiffrée : chiffrer et supprimer la standard
+# Si déjà chiffrée : ne rien faire (idempotent)
 if "$install_dir/venv/bin/python3" -c "import sqlcipher3" 2>/dev/null; then
     "$install_dir/venv/bin/python3" "$install_dir/encrypt_db.py" || true
 fi
