@@ -3656,13 +3656,17 @@ def admin_sauvegarde_exporter():
     nom = f"orthoptie_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
     zip_path = os.path.join(tmpdir, nom)
 
-    db_path = os.path.join(app.instance_path, 'orthoptie_v2.db')
+    data_dir    = app.config['DATA_FOLDER']
     uploads_dir = app.config['UPLOAD_FOLDER']
+    db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+    db_std      = os.path.join(app.instance_path, 'orthoptie_v2.db')
 
     with zf.ZipFile(zip_path, 'w', zf.ZIP_DEFLATED) as z:
-        # Base de données
-        if os.path.exists(db_path):
-            z.write(db_path, 'orthoptie_v2.db')
+        # Base de données — préférer enc.db, fallback sur standard
+        if os.path.exists(db_enc) and os.path.getsize(db_enc) > 0:
+            z.write(db_enc, 'orthoptie_v2.enc.db')
+        elif os.path.exists(db_std) and os.path.getsize(db_std) > 0:
+            z.write(db_std, 'orthoptie_v2.db')
         # Uploads
         for root, dirs, files in os.walk(uploads_dir):
             for file in files:
@@ -3708,8 +3712,14 @@ def admin_sauvegarde_importer():
             import tarfile
             with tarfile.open(backup_path, 'r:gz') as tar:
                 members = tar.getnames()
-                db_member = next((m for m in members if m.endswith('orthoptie_v2.db')), None)
-                if db_member:
+                # Chercher enc.db en priorité, puis db standard
+                enc_member = next((m for m in members if m.endswith('orthoptie_v2.enc.db')), None)
+                db_member  = next((m for m in members if m.endswith('orthoptie_v2.db') and not m.endswith('.enc.db')), None)
+                if enc_member:
+                    tar.extract(enc_member, tmpdir)
+                    shutil.move(os.path.join(tmpdir, enc_member), db_tmp.replace('.db', '.enc.db'))
+                    db_tmp = db_tmp.replace('.db', '.enc.db')
+                elif db_member:
                     tar.extract(db_member, tmpdir)
                     extracted = os.path.join(tmpdir, db_member)
                     if extracted != db_tmp:
@@ -3725,7 +3735,10 @@ def admin_sauvegarde_importer():
             import zipfile as zf
             with zf.ZipFile(backup_path, 'r') as z:
                 names = z.namelist()
-                if 'orthoptie_v2.db' in names:
+                if 'orthoptie_v2.enc.db' in names:
+                    z.extract('orthoptie_v2.enc.db', tmpdir)
+                    db_tmp = os.path.join(tmpdir, 'orthoptie_v2.enc.db')
+                elif 'orthoptie_v2.db' in names:
                     z.extract('orthoptie_v2.db', tmpdir)
                 for name in names:
                     if name.startswith('uploads/'):
@@ -3740,10 +3753,30 @@ def admin_sauvegarde_importer():
         flash(f'❌ Erreur extraction : {e}', 'danger')
         return redirect(url_for('admin_sauvegarde'))
 
-    # Lancer le chiffrement + redémarrage via 'at' (arrière-plan complet)
-    script = f"""#!/bin/bash
+    # Lancer la restauration via 'at' (arrière-plan complet)
+    db_enc_path = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+    is_already_encrypted = db_tmp.endswith('.enc.db')
+
+    if is_already_encrypted:
+        # Copier directement enc.db sans rechiffrer
+        script = f"""#!/bin/bash
 DB_TMP="{db_tmp}"
-DB_ENC="{os.path.join(data_dir, 'orthoptie_v2.enc.db')}"
+DB_ENC="{db_enc_path}"
+TMPDIR="{tmpdir}"
+
+if [ -f "$DB_TMP" ] && [ -s "$DB_TMP" ]; then
+    cp "$DB_TMP" "$DB_ENC"
+    chown orthoptie:orthoptie "$DB_ENC" 2>/dev/null || true
+    chmod 660 "$DB_ENC" 2>/dev/null || true
+fi
+rm -rf "$TMPDIR"
+systemctl restart orthoptie 2>/dev/null || true
+"""
+    else:
+        # Rechiffrer depuis db standard
+        script = f"""#!/bin/bash
+DB_TMP="{db_tmp}"
+DB_ENC="{db_enc_path}"
 KEY_FILE="{os.path.join(install_dir, '.db_key')}"
 PYTHON="{os.path.join(install_dir, 'venv', 'bin', 'python3')}"
 TMPDIR="{tmpdir}"
@@ -3774,12 +3807,10 @@ try:
     uid = pwd.getpwnam('orthoptie').pw_uid
     gid = grp.getgrnam('orthoptie').gr_gid
     os.chown(db_enc, uid, gid); os.chmod(db_enc, 0o660)
-    print("OK")
 except Exception as e:
     print(f"ERR: {{e}}")
 PYEOF
 fi
-
 rm -rf "$TMPDIR"
 systemctl restart orthoptie 2>/dev/null || true
 """
