@@ -3748,13 +3748,8 @@ KEY_FILE="{os.path.join(install_dir, '.db_key')}"
 PYTHON="{os.path.join(install_dir, 'venv', 'bin', 'python3')}"
 TMPDIR="{tmpdir}"
 
-# Attendre que Flask ait fini d'envoyer la réponse HTTP
-sleep 3
-
 systemctl stop orthoptie 2>/dev/null || true
 sleep 1
-
-if [ -f "$DB_TMP" ] && [ -f "$KEY_FILE" ]; then
     rm -f "$DB_ENC"
     "$PYTHON" - "$DB_TMP" "$DB_ENC" "$KEY_FILE" << 'PYEOF'
 import sys, sqlite3, os
@@ -3787,7 +3782,9 @@ PYEOF
 fi
 
 rm -rf "$TMPDIR"
-systemctl start orthoptie 2>/dev/null || true
+
+# Graceful reload — les workers rechargent sans couper les connexions actives
+systemctl reload orthoptie 2>/dev/null || systemctl restart orthoptie 2>/dev/null || true
 """
     script_path = os.path.join(tmpdir, 'do_restore.sh')
     with open(script_path, 'w') as sf:
@@ -3799,7 +3796,7 @@ systemctl start orthoptie 2>/dev/null || true
     except Exception:
         pass
 
-    subprocess.run(['at', 'now'], input=f'bash {script_path}\n'.encode(),
+    subprocess.run(['at', 'now + 1 minute'], input=f'bash {script_path}\n'.encode(),
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     return '''<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -3822,7 +3819,7 @@ setTimeout(function check() {
     if (r.redirected || r.ok) { window.location.href = '/'; }
     else { setTimeout(check, 2000); }
   }).catch(function() { setTimeout(check, 2000); });
-}, 8000);
+}, 70000);
 </script>
 </body></html>''', 200
     flash('Restauration effectuée.', 'success')
