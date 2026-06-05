@@ -3748,8 +3748,7 @@ KEY_FILE="{os.path.join(install_dir, '.db_key')}"
 PYTHON="{os.path.join(install_dir, 'venv', 'bin', 'python3')}"
 TMPDIR="{tmpdir}"
 
-systemctl stop orthoptie 2>/dev/null || true
-sleep 1
+if [ -f "$DB_TMP" ] && [ -f "$KEY_FILE" ]; then
     rm -f "$DB_ENC"
     "$PYTHON" - "$DB_TMP" "$DB_ENC" "$KEY_FILE" << 'PYEOF'
 import sys, sqlite3, os
@@ -3782,9 +3781,7 @@ PYEOF
 fi
 
 rm -rf "$TMPDIR"
-
-# Graceful reload — les workers rechargent sans couper les connexions actives
-systemctl reload orthoptie 2>/dev/null || systemctl restart orthoptie 2>/dev/null || true
+systemctl restart orthoptie 2>/dev/null || true
 """
     script_path = os.path.join(tmpdir, 'do_restore.sh')
     with open(script_path, 'w') as sf:
