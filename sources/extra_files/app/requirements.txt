@@ -5,3 +5,4 @@ flask-wtf
 pillow
 gunicorn
 werkzeug
+sqlcipher3

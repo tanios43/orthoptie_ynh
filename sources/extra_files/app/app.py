@@ -457,14 +457,52 @@ WOPI_BASE_URL = 'https://dossiers.cyps.ynh.fr'   # URL publique de ce serveur Fl
 
 # URL de votre serveur Collabora Online (modifiable depuis Admin → Configuration)
 COLLABORA_URL = 'https://collabora.orthoptistes-yssingeaux.fr'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orthoptie_v2.db'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx'}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 # DATA_FOLDER : résoudre le symlink uploads pour trouver le vrai répertoire de données
 _uploads_real = os.path.realpath(app.config['UPLOAD_FOLDER'])
 app.config['DATA_FOLDER'] = os.path.dirname(_uploads_real)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx'}
+
+# ── Base de données — SQLCipher si disponible, sinon SQLite standard ──────────
+_db_key_file = _os.path.join(_os.path.dirname(__file__), '.db_key')
+_db_key = None
+if _os.path.exists(_db_key_file):
+    with open(_db_key_file) as _f:
+        _db_key = _f.read().strip()
+
+_data_folder  = app.config['DATA_FOLDER']
+_db_enc_path  = _os.path.join(_data_folder, 'orthoptie_v2.enc.db')
+_use_encrypted = bool(_db_key and _os.path.exists(_db_enc_path))
+
+if _use_encrypted:
+    try:
+        import sqlcipher3 as _sqlcipher3
+        _enc_path = _db_enc_path
+        _enc_key  = _db_key
+        def _sqlcipher_creator():
+            conn = _sqlcipher3.connect(_enc_path)
+            conn.executescript(f"""
+                PRAGMA key='{_enc_key}';
+                PRAGMA cipher_page_size=4096;
+                PRAGMA kdf_iter=64000;
+                PRAGMA cipher_hmac_algorithm=HMAC_SHA512;
+                PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512;
+            """)
+            return conn
+        app.config['SQLALCHEMY_DATABASE_URI']   = 'sqlite+pysqlite:///:memory:'
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'creator': _sqlcipher_creator,
+            'connect_args': {}
+        }
+        print("INFO: Base de données chiffrée (SQLCipher AES-256) activée")
+    except ImportError:
+        _use_encrypted = False
+        print("WARNING: sqlcipher3 non disponible, SQLite standard utilisé")
+
+if not _use_encrypted:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orthoptie_v2.db'
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)

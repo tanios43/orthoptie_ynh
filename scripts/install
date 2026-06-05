@@ -83,6 +83,11 @@ with app.app_context():
     "$install_dir/venv/bin/python3" "$install_dir/migrate.py"
 popd
 
+# Chiffrer la base avec SQLCipher si disponible
+if "$install_dir/venv/bin/python3" -c "import sqlcipher3" 2>/dev/null; then
+    "$install_dir/venv/bin/python3" "$install_dir/encrypt_db.py" 2>/dev/null || true
+fi
+
 #=================================================
 # PERMISSIONS
 #=================================================
