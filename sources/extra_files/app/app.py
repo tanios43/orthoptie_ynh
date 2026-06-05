@@ -3229,14 +3229,23 @@ def admin_restaurer_nas():
     ssh_opts = f"ssh -i {key_path} -p {cfg.sftp_port} -o StrictHostKeyChecking=no -o BatchMode=yes"
     errors = []
     try:
-        # 1. Restaurer la base de données
-        r = subprocess.run([
+        # 1. Restaurer la base de données — enc.db en priorité, sinon db standard
+        r_enc = subprocess.run([
             'rsync', '-az', '--no-perms', '--no-owner', '--no-group',
             '--timeout=120', '-e', ssh_opts,
-            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/db/orthoptie_v2.db',
-            os.path.join(data_dir, 'orthoptie_v2.db')
+            f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/db/orthoptie_v2.enc.db',
+            os.path.join(data_dir, 'orthoptie_v2.enc.db')
         ], capture_output=True, text=True, timeout=120)
-        if r.returncode != 0: errors.append(f'db: {r.stderr.strip()}')
+
+        if r_enc.returncode != 0:
+            # Fallback : télécharger db standard
+            r = subprocess.run([
+                'rsync', '-az', '--no-perms', '--no-owner', '--no-group',
+                '--timeout=120', '-e', ssh_opts,
+                f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/db/orthoptie_v2.db',
+                os.path.join(data_dir, 'orthoptie_v2.db')
+            ], capture_output=True, text=True, timeout=120)
+            if r.returncode != 0: errors.append(f'db: {r.stderr.strip()}')
 
         # 2. Restaurer les clés SSH si présentes sur le NAS
         subprocess.run([
@@ -3272,7 +3281,16 @@ def admin_restaurer_nas():
             def _do_nas_restore(response):
                 try:
                     import shutil as _sh, pwd, grp
-                    if os.path.exists(db_std_path) and os.path.getsize(db_std_path) > 0 and os.path.exists(key_file_nas):
+                    # Si enc.db a été téléchargée directement — juste permissions
+                    if os.path.exists(db_enc_path) and os.path.getsize(db_enc_path) > 0:
+                        try:
+                            uid = pwd.getpwnam('orthoptie').pw_uid
+                            gid = grp.getgrnam('orthoptie').gr_gid
+                            os.chown(db_enc_path, uid, gid)
+                            os.chmod(db_enc_path, 0o660)
+                        except Exception: pass
+                    # Sinon rechiffrer depuis db standard
+                    elif os.path.exists(db_std_path) and os.path.getsize(db_std_path) > 0 and os.path.exists(key_file_nas):
                         import sqlcipher3 as _sc, sqlite3 as _sq
                         with open(key_file_nas) as kf: key = kf.read().strip()
                         SKIP = {'sqlite_sequence','sqlite_stat1','sqlite_stat2','sqlite_stat3','sqlite_stat4'}
@@ -3291,12 +3309,13 @@ def admin_restaurer_nas():
                             except: pass
                         dst.commit(); dst.close(); src.close()
                         os.remove(db_std_path)
-                    try:
-                        uid = pwd.getpwnam('orthoptie').pw_uid
-                        gid = grp.getgrnam('orthoptie').gr_gid
-                        os.chown(db_enc_path, uid, gid)
-                        os.chmod(db_enc_path, 0o660)
-                    except Exception: pass
+                        try:
+                            uid = pwd.getpwnam('orthoptie').pw_uid
+                            gid = grp.getgrnam('orthoptie').gr_gid
+                            os.chown(db_enc_path, uid, gid)
+                            os.chmod(db_enc_path, 0o660)
+                        except Exception: pass
+                    # Redémarrer
                     import subprocess as _sub
                     if os.path.exists(fix_perms_nas):
                         _sub.Popen(['bash', '-c', f'sleep 5 && sudo {fix_perms_nas}'])
