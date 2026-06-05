@@ -3758,16 +3758,18 @@ def admin_sauvegarde_importer():
     is_already_encrypted = db_tmp.endswith('.enc.db')
 
     if is_already_encrypted:
-        # Copier directement enc.db sans rechiffrer
+        # Copier directement enc.db sans rechiffrer — mv atomique
         script = f"""#!/bin/bash
 DB_TMP="{db_tmp}"
 DB_ENC="{db_enc_path}"
+DB_ENC_NEW="{db_enc_path}.new"
 TMPDIR="{tmpdir}"
 
 if [ -f "$DB_TMP" ] && [ -s "$DB_TMP" ]; then
-    cp "$DB_TMP" "$DB_ENC"
-    chown orthoptie:orthoptie "$DB_ENC" 2>/dev/null || true
-    chmod 660 "$DB_ENC" 2>/dev/null || true
+    cp "$DB_TMP" "$DB_ENC_NEW"
+    chown orthoptie:orthoptie "$DB_ENC_NEW" 2>/dev/null || true
+    chmod 660 "$DB_ENC_NEW" 2>/dev/null || true
+    mv "$DB_ENC_NEW" "$DB_ENC"
 fi
 rm -rf "$TMPDIR"
 systemctl restart orthoptie 2>/dev/null || true
