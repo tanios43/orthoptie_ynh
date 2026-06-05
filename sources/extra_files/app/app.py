@@ -3195,7 +3195,8 @@ def admin_sauvegarde_infos_nas():
             '-o', 'StrictHostKeyChecking=no', '-o', 'BatchMode=yes',
             '-o', 'ConnectTimeout=10',
             f'{cfg.sftp_user}@{cfg.sftp_host}',
-            f'stat -c "%Y" {cfg.sftp_path}/db/orthoptie_v2.db 2>/dev/null && '
+            f'stat -c "%Y" {cfg.sftp_path}/db/orthoptie_v2.enc.db 2>/dev/null || '
+            f'stat -c "%Y" {cfg.sftp_path}/db/orthoptie_v2.db 2>/dev/null; '
             f'du -sh {cfg.sftp_path}/uploads 2>/dev/null | cut -f1'
         ], capture_output=True, text=True, timeout=15)
         if r.returncode == 0:
