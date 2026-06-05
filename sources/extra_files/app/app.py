@@ -3748,6 +3748,9 @@ KEY_FILE="{os.path.join(install_dir, '.db_key')}"
 PYTHON="{os.path.join(install_dir, 'venv', 'bin', 'python3')}"
 TMPDIR="{tmpdir}"
 
+# Attendre que Flask ait fini d'envoyer la réponse HTTP
+sleep 3
+
 systemctl stop orthoptie 2>/dev/null || true
 sleep 1
 
