@@ -3251,20 +3251,12 @@ def admin_restaurer_nas():
                 db.engine.dispose()
             except Exception:
                 pass
-            db_enc = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+            db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+            install_dir = os.path.dirname(__file__)
             if os.path.exists(db_enc):
                 os.remove(db_enc)
-            install_dir    = os.path.dirname(__file__)
-            restore_script = os.path.join(install_dir, 'restore_and_restart.sh')
-            if os.path.exists(restore_script):
-                subprocess.Popen(['bash', restore_script, data_dir, install_dir])
-            else:
-                venv_python    = os.path.join(install_dir, 'venv', 'bin', 'python3')
-                encrypt_script = os.path.join(install_dir, 'encrypt_db.py')
-                subprocess.Popen(['bash', '-c',
-                    f'systemctl stop orthoptie 2>/dev/null; '
-                    f'{venv_python} {encrypt_script} 2>/dev/null; '
-                    f'systemctl start orthoptie 2>/dev/null'])
+            subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-restore-restart',
+                               data_dir, install_dir])
             flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
@@ -3683,32 +3675,23 @@ def admin_sauvegarde_importer():
     except Exception:
         pass
 
-    data_dir = app.config.get('DATA_FOLDER', os.path.dirname(db_path))
-    db_enc   = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+    data_dir    = app.config.get('DATA_FOLDER', os.path.dirname(db_path))
+    db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
     install_dir = os.path.dirname(__file__)
-    restore_script = os.path.join(install_dir, 'restore_and_restart.sh')
 
     # Supprimer la base chiffrée maintenant (dans ce worker)
     if os.path.exists(db_enc):
         os.remove(db_enc)
 
-    # Lancer le script shell qui arrête TOUS les workers, re-chiffre, redémarre
+    # Lancer le script sudo qui arrête TOUS les workers, re-chiffre, redémarre
     import subprocess
-    if os.path.exists(restore_script):
-        subprocess.Popen(['bash', restore_script, data_dir, install_dir])
-    else:
-        # Fallback
-        venv_python = os.path.join(install_dir, 'venv', 'bin', 'python3')
-        encrypt_script = os.path.join(install_dir, 'encrypt_db.py')
-        subprocess.Popen(['bash', '-c',
-            f'systemctl stop orthoptie 2>/dev/null; '
-            f'{venv_python} {encrypt_script} 2>/dev/null; '
-            f'systemctl start orthoptie 2>/dev/null'])
+    subprocess.Popen(['sudo', '/usr/local/bin/orthoptie-restore-restart',
+                      data_dir, install_dir])
 
     shutil.rmtree(tmpdir, ignore_errors=True)
 
     return '''<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="12;url=/">
+<meta http-equiv="refresh" content="15;url=/">
 <title>Restauration effectuée</title>
 <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
 height:100vh;margin:0;background:#f0f4ff;}

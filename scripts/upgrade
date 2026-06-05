@@ -99,8 +99,30 @@ chmod -R 755 "$data_dir/uploads" 2>/dev/null
 systemctl restart $app
 FIXPERMS
 chmod +x "/usr/local/bin/orthoptie-fix-perms"
+
+# Script de restauration post-upload
+cat > "/usr/local/bin/orthoptie-restore-restart" << RESTARTSCRIPT
+#!/bin/bash
+DATA_DIR="\${1:-$data_dir}"
+INSTALL_DIR="\${2:-$install_dir}"
+PYTHON="\$INSTALL_DIR/venv/bin/python3"
+ENCRYPT_SCRIPT="\$INSTALL_DIR/encrypt_db.py"
+systemctl stop $app 2>/dev/null || true
+sleep 1
+rm -f "\$DATA_DIR/orthoptie_v2.enc.db"
+if [ -f "\$ENCRYPT_SCRIPT" ]; then
+    "\$PYTHON" "\$ENCRYPT_SCRIPT"
+fi
+chown -R $app:$app "\$DATA_DIR" 2>/dev/null || true
+chmod 600 "\$INSTALL_DIR/.db_key" 2>/dev/null || true
+systemctl start $app 2>/dev/null || true
+RESTARTSCRIPT
+chmod +x "/usr/local/bin/orthoptie-restore-restart"
+
 echo "$app ALL=(root) NOPASSWD: /usr/local/bin/orthoptie-fix-perms" \
     > "/etc/sudoers.d/orthoptie-fix-perms"
+echo "$app ALL=(root) NOPASSWD: /usr/local/bin/orthoptie-restore-restart" \
+    >> "/etc/sudoers.d/orthoptie-fix-perms"
 chmod 440 "/etc/sudoers.d/orthoptie-fix-perms"
 
 #=================================================
