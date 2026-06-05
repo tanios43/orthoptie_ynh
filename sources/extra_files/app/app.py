@@ -509,6 +509,18 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Veuillez vous connecter.'
 
+# ── Détection de nouvelle base chiffrée (après restauration) ─────────────────
+@app.before_request
+def _check_new_enc_db():
+    """Si enc.db.new existe, remplace enc.db et recharge le moteur SQLAlchemy."""
+    new_db = _db_enc_path + '.new'
+    if _os.path.exists(new_db):
+        try:
+            _os.replace(new_db, _db_enc_path)  # mv atomique
+            db.engine.dispose()
+        except Exception:
+            pass
+
 # ============================================================
 # MODÈLES
 # ============================================================
@@ -3773,10 +3785,9 @@ def admin_sauvegarde_importer():
     is_already_encrypted = db_tmp.endswith('.enc.db')
 
     if is_already_encrypted:
-        # Copier directement enc.db sans rechiffrer — mv atomique
+        # Copier vers enc.db.new — Flask le détecte et fait mv atomique
         script = f"""#!/bin/bash
 DB_TMP="{db_tmp}"
-DB_ENC="{db_enc_path}"
 DB_ENC_NEW="{db_enc_path}.new"
 TMPDIR="{tmpdir}"
 
@@ -3784,10 +3795,8 @@ if [ -f "$DB_TMP" ] && [ -s "$DB_TMP" ]; then
     cp "$DB_TMP" "$DB_ENC_NEW"
     chown orthoptie:orthoptie "$DB_ENC_NEW" 2>/dev/null || true
     chmod 660 "$DB_ENC_NEW" 2>/dev/null || true
-    mv "$DB_ENC_NEW" "$DB_ENC"
 fi
 rm -rf "$TMPDIR"
-systemctl restart orthoptie 2>/dev/null || true
 """
     else:
         # Rechiffrer depuis db standard
@@ -3841,7 +3850,7 @@ systemctl restart orthoptie 2>/dev/null || true
     except Exception:
         pass
 
-    subprocess.run(['at', 'now + 1 minute'], input=f'bash {script_path}\n'.encode(),
+    subprocess.run(['at', 'now'], input=f'bash {script_path}\n'.encode(),
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     return '''<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -3856,21 +3865,15 @@ border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}
 </style></head><body><div class="box">
 <div class="spinner"></div>
 <h2>✅ Restauration en cours</h2>
-<p>L'application redémarre, veuillez patienter…</p>
+<p>Chargement des données…</p>
 </div>
 <script>
-// Attendre 3s que la page soit bien rendue, puis déclencher le restart
-setTimeout(function() {
-  fetch('/admin/sauvegarde/do-restart', {method:'POST', credentials:'include'})
-    .catch(function(){});
-  // Puis vérifier toutes les 2s que le service répond
-  setTimeout(function check() {
-    fetch('/').then(function(r) {
-      if (r.redirected || r.ok) { window.location.href = '/'; }
-      else { setTimeout(check, 2000); }
-    }).catch(function() { setTimeout(check, 2000); });
-  }, 5000);
-}, 3000);
+setTimeout(function check() {
+  fetch('/').then(function(r) {
+    if (r.redirected || r.ok) { window.location.href = '/'; }
+    else { setTimeout(check, 1000); }
+  }).catch(function() { setTimeout(check, 1000); });
+}, 5000);
 </script>
 </body></html>''', 200
     flash('Restauration effectuée.', 'success')
