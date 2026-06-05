@@ -3255,10 +3255,9 @@ def admin_restaurer_nas():
             install_dir = os.path.dirname(__file__)
             if os.path.exists(db_enc):
                 os.remove(db_enc)
-            cmd = f'/usr/local/bin/orthoptie-restore-restart {data_dir} {install_dir}'
-            subprocess.Popen(['at', 'now'], input=cmd.encode(),
-                             stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL)
+            cmd = f'/usr/local/bin/orthoptie-restore-restart {data_dir} {install_dir}\n'
+            subprocess.run(['at', 'now'], input=cmd.encode(),
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             flash('✅ Restauration depuis le NAS réussie.', 'success')
         else:
             flash(f'⚠️ Restauration partielle : {" | ".join(errors)}', 'warning')
@@ -3685,12 +3684,11 @@ def admin_sauvegarde_importer():
     if os.path.exists(db_enc):
         os.remove(db_enc)
 
-    # Lancer via 'at' — complètement indépendant de gunicorn, contourne use_pty
+    # Lancer via 'at now' — complètement indépendant de gunicorn, contourne use_pty
     import subprocess
-    cmd = f'/usr/local/bin/orthoptie-restore-restart {data_dir} {install_dir}'
-    subprocess.Popen(['at', 'now'], input=cmd.encode(),
-                     stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
-                     stderr=subprocess.DEVNULL)
+    cmd = f'/usr/local/bin/orthoptie-restore-restart {data_dir} {install_dir}\n'
+    subprocess.run(['at', 'now'], input=cmd.encode(),
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     shutil.rmtree(tmpdir, ignore_errors=True)
 

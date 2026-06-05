@@ -146,6 +146,9 @@ rm -f "\$DATA_DIR/orthoptie_v2.enc.db"
 if [ -f "\$ENCRYPT_SCRIPT" ]; then
     "\$PYTHON" "\$ENCRYPT_SCRIPT"
 fi
+# Corriger les permissions (important : enc.db peut être créé en root:root)
+chown $app:$app "\$DATA_DIR/orthoptie_v2.enc.db" 2>/dev/null || true
+chmod 660 "\$DATA_DIR/orthoptie_v2.enc.db" 2>/dev/null || true
 chown -R $app:$app "\$DATA_DIR" 2>/dev/null || true
 chmod 600 "\$INSTALL_DIR/.db_key" 2>/dev/null || true
 systemctl start $app 2>/dev/null || true

@@ -86,6 +86,16 @@ try:
     conn.close()
     print(f"INFO encrypt_db: base chiffrée créée — {nb} patients ✓")
 
+    # Corriger les permissions pour que l'app puisse lire/écrire
+    import pwd, grp
+    try:
+        uid = pwd.getpwnam('orthoptie').pw_uid
+        gid = grp.getgrnam('orthoptie').gr_gid
+        os.chown(db_enc, uid, gid)
+        os.chmod(db_enc, 0o660)
+    except Exception as e:
+        print(f"INFO encrypt_db: permissions non corrigées — {e}")
+
 except Exception as e:
     print(f"ERREUR encrypt_db: {e}")
     if os.path.exists(db_enc):
