@@ -511,18 +511,6 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Veuillez vous connecter.'
 
-# ── Détection de nouvelle base chiffrée (après restauration) ─────────────────
-@app.before_request
-def _check_new_enc_db():
-    """Si enc.db.new existe, remplace enc.db et recharge le moteur SQLAlchemy."""
-    new_db = _db_enc_path + '.new'
-    if _os.path.exists(new_db):
-        try:
-            _os.replace(new_db, _db_enc_path)  # mv atomique
-            db.engine.dispose()
-        except Exception:
-            pass
-
 # ============================================================
 # MODÈLES
 # ============================================================
