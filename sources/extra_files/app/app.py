@@ -5898,15 +5898,38 @@ def _html_to_docx_paras(html_content, esc_fn):
             self._bold = False
             self._italic = False
             self._underline = False
-            self._size = 20  # défaut 10pt
+            self._size = 20
             self._align = 'left'
-            self._indent = 0  # en twips (720 = 1cm)
+            self._indent = 0
+            self._last_was_empty = False  # évite les paras vides consécutifs
+
+        def _flush_para(self):
+            indent_xml = f'<w:ind w:left="{self._indent}"/>' if self._indent else ''
+            pPr = (f'<w:pPr><w:jc w:val="{self._align}"/>'
+                   f'<w:spacing w:after="0"/>{indent_xml}</w:pPr>')
+            if self._runs:
+                runs_xml = ''
+                for r in self._runs:
+                    rPr = '<w:rPr>'
+                    rPr += '<w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                    rPr += f'<w:sz w:val="{r["size"]}"/>'
+                    if r['bold']: rPr += '<w:b/>'
+                    if r['italic']: rPr += '<w:i/>'
+                    if r['underline']: rPr += '<w:u w:val="single"/>'
+                    rPr += '</w:rPr>'
+                    text = esc_fn(r['text'])
+                    space = ' xml:space="preserve"' if ' ' in r['text'] or r['text'].startswith(' ') or r['text'].endswith(' ') else ''
+                    runs_xml += f'<w:r>{rPr}<w:t{space}>{text}</w:t></w:r>'
+                self.paras.append(f'<w:p>{pPr}{runs_xml}</w:p>')
+                self._last_was_empty = False
+            self._runs = []
 
         def handle_starttag(self, tag, attrs):
             attrs = dict(attrs)
             style = attrs.get('style', '')
             if tag == 'div':
-                self._flush_para()
+                if self._runs:
+                    self._flush_para()
                 # Alignement
                 for s in style.split(';'):
                     s = s.strip()
@@ -5923,13 +5946,19 @@ def _html_to_docx_paras(html_content, esc_fn):
                 if sz in FONT_SIZE_MAP:
                     self._size = FONT_SIZE_MAP[sz]
             elif tag == 'br':
-                self._flush_para()
-                # Paragraphe vide pour le saut de ligne
-                self.paras.append('<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>')
+                pass  # géré via div vide
 
         def handle_endtag(self, tag):
             if tag == 'div':
-                self._flush_para()
+                if self._runs:
+                    self._flush_para()
+                elif not self._last_was_empty:
+                    # Para vide — saut de ligne
+                    indent_xml = f'<w:ind w:left="{self._indent}"/>' if self._indent else ''
+                    pPr = (f'<w:pPr><w:jc w:val="{self._align}"/>'
+                           f'<w:spacing w:after="0"/>{indent_xml}</w:pPr>')
+                    self.paras.append(f'<w:p>{pPr}</w:p>')
+                    self._last_was_empty = True
                 self._align = 'left'
             elif tag == 'blockquote':
                 self._flush_para()
@@ -5953,27 +5982,12 @@ def _html_to_docx_paras(html_content, esc_fn):
             if name == 'nbsp': self._runs.append({'text': '\u00a0', 'bold': self._bold,
                 'italic': self._italic, 'underline': self._underline, 'size': self._size})
 
-        def _flush_para(self):
-            # Construire le paragraphe XML
-            indent_xml = f'<w:ind w:left="{self._indent}"/>' if self._indent else ''
-            pPr = (f'<w:pPr><w:jc w:val="{self._align}"/>'
-                   f'<w:spacing w:after="0"/>{indent_xml}</w:pPr>')
-            runs_xml = ''
-            for r in self._runs:
-                rPr = '<w:rPr>'
-                rPr += '<w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                rPr += f'<w:sz w:val="{r["size"]}"/>'
-                if r['bold']: rPr += '<w:b/>'
-                if r['italic']: rPr += '<w:i/>'
-                if r['underline']: rPr += '<w:u w:val="single"/>'
-                rPr += '</w:rPr>'
-                text = esc_fn(r['text'])
-                space = ' xml:space="preserve"' if ' ' in r['text'] or r['text'].startswith(' ') or r['text'].endswith(' ') else ''
-                runs_xml += f'<w:r>{rPr}<w:t{space}>{text}</w:t></w:r>'
-            self.paras.append(f'<w:p>{pPr}{runs_xml}</w:p>')
-            self._runs = []
-
         def get_paras(self):
+            if self._runs:
+                self._flush_para()
+            return self.paras if self.paras else [
+                f'<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>'
+            ]
             if self._runs:
                 self._flush_para()
             return self.paras if self.paras else [
