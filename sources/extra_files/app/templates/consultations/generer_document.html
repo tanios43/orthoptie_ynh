@@ -97,30 +97,53 @@
       </div>
     </div>
 
-    {# Sections à inclure — par bloc si modèle sélectionné, sinon global #}
+    {# Aperçu du modèle et sélection des sections par bloc #}
     {% set modele_sel_id = request.args.get('modele_id')|int %}
     {% set modele_sel = modeles | selectattr('id', 'equalto', modele_sel_id) | first | default(None) %}
+    {% set has_section_blocs = modele_sel and (modele_sel.blocs | selectattr('type', 'equalto', 'section_bilan') | list) %}
 
-    {% if modele_sel and modele_sel.blocs | selectattr('type', 'equalto', 'section_bilan') | list %}
-      {# Affichage par bloc #}
+    {% if modele_sel %}
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:500;
+                  text-transform:uppercase;letter-spacing:.05em;">
+        Structure du document
+      </div>
+
       {% for bloc in modele_sel.blocs %}
+
+        {# Bloc texte — aperçu #}
+        {% if bloc.type == 'texte' and bloc.contenu %}
+        <div style="border:1px solid var(--border);border-radius:8px;padding:10px 14px;
+                    margin-bottom:8px;background:var(--bg);font-size:12px;color:var(--muted);">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);
+                      text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+            ✍️ Texte
+          </div>
+          <div style="color:var(--text);font-size:12px;line-height:1.5;
+                      max-height:60px;overflow:hidden;opacity:.7;">
+            {{ bloc.contenu | striptags | truncate(120) }}
+          </div>
+        </div>
+        {% endif %}
+
+        {# Bloc sections — sélecteur #}
         {% if bloc.type == 'section_bilan' and consultation.sections %}
-        {% set bloc_label = bloc.label or ('Bloc sections ' ~ loop.index) %}
+        {% set bloc_label = bloc.label or 'Sections du bilan' %}
         {% set filtre = bloc.filtre_cats %}
         {% set predef = bloc.sections_predefinies %}
-        <div class="card" style="margin-bottom:14px;">
-          <div class="card-header">
-            <h2>📋 {{ bloc_label }}</h2>
-            <button type="button" class="btn btn-secondary btn-sm" style="margin-left:auto;"
+        <div class="card" style="margin-bottom:8px;">
+          <div class="card-header" style="padding:8px 14px;">
+            <h2 style="font-size:13px;">📋 {{ bloc_label }}</h2>
+            <button type="button" class="btn btn-secondary btn-sm" style="margin-left:auto;padding:2px 8px;font-size:11px;"
                     onclick="this.closest('.card').querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=true)">
-              Tout cocher
+              Tout ✓
             </button>
-            <button type="button" class="btn btn-secondary btn-sm"
+            <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;"
                     onclick="this.closest('.card').querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false)">
-              Tout décocher
+              Tout ✗
             </button>
           </div>
-          <div style="padding:8px 16px;">
+          <div style="padding:4px 14px 8px;">
             {% for sec in consultation.sections %}
             {% if sec.type not in ['courrier', 'ordonnance'] %}
             {% if not filtre or sec.type in filtre or (sec.categorie and sec.categorie in filtre) %}
@@ -128,7 +151,7 @@
                 | selectattr('section_ordre', 'equalto', sec.ordre)
                 | selectattr('type_fichier', 'in', ['jpg','jpeg','png','gif','webp','image'])
                 | list %}
-            <div style="border-bottom:1px solid var(--border);padding:8px 0;">
+            <div style="border-bottom:1px solid var(--border);padding:6px 0;">
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
                 <input type="checkbox"
                        name="bloc_{{ bloc.id }}_sections[]"
@@ -151,8 +174,7 @@
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;
                                background:var(--bg);border:1px solid var(--border);
                                border-radius:7px;padding:4px 8px;">
-                  <input type="checkbox" name="images_incluses[]"
-                         value="{{ f.id }}"
+                  <input type="checkbox" name="images_incluses[]" value="{{ f.id }}"
                          style="width:13px;height:13px;accent-color:var(--accent);">
                   <img src="{{ url_for('uploaded_file_section', consultation_id=consultation.id, filename=f.nom_stocke) }}"
                        style="width:36px;height:28px;object-fit:cover;border-radius:4px;">
@@ -168,10 +190,12 @@
           </div>
         </div>
         {% endif %}
-      {% endfor %}
 
+      {% endfor %}
+    </div>
+
+    {# Fallback : pas de blocs sections dans le modèle mais consultation a des sections #}
     {% elif consultation.sections %}
-    {# Sélecteur global (pas de modèle avec blocs sections) #}
     <div class="card" style="margin-bottom:14px;">
       <div class="card-header">
         <h2>Sections à inclure</h2>
@@ -213,14 +237,11 @@
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;
                            background:var(--bg);border:1px solid var(--border);
                            border-radius:7px;padding:4px 8px;">
-              <input type="checkbox" name="images_incluses[]"
-                     value="{{ f.id }}"
+              <input type="checkbox" name="images_incluses[]" value="{{ f.id }}"
                      style="width:13px;height:13px;accent-color:var(--accent);">
               <img src="{{ url_for('uploaded_file_section', consultation_id=consultation.id, filename=f.nom_stocke) }}"
                    style="width:36px;height:28px;object-fit:cover;border-radius:4px;">
-              <span style="font-size:11px;color:var(--muted);">
-                {{ f.titre or f.nom_original }}
-              </span>
+              <span style="font-size:11px;color:var(--muted);">{{ f.titre or f.nom_original }}</span>
             </label>
             {% endfor %}
           </div>
