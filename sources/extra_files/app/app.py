@@ -5881,6 +5881,108 @@ def _generer_ordonnance_docx(consultation, praticien, cabinet, pc, titre_ordo, l
     return new_out
 
 
+def _html_to_docx_paras(html_content, esc_fn):
+    """Convertit le HTML riche de l'éditeur de blocs en paragraphes XML Word."""
+    from html.parser import HTMLParser
+
+    # Map taille font HTML (1-7) vers demi-points Word
+    FONT_SIZE_MAP = {'1': 16, '2': 20, '3': 24, '4': 28, '5': 36, '6': 48, '7': 64}
+    # Alignement
+    ALIGN_MAP = {'left': 'left', 'center': 'center', 'right': 'right', 'justify': 'both'}
+
+    class HtmlToDocx(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.paras = []
+            self._runs = []
+            self._bold = False
+            self._italic = False
+            self._underline = False
+            self._size = 20  # défaut 10pt
+            self._align = 'left'
+            self._indent = 0  # en twips (720 = 1cm)
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            style = attrs.get('style', '')
+            if tag == 'div':
+                self._flush_para()
+                # Alignement
+                for s in style.split(';'):
+                    s = s.strip()
+                    if s.startswith('text-align:'):
+                        self._align = ALIGN_MAP.get(s.split(':')[1].strip(), 'left')
+            elif tag == 'blockquote':
+                self._flush_para()
+                self._indent += 720
+            elif tag == 'b': self._bold = True
+            elif tag == 'i': self._italic = True
+            elif tag == 'u': self._underline = True
+            elif tag == 'font':
+                sz = attrs.get('size', '')
+                if sz in FONT_SIZE_MAP:
+                    self._size = FONT_SIZE_MAP[sz]
+            elif tag == 'br':
+                self._flush_para()
+
+        def handle_endtag(self, tag):
+            if tag == 'div':
+                self._flush_para()
+                self._align = 'left'
+            elif tag == 'blockquote':
+                self._flush_para()
+                self._indent = max(0, self._indent - 720)
+            elif tag == 'b': self._bold = False
+            elif tag == 'i': self._italic = False
+            elif tag == 'u': self._underline = False
+            elif tag == 'font': self._size = 20
+
+        def handle_data(self, data):
+            if data:
+                self._runs.append({
+                    'text': data,
+                    'bold': self._bold,
+                    'italic': self._italic,
+                    'underline': self._underline,
+                    'size': self._size,
+                })
+
+        def handle_entityref(self, name):
+            if name == 'nbsp': self._runs.append({'text': '\u00a0', 'bold': self._bold,
+                'italic': self._italic, 'underline': self._underline, 'size': self._size})
+
+        def _flush_para(self):
+            # Construire le paragraphe XML
+            indent_xml = f'<w:ind w:left="{self._indent}"/>' if self._indent else ''
+            pPr = (f'<w:pPr><w:jc w:val="{self._align}"/>'
+                   f'<w:spacing w:after="120"/>{indent_xml}</w:pPr>')
+            runs_xml = ''
+            for r in self._runs:
+                rPr = '<w:rPr>'
+                rPr += '<w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
+                rPr += f'<w:sz w:val="{r["size"]}"/>'
+                if r['bold']: rPr += '<w:b/>'
+                if r['italic']: rPr += '<w:i/>'
+                if r['underline']: rPr += '<w:u w:val="single"/>'
+                rPr += '</w:rPr>'
+                text = esc_fn(r['text'])
+                space = ' xml:space="preserve"' if ' ' in r['text'] or r['text'].startswith(' ') or r['text'].endswith(' ') else ''
+                runs_xml += f'<w:r>{rPr}<w:t{space}>{text}</w:t></w:r>'
+            self.paras.append(f'<w:p>{pPr}{runs_xml}</w:p>')
+            self._runs = []
+
+        def get_paras(self):
+            if self._runs:
+                self._flush_para()
+            return self.paras if self.paras else [
+                f'<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>'
+            ]
+
+    parser = HtmlToDocx()
+    parser.feed(html_content)
+    return parser.get_paras()
+
+
 def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
     """
     Génère un .docx en clonant l'en-tête depuis le template fourni
@@ -6325,12 +6427,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
     body_paras = []
     for bloc in blocs_resolus:
         if bloc['type'] == 'texte' and bloc['contenu']:
-            for line in bloc['contenu'].split('\n'):
-                body_paras.append(
-                    f'<w:p><w:pPr><w:spacing w:after="120"/></w:pPr>'
-                    f'<w:r><w:rPr><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
-                    f'<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">{esc(line)}</w:t></w:r></w:p>'
-                )
+            body_paras.extend(_html_to_docx_paras(bloc['contenu'], esc))
         elif bloc['type'] == 'sections':
             for sec in bloc['sections']:
                 # Titre section
