@@ -5224,11 +5224,21 @@ def admin_document_modele_detail(modele_id):
     m = DocumentModele.query.get_or_404(modele_id)
     modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
     sections, ordre = get_sections()
-    categories = CategorieSection.query.order_by(CategorieSection.ordre).all()
+    # Liste de sections avec type et label pour les cases à cocher
+    sections_liste = [{'type': k, 'label': v['label']} for k, v in sections.items()
+                      if k not in ('courrier', 'ordonnance', 'prescription')]
+    # Catégories builtin uniques + custom
+    builtin_cats = sorted(set(BUILTIN_CATEGORIES.values()) - {'ordonnance', 'courrier'})
+    cats_custom = CategorieSection.query.order_by(CategorieSection.ordre).all()
+    custom_noms = [c.nom for c in cats_custom]
+    categories_liste = builtin_cats + [c for c in custom_noms if c not in builtin_cats]
+    cats_labels = {c.nom: (c.label or c.nom) for c in cats_custom}
     return render_template('admin/document_modele_detail.html',
                            modele=m, modeles=modeles,
                            sections_dispo=sections, sections_ordre=ordre,
-                           categories=categories)
+                           sections_liste=sections_liste,
+                           categories=categories_liste,
+                           cats_labels=cats_labels)
 
 
 @app.route('/admin/document-modele/<int:modele_id>/modifier', methods=['POST'])

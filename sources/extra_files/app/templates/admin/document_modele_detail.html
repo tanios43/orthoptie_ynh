@@ -202,10 +202,10 @@
                     <label style="display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;">
                       <input type="checkbox"
                              class="filtre-cat-{{ bloc.id }}"
-                             value="{{ cat.nom }}"
+                             value="{{ cat }}"
                              style="accent-color:var(--accent);"
-                             {% if bloc.filtre_cats and cat.nom in bloc.filtre_cats %}checked{% endif %}>
-                      <span style="font-size:13px;">{{ cat.label or cat.nom }}</span>
+                             {% if bloc.filtre_cats and cat in bloc.filtre_cats %}checked{% endif %}>
+                      <span style="font-size:13px;">{{ cats_labels.get(cat, cat) }}</span>
                     </label>
                     {% endfor %}
                   </div>
@@ -219,7 +219,7 @@
                   </label>
                   <div style="border:1px solid var(--border);border-radius:6px;padding:8px;
                               background:var(--bg);max-height:160px;overflow-y:auto;">
-                    {% for sec in sections_dispo %}
+                    {% for sec in sections_liste %}
                     <label style="display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;">
                       <input type="checkbox"
                              class="predef-sec-{{ bloc.id }}"
