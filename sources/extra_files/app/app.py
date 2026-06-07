@@ -1097,11 +1097,24 @@ class DocumentModele(db.Model):
 class DocumentBloc(db.Model):
     """Bloc dans un modèle de document."""
     __tablename__ = 'document_bloc'
-    id         = db.Column(db.Integer, primary_key=True)
-    modele_id  = db.Column(db.Integer, db.ForeignKey('document_modele.id'), nullable=False)
-    type       = db.Column(db.String(20), nullable=False)  # 'texte' ou 'section_bilan'
-    contenu    = db.Column(db.Text, default='')
-    ordre      = db.Column(db.Integer, default=99)
+    id                = db.Column(db.Integer, primary_key=True)
+    modele_id         = db.Column(db.Integer, db.ForeignKey('document_modele.id'), nullable=False)
+    type              = db.Column(db.String(20), nullable=False)  # 'texte' ou 'section_bilan'
+    contenu           = db.Column(db.Text, default='')
+    ordre             = db.Column(db.Integer, default=99)
+    label             = db.Column(db.String(100), default='')      # titre affiché à la génération
+    filtre_categories = db.Column(db.Text, default=None)           # JSON ['refraction'] ou None
+    sections_predef   = db.Column(db.Text, default=None)           # JSON ['correction_portee'] ou None
+
+    @property
+    def filtre_cats(self):
+        import json
+        return json.loads(self.filtre_categories) if self.filtre_categories else None
+
+    @property
+    def sections_predefinies(self):
+        import json
+        return json.loads(self.sections_predef) if self.sections_predef else None
 
 
 
@@ -5255,6 +5268,16 @@ def admin_document_bloc_nouveau(modele_id):
 def admin_document_bloc_modifier(bloc_id):
     b = DocumentBloc.query.get_or_404(bloc_id)
     b.contenu = request.form.get('contenu', '').strip()
+    if 'label' in request.form:
+        b.label = request.form.get('label', '').strip()
+    if 'filtre_categories' in request.form:
+        import json
+        cats = [c.strip() for c in request.form.get('filtre_categories', '').split(',') if c.strip()]
+        b.filtre_categories = json.dumps(cats) if cats else None
+    if 'sections_predef' in request.form:
+        import json
+        secs = [s.strip() for s in request.form.get('sections_predef', '').split(',') if s.strip()]
+        b.sections_predef = json.dumps(secs) if secs else None
     db.session.commit()
     return jsonify({'ok': True})
 
@@ -5999,7 +6022,7 @@ def _html_to_docx_paras(html_content, esc_fn):
     return parser.get_paras()
 
 
-def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
+def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sections_par_bloc=None):
     """
     Génère un .docx en clonant l'en-tête depuis le template fourni
     et en ajoutant le corps via Node.js/docx.
@@ -6334,16 +6357,24 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
         })
 
     blocs_resolus = []
-    sections_inserees = False
     for bloc in modele.blocs:
         if bloc.type == 'texte':
             blocs_resolus.append({
                 'type': 'texte',
                 'contenu': _resoudre_variables(bloc.contenu, consultation, praticien, cabinet, pc)
             })
-        elif bloc.type == 'section_bilan' and not sections_inserees:
-            blocs_resolus.append({'type': 'sections', 'sections': sections_data})
-            sections_inserees = True
+        elif bloc.type == 'section_bilan':
+            # Sections pour ce bloc spécifique
+            if sections_par_bloc and bloc.id in sections_par_bloc:
+                bloc_sections_types = sections_par_bloc[bloc.id]
+            else:
+                bloc_sections_types = sections_incluses
+
+            # Filtrer sections_data selon les types sélectionnés pour ce bloc
+            bloc_sections_data = [s for s in sections_data if s['type'] in bloc_sections_types]
+            if bloc_sections_data:
+                blocs_resolus.append({'type': 'sections', 'sections': bloc_sections_data,
+                                      'label': bloc.label or ''})
 
     # ── Générer le XML des paragraphes du corps ───────────────────────
     def esc(t):
@@ -7187,7 +7218,6 @@ def editer_collabora(consultation_id):
     """Génère le .docx et ouvre l'éditeur Collabora."""
     c = Consultation.query.get_or_404(consultation_id)
     modele_id    = request.args.get('modele_id', type=int)
-    sections_sel = request.args.getlist('sections_incluses[]')
     section_type = request.args.get('section', 'courrier')
 
     if not modele_id:
@@ -7196,6 +7226,24 @@ def editer_collabora(consultation_id):
                                 section=section_type))
 
     modele = DocumentModele.query.get_or_404(modele_id)
+
+    # Construire sections_par_bloc : dict {bloc_id: [section_types]}
+    # Compatibilité : si sections_incluses[] global → affecter à tous les blocs sections
+    sections_incluses_global = request.args.getlist('sections_incluses[]')
+    sections_par_bloc = {}
+    for key in request.args.keys():
+        if key.startswith('bloc_') and key.endswith('_sections[]'):
+            bloc_id = int(key.split('_')[1])
+            sections_par_bloc[bloc_id] = request.args.getlist(key)
+
+    # Fallback global
+    if not sections_par_bloc and sections_incluses_global:
+        for bloc in modele.blocs:
+            if bloc.type == 'section_bilan':
+                sections_par_bloc[bloc.id] = sections_incluses_global
+
+    # sections_sel = union de toutes les sections (pour compatibilité)
+    sections_sel = list({s for secs in sections_par_bloc.values() for s in secs}) or sections_incluses_global
 
     # Générer le .docx dans un dossier permanent (pas tmpdir)
     import os, tempfile, urllib.parse, shutil, uuid
@@ -7226,7 +7274,8 @@ def editer_collabora(consultation_id):
         return redirect(f"{base_url}&{sections_args}")
 
     images_ids  = [int(i) for i in request.args.getlist('images_incluses[]') if i.isdigit()]
-    docx_path = _generer_docx(c, modele, sections_sel, images_ids=images_ids)
+    docx_path = _generer_docx(c, modele, sections_sel, images_ids=images_ids,
+                               sections_par_bloc=sections_par_bloc)
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
     shutil.copy2(docx_path, permanent_path)
 

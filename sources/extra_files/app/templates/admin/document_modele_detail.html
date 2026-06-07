@@ -71,7 +71,8 @@
             </span>
             {% else %}
             <span class="text-sm text-muted" style="flex:1;">
-              Insérer les sections sélectionnées lors de la génération
+              {{ bloc.label or 'Sections du bilan' }}
+              {% if bloc.filtre_cats %}<span style="color:var(--accent);font-size:11px;"> [{{ bloc.filtre_cats | join(', ') }}]</span>{% endif %}
             </span>
             {% endif %}
             <button type="button" onclick="toggleBloc({{ bloc.id }})"
@@ -173,6 +174,35 @@
                 <button type="button" class="btn btn-primary btn-sm"
                         onclick="sauverBloc({{ bloc.id }})">Enregistrer</button>
               </div>
+            </div>
+            {% endif %}
+            {% if bloc.type == 'section_bilan' %}
+            <div style="margin-top:10px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
+                <div>
+                  <label class="field-label">Titre du bloc</label>
+                  <input type="text" id="label-{{ bloc.id }}"
+                         value="{{ bloc.label or '' }}"
+                         placeholder="ex: Réfraction, Acuité…"
+                         style="margin-top:4px;">
+                </div>
+                <div>
+                  <label class="field-label">Filtrer par catégories (vide = tout)</label>
+                  <input type="text" id="filtre-{{ bloc.id }}"
+                         value="{{ bloc.filtre_cats | join(', ') if bloc.filtre_cats else '' }}"
+                         placeholder="ex: refraction, acuite"
+                         style="margin-top:4px;">
+                </div>
+              </div>
+              <div style="margin-bottom:8px;">
+                <label class="field-label">Sections pré-sélectionnées (vide = tout coché)</label>
+                <input type="text" id="predef-{{ bloc.id }}"
+                       value="{{ bloc.sections_predefinies | join(', ') if bloc.sections_predefinies else '' }}"
+                       placeholder="ex: correction_portee, refraction_subj"
+                       style="margin-top:4px;">
+              </div>
+              <button type="button" class="btn btn-primary btn-sm"
+                      onclick="sauverBlocSection({{ bloc.id }})">Enregistrer</button>
             </div>
             {% endif %}
             <form method="POST"
@@ -306,7 +336,15 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Drag & drop blocs
+function sauverBlocSection(id) {
+  const fd = new FormData();
+  fd.append('label',             document.getElementById('label-' + id)?.value || '');
+  fd.append('filtre_categories', document.getElementById('filtre-' + id)?.value || '');
+  fd.append('sections_predef',   document.getElementById('predef-' + id)?.value || '');
+  fetch('/admin/document-bloc/' + id + '/modifier', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(d => { if (d.ok) { location.reload(); } });
+}
 const list = document.getElementById('blocs-list');
 let dragged = null;
 list.querySelectorAll('.bloc-row').forEach(row => {

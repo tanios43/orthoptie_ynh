@@ -227,6 +227,9 @@ if _db_path:
         "ALTER TABLE cabinet ADD COLUMN repondeur TEXT DEFAULT ''",
         "ALTER TABLE cabinet ADD COLUMN repondeur_updated_by TEXT DEFAULT ''",
         "ALTER TABLE cabinet ADD COLUMN repondeur_updated_at DATETIME",
+        "ALTER TABLE document_bloc ADD COLUMN label TEXT DEFAULT ''",
+        "ALTER TABLE document_bloc ADD COLUMN filtre_categories TEXT DEFAULT NULL",
+        "ALTER TABLE document_bloc ADD COLUMN sections_predef TEXT DEFAULT NULL",
         """CREATE TABLE IF NOT EXISTS favori (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             praticien_id INTEGER NOT NULL REFERENCES praticien(id),
