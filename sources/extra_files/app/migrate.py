@@ -7,28 +7,69 @@ warnings.filterwarnings('ignore', category=UserWarning, module='flask_sqlalchemy
 warnings.filterwarnings('ignore', message='.*already contains a class.*')
 
 # Créer les tables et colonnes critiques AVANT l'import de app.py
-# pour éviter que SQLAlchemy plante si le schéma est incomplet
 import sqlite3, os, glob
 
 def _find_db():
-    candidates = [
-        '/home/yunohost.app/orthoptie/orthoptie_v2.db',
-        os.path.join(os.path.dirname(__file__), 'instance', 'orthoptie_v2.db'),
-        os.path.join(os.path.dirname(__file__), 'orthoptie_v2.db'),
+    """Trouve la base de données — enc.db en priorité, sinon db standard."""
+    install_dir = os.path.dirname(os.path.abspath(__file__))
+    data_candidates = [
+        '/home/yunohost.app/orthoptie',
+        os.path.join(install_dir, '..', '..', 'home', 'yunohost.app', 'orthoptie'),
     ]
-    for p in candidates:
-        real = os.path.realpath(p)
-        if os.path.exists(real):
-            return real
-    return None
+    for data_dir in data_candidates:
+        data_dir = os.path.realpath(data_dir)
+        enc = os.path.join(data_dir, 'orthoptie_v2.enc.db')
+        std = os.path.join(data_dir, 'orthoptie_v2.db')
+        if os.path.exists(enc) and os.path.getsize(enc) > 0:
+            return enc, True
+        if os.path.exists(std) and os.path.getsize(std) > 0:
+            return std, False
+    # Fallback instance/
+    for p in [
+        os.path.join(install_dir, 'instance', 'orthoptie_v2.db'),
+        os.path.join(install_dir, 'orthoptie_v2.db'),
+    ]:
+        if os.path.exists(p):
+            return p, False
+    return None, False
 
-_db_path = _find_db()
+_db_path, _db_encrypted = _find_db()
+
+def _connect_db(path, encrypted):
+    """Ouvre la connexion SQLite ou SQLCipher selon le type."""
+    if encrypted:
+        try:
+            import sqlcipher3
+            key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.db_key')
+            if not os.path.exists(key_file):
+                return None, None
+            with open(key_file) as f:
+                key = f.read().strip()
+            conn = sqlcipher3.connect(path)
+            conn.execute(f"PRAGMA key='{key}'")
+            conn.execute("PRAGMA cipher_page_size=4096")
+            conn.execute("PRAGMA kdf_iter=64000")
+            conn.execute("PRAGMA cipher_hmac_algorithm=HMAC_SHA512")
+            conn.execute("PRAGMA cipher_kdf_algorithm=PBKDF2_HMAC_SHA512")
+            # Vérifier que la connexion fonctionne
+            conn.execute("SELECT count(*) FROM sqlite_master")
+            print("Pré-migration SQLCipher OK")
+            return conn, conn.cursor()
+        except Exception as e:
+            print(f"Pré-migration SQLCipher erreur: {e}")
+            return None, None
+    else:
+        conn = sqlite3.connect(path)
+        print("Pré-migration SQLite OK")
+        return conn, conn.cursor()
+
 if _db_path:
-    _conn = sqlite3.connect(_db_path)
-    _cur = _conn.cursor()
-    # Toutes les colonnes/tables critiques créées AVANT l'import de app.py
-    _pre_migrations = [
-        "ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''",
+    _conn, _cur = _connect_db(_db_path, _db_encrypted)
+else:
+    _conn, _cur = None, None
+
+_pre_migrations = [
+    "ALTER TABLE section_def ADD COLUMN categorie VARCHAR(50) DEFAULT ''",
         "ALTER TABLE section_def ADD COLUMN avec_observations BOOLEAN DEFAULT 1",
         "ALTER TABLE section_def ADD COLUMN obs_defaut TEXT DEFAULT ''",
         """CREATE TABLE IF NOT EXISTS config_app (
@@ -242,10 +283,12 @@ if _db_path:
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )""",
     ]
+
+if _conn and _cur:
     for sql in _pre_migrations:
         try:
             _cur.execute(sql)
-        except sqlite3.OperationalError:
+        except Exception:
             pass  # colonne/table déjà existante
     _conn.commit()
 
@@ -255,9 +298,11 @@ if _db_path:
         _cur.execute("DELETE FROM message WHERE contenu='__test__'")
         _conn.commit()
         print("Present : message.destinataire_id nullable OK")
-    except sqlite3.IntegrityError:
-        _conn.rollback()
-        # Vérifier si conversation_id existe déjà
+    except Exception:
+        try:
+            _conn.rollback()
+        except Exception:
+            pass
         _cur.execute("PRAGMA table_info(message)")
         cols = [row[1] for row in _cur.fetchall()]
         if 'conversation_id' in cols:
@@ -266,27 +311,29 @@ if _db_path:
         else:
             copy_conv = ''
             col_conv  = 'NULL,'
-        _cur.executescript(f"""
-            CREATE TABLE IF NOT EXISTS message_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                conversation_id INTEGER REFERENCES conversation(id),
-                expediteur_id INTEGER NOT NULL REFERENCES praticien(id),
-                destinataire_id INTEGER REFERENCES praticien(id),
-                contenu TEXT NOT NULL,
-                lu BOOLEAN DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-            INSERT INTO message_new
-                SELECT id, {col_conv} expediteur_id, destinataire_id, contenu, lu, created_at
-                FROM message;
-            DROP TABLE message;
-            ALTER TABLE message_new RENAME TO message;
-        """)
-        _conn.commit()
-        print("OK      : message.destinataire_id rendu nullable")
+        try:
+            _cur.executescript(f"""
+                CREATE TABLE IF NOT EXISTS message_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    conversation_id INTEGER REFERENCES conversation(id),
+                    expediteur_id INTEGER NOT NULL REFERENCES praticien(id),
+                    destinataire_id INTEGER REFERENCES praticien(id),
+                    contenu TEXT NOT NULL,
+                    lu BOOLEAN DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                INSERT INTO message_new
+                    SELECT id, {col_conv} expediteur_id, destinataire_id, contenu, lu, created_at
+                    FROM message;
+                DROP TABLE message;
+                ALTER TABLE message_new RENAME TO message;
+            """)
+            _conn.commit()
+            print("OK      : message.destinataire_id rendu nullable")
+        except Exception:
+            pass
 
     _conn.close()
-    print("Pré-migration SQLite OK")
 
 from app import db, app, SectionDef, ChampDef
 
