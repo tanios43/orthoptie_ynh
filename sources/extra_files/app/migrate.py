@@ -10,16 +10,16 @@ warnings.filterwarnings('ignore', message='.*already contains a class.*')
 import sqlite3, os, glob
 
 def _find_db():
-    """Trouve la base de données — enc.db en priorité, sinon db standard."""
+    """Trouve la base — enc.db TOUJOURS prioritaire sur db standard."""
     install_dir = os.path.dirname(os.path.abspath(__file__))
-    data_candidates = [
+    data_dirs = [
         '/home/yunohost.app/orthoptie',
-        os.path.join(install_dir, '..', '..', 'home', 'yunohost.app', 'orthoptie'),
+        os.path.realpath(os.path.join(install_dir, '..', '..', 'home', 'yunohost.app', 'orthoptie')),
     ]
-    for data_dir in data_candidates:
-        data_dir = os.path.realpath(data_dir)
+    for data_dir in data_dirs:
         enc = os.path.join(data_dir, 'orthoptie_v2.enc.db')
         std = os.path.join(data_dir, 'orthoptie_v2.db')
+        # enc.db TOUJOURS prioritaire — même si db standard existe aussi
         if os.path.exists(enc) and os.path.getsize(enc) > 0:
             return enc, True
         if os.path.exists(std) and os.path.getsize(std) > 0:

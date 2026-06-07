@@ -68,11 +68,12 @@ pushd "$install_dir"
 with app.app_context():
     db.create_all()
 "
-    "$install_dir/venv/bin/python3" "$install_dir/migrate.py"
-    # Supprimer la base standard résiduelle si enc.db existe
+    # Supprimer la base standard résiduelle AVANT migrate.py
+    # pour que migrate.py utilise enc.db via SQLCipher
     if [ -f "$data_dir/orthoptie_v2.enc.db" ] && [ -s "$data_dir/orthoptie_v2.enc.db" ]; then
         rm -f "$data_dir/orthoptie_v2.db"
     fi
+    "$install_dir/venv/bin/python3" "$install_dir/migrate.py"
 popd
 
 # Si base non chiffrée : chiffrer et supprimer la standard
