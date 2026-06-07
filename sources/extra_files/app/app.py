@@ -5230,9 +5230,9 @@ def admin_document_modele_detail(modele_id):
     # Catégories builtin uniques + custom
     builtin_cats = sorted(set(BUILTIN_CATEGORIES.values()) - {'ordonnance', 'courrier'})
     cats_custom = CategorieSection.query.order_by(CategorieSection.ordre).all()
-    custom_noms = [c.nom for c in cats_custom]
+    custom_noms = [c.key for c in cats_custom]
     categories_liste = builtin_cats + [c for c in custom_noms if c not in builtin_cats]
-    cats_labels = {c.nom: (c.label or c.nom) for c in cats_custom}
+    cats_labels = {c.key: (c.label or c.key) for c in cats_custom}
     return render_template('admin/document_modele_detail.html',
                            modele=m, modeles=modeles,
                            sections_dispo=sections, sections_ordre=ordre,
