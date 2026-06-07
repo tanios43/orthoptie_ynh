@@ -83,8 +83,92 @@
             {% if bloc.type == 'texte' %}
             <div style="margin-top:10px;">
               <label class="field-label">Contenu (variables {{'{{'}}variable{{'}}'}} supportées)</label>
-              <textarea id="ta-{{ bloc.id }}" style="min-height:100px;margin-top:4px;
-                        font-family:monospace;font-size:13px;">{{ bloc.contenu }}</textarea>
+
+              {# Toolbar #}
+              <div class="bloc-toolbar" style="display:flex;flex-wrap:wrap;gap:3px;padding:6px;
+                           background:var(--bg);border:1px solid var(--border);
+                           border-bottom:none;border-radius:6px 6px 0 0;margin-top:4px;">
+
+                {# Taille de police #}
+                <select onchange="execCmd('fontSize', this.value); this.blur();"
+                        style="font-size:11px;padding:2px 4px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);">
+                  <option value="">Taille</option>
+                  <option value="1">8pt</option>
+                  <option value="2">10pt</option>
+                  <option value="3">12pt (défaut)</option>
+                  <option value="4">14pt</option>
+                  <option value="5">18pt</option>
+                  <option value="6">24pt</option>
+                </select>
+
+                <div style="width:1px;background:var(--border);margin:2px 3px;"></div>
+
+                {# Gras / Italique / Souligné #}
+                <button type="button" onclick="execCmd('bold')"
+                        title="Gras (Ctrl+B)"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;
+                               font-weight:700;font-size:12px;">B</button>
+                <button type="button" onclick="execCmd('italic')"
+                        title="Italique (Ctrl+I)"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;
+                               font-style:italic;font-size:12px;">I</button>
+                <button type="button" onclick="execCmd('underline')"
+                        title="Souligné (Ctrl+U)"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;
+                               text-decoration:underline;font-size:12px;">U</button>
+
+                <div style="width:1px;background:var(--border);margin:2px 3px;"></div>
+
+                {# Alignement #}
+                <button type="button" onclick="execCmd('justifyLeft')"
+                        title="Aligner à gauche"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;font-size:12px;">⬛◻◻</button>
+                <button type="button" onclick="execCmd('justifyCenter')"
+                        title="Centrer"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;font-size:12px;">◻⬛◻</button>
+                <button type="button" onclick="execCmd('justifyRight')"
+                        title="Aligner à droite"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;font-size:12px;">◻◻⬛</button>
+
+                <div style="width:1px;background:var(--border);margin:2px 3px;"></div>
+
+                {# Tabulation / Indentation #}
+                <button type="button" onclick="execCmd('indent')"
+                        title="Augmenter le retrait"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;font-size:12px;">→|</button>
+                <button type="button" onclick="execCmd('outdent')"
+                        title="Diminuer le retrait"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;font-size:12px;">|←</button>
+
+                <div style="width:1px;background:var(--border);margin:2px 3px;"></div>
+
+                {# Effacer la mise en forme #}
+                <button type="button" onclick="execCmd('removeFormat')"
+                        title="Effacer la mise en forme"
+                        style="min-width:28px;height:26px;border:1px solid var(--border);
+                               border-radius:4px;background:var(--surface);cursor:pointer;font-size:11px;">Aa✕</button>
+              </div>
+
+              {# Zone éditable #}
+              <div id="editor-{{ bloc.id }}"
+                   contenteditable="true"
+                   data-bloc-id="{{ bloc.id }}"
+                   style="min-height:120px;padding:10px;
+                          border:1px solid var(--border);border-radius:0 0 6px 6px;
+                          background:white;color:#1a1a2e;font-size:13px;
+                          line-height:1.6;outline:none;white-space:pre-wrap;">{{ bloc.contenu | safe }}</div>
+
+              <input type="hidden" id="ta-{{ bloc.id }}">
+
               <div style="display:flex;gap:8px;margin-top:8px;">
                 <button type="button" class="btn btn-primary btn-sm"
                         onclick="sauverBloc({{ bloc.id }})">Enregistrer</button>
@@ -166,28 +250,61 @@
 </div>
 
 <script>
+// Garder la référence au dernier éditeur actif
+let _activeEditor = null;
+document.addEventListener('focusin', e => {
+  if (e.target.contentEditable === 'true') _activeEditor = e.target;
+});
+
+function execCmd(cmd, val) {
+  // Restaurer le focus sur l'éditeur actif
+  if (_activeEditor) _activeEditor.focus();
+  document.execCommand(cmd, false, val || null);
+}
+
 function toggleBloc(id) {
   const el = document.getElementById('edit-bloc-' + id);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (!el) return;
+  const visible = el.style.display !== 'none';
+  el.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    // Focus sur l'éditeur après ouverture
+    setTimeout(() => {
+      const ed = document.getElementById('editor-' + id);
+      if (ed) { ed.focus(); _activeEditor = ed; }
+    }, 50);
+  }
 }
 
 function sauverBloc(id) {
-  const ta = document.getElementById('ta-' + id);
-  if (!ta) return;
+  const editor = document.getElementById('editor-' + id);
+  if (!editor) return;
   const fd = new FormData();
-  fd.append('contenu', ta.value);
+  fd.append('contenu', editor.innerHTML);
   fetch('/admin/document-bloc/' + id + '/modifier', { method: 'POST', body: fd })
     .then(r => r.json())
-    .then(() => {
-      const row = ta.closest('.bloc-row');
-      const preview = row.querySelector('.text-sm.text-muted');
-      if (preview) {
-        const txt = ta.value.substring(0, 80);
-        preview.textContent = txt + (ta.value.length > 80 ? '…' : '');
+    .then(d => {
+      if (d.ok) {
+        // Mettre à jour l'aperçu
+        const row = document.querySelector(`.bloc-row[data-id="${id}"]`);
+        if (row) {
+          const preview = row.querySelector('.text-sm.text-muted');
+          if (preview) {
+            const txt = editor.innerText.substring(0, 80);
+            preview.textContent = txt + (editor.innerText.length > 80 ? '…' : '');
+          }
+        }
       }
-      toggleBloc(id);
     });
 }
+
+// Gérer Tab dans l'éditeur (indentation)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Tab' && document.activeElement.contentEditable === 'true') {
+    e.preventDefault();
+    document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+  }
+});
 
 // Drag & drop blocs
 const list = document.getElementById('blocs-list');
