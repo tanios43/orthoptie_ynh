@@ -6191,6 +6191,11 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
     # ── Construire le corps du document ──────────────────────────────
     sections_db, _ = get_sections()
     sections_data = []
+    # Collecter toutes les sections nécessaires (filtre par bloc fait plus tard)
+    _all_sections_types = set(sections_incluses)
+    if sections_par_bloc:
+        for _secs in sections_par_bloc.values():
+            _all_sections_types.update(_secs)
 
     def fmt_sph(v):
         """Formate une valeur sphère/cylindre avec signe et 2 décimales."""
@@ -6212,7 +6217,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
         return parts
 
     for sec in consultation.sections:
-        if sec.type not in sections_incluses:
+        if sec.type not in _all_sections_types:
             continue
         d = sec.get_donnees()
         lignes = []
@@ -6350,6 +6355,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
             flush_pending()
 
         sections_data.append({
+            'type': sec.type,
             'label': sec.label,
             'observations': sec.observations or '',
             'lignes': lignes,

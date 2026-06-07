@@ -77,10 +77,10 @@
             <input type="radio" name="modele_id" value="{{ m.id }}"
                    style="accent-color:var(--accent);"
                    {% if request.args.get('modele_id')|int == m.id %}checked{% endif %}
-                   onchange="this.closest('form').querySelectorAll('label').forEach(l=>l.style.borderColor='var(--border)');
+                   onchange="this.closest('form').querySelectorAll('label').forEach(l=>{l.style.borderColor='var(--border)';l.style.background=''});
                              this.parentElement.style.borderColor='var(--accent)';
-                             this.parentElement.style.background='var(--accent-lt)';">
-            <div>
+                             this.parentElement.style.background='var(--accent-lt)';
+                             rechargerAvecModele({{ m.id }})">            <div>
               <div style="font-size:13px;font-weight:500;">{{ m.nom }}</div>
             </div>
           </label>
@@ -277,6 +277,15 @@
 
   </form>
 </div>
+
+<script>
+function rechargerAvecModele(modeleId) {
+  // Recharger la page avec modele_id pour afficher les sélecteurs par bloc
+  const url = new URL(window.location.href);
+  url.searchParams.set('modele_id', modeleId);
+  window.location.href = url.toString();
+}
+</script>
 
 {% endif %}
 {% endblock %}
