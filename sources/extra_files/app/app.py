@@ -5224,9 +5224,11 @@ def admin_document_modele_detail(modele_id):
     m = DocumentModele.query.get_or_404(modele_id)
     modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
     sections, ordre = get_sections()
+    categories = CategorieSection.query.order_by(CategorieSection.ordre).all()
     return render_template('admin/document_modele_detail.html',
                            modele=m, modeles=modeles,
-                           sections_dispo=sections, sections_ordre=ordre)
+                           sections_dispo=sections, sections_ordre=ordre,
+                           categories=categories)
 
 
 @app.route('/admin/document-modele/<int:modele_id>/modifier', methods=['POST'])

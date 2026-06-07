@@ -178,29 +178,62 @@
             {% endif %}
             {% if bloc.type == 'section_bilan' %}
             <div style="margin-top:10px;">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
-                <div>
-                  <label class="field-label">Titre du bloc</label>
-                  <input type="text" id="label-{{ bloc.id }}"
-                         value="{{ bloc.label or '' }}"
-                         placeholder="ex: Réfraction, Acuité…"
-                         style="margin-top:4px;">
-                </div>
-                <div>
-                  <label class="field-label">Filtrer par catégories (vide = tout)</label>
-                  <input type="text" id="filtre-{{ bloc.id }}"
-                         value="{{ bloc.filtre_cats | join(', ') if bloc.filtre_cats else '' }}"
-                         placeholder="ex: refraction, acuite"
-                         style="margin-top:4px;">
-                </div>
-              </div>
-              <div style="margin-bottom:8px;">
-                <label class="field-label">Sections pré-sélectionnées (vide = tout coché)</label>
-                <input type="text" id="predef-{{ bloc.id }}"
-                       value="{{ bloc.sections_predefinies | join(', ') if bloc.sections_predefinies else '' }}"
-                       placeholder="ex: correction_portee, refraction_subj"
+
+              {# Label #}
+              <div style="margin-bottom:10px;">
+                <label class="field-label">Titre du bloc</label>
+                <input type="text" id="label-{{ bloc.id }}"
+                       value="{{ bloc.label or '' }}"
+                       placeholder="ex: Réfraction, Acuité visuelle…"
                        style="margin-top:4px;">
               </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:10px;">
+
+                {# Filtre par catégories #}
+                <div>
+                  <label class="field-label" style="margin-bottom:6px;display:block;">
+                    Filtrer par catégories
+                    <span style="font-weight:400;color:var(--muted);"> (vide = tout afficher)</span>
+                  </label>
+                  <div style="border:1px solid var(--border);border-radius:6px;padding:8px;
+                              background:var(--bg);max-height:160px;overflow-y:auto;">
+                    {% for cat in categories %}
+                    <label style="display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;">
+                      <input type="checkbox"
+                             class="filtre-cat-{{ bloc.id }}"
+                             value="{{ cat.nom }}"
+                             style="accent-color:var(--accent);"
+                             {% if bloc.filtre_cats and cat.nom in bloc.filtre_cats %}checked{% endif %}>
+                      <span style="font-size:13px;">{{ cat.label or cat.nom }}</span>
+                    </label>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                {# Sections pré-sélectionnées #}
+                <div>
+                  <label class="field-label" style="margin-bottom:6px;display:block;">
+                    Sections pré-sélectionnées
+                    <span style="font-weight:400;color:var(--muted);"> (vide = tout coché)</span>
+                  </label>
+                  <div style="border:1px solid var(--border);border-radius:6px;padding:8px;
+                              background:var(--bg);max-height:160px;overflow-y:auto;">
+                    {% for sec in sections_dispo %}
+                    <label style="display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;">
+                      <input type="checkbox"
+                             class="predef-sec-{{ bloc.id }}"
+                             value="{{ sec.type }}"
+                             style="accent-color:var(--accent);"
+                             {% if bloc.sections_predefinies and sec.type in bloc.sections_predefinies %}checked{% endif %}>
+                      <span style="font-size:12px;">{{ sec.label }}</span>
+                    </label>
+                    {% endfor %}
+                  </div>
+                </div>
+
+              </div>
+
               <button type="button" class="btn btn-primary btn-sm"
                       onclick="sauverBlocSection({{ bloc.id }})">Enregistrer</button>
             </div>
@@ -337,10 +370,18 @@ document.addEventListener('keydown', e => {
 });
 
 function sauverBlocSection(id) {
+  const label = document.getElementById('label-' + id)?.value || '';
+
+  const cats = Array.from(document.querySelectorAll('.filtre-cat-' + id + ':checked'))
+                    .map(cb => cb.value);
+
+  const secs = Array.from(document.querySelectorAll('.predef-sec-' + id + ':checked'))
+                    .map(cb => cb.value);
+
   const fd = new FormData();
-  fd.append('label',             document.getElementById('label-' + id)?.value || '');
-  fd.append('filtre_categories', document.getElementById('filtre-' + id)?.value || '');
-  fd.append('sections_predef',   document.getElementById('predef-' + id)?.value || '');
+  fd.append('label',             label);
+  fd.append('filtre_categories', cats.join(','));
+  fd.append('sections_predef',   secs.join(','));
   fetch('/admin/document-bloc/' + id + '/modifier', { method: 'POST', body: fd })
     .then(r => r.json())
     .then(d => { if (d.ok) { location.reload(); } });
