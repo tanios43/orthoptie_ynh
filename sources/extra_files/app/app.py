@@ -5924,6 +5924,8 @@ def _html_to_docx_paras(html_content, esc_fn):
                     self._size = FONT_SIZE_MAP[sz]
             elif tag == 'br':
                 self._flush_para()
+                # Paragraphe vide pour le saut de ligne
+                self.paras.append('<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>')
 
         def handle_endtag(self, tag):
             if tag == 'div':
@@ -5955,7 +5957,7 @@ def _html_to_docx_paras(html_content, esc_fn):
             # Construire le paragraphe XML
             indent_xml = f'<w:ind w:left="{self._indent}"/>' if self._indent else ''
             pPr = (f'<w:pPr><w:jc w:val="{self._align}"/>'
-                   f'<w:spacing w:after="120"/>{indent_xml}</w:pPr>')
+                   f'<w:spacing w:after="0"/>{indent_xml}</w:pPr>')
             runs_xml = ''
             for r in self._runs:
                 rPr = '<w:rPr>'
@@ -6427,6 +6429,9 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None):
     body_paras = []
     for bloc in blocs_resolus:
         if bloc['type'] == 'texte' and bloc['contenu']:
+            # Ligne de séparation après les sections
+            if body_paras and bloc != blocs_resolus[0]:
+                body_paras.append('<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>')
             body_paras.extend(_html_to_docx_paras(bloc['contenu'], esc))
         elif bloc['type'] == 'sections':
             for sec in bloc['sections']:
