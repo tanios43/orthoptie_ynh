@@ -204,9 +204,9 @@
                       <input type="checkbox"
                              class="filtre-cat-{{ bloc.id }}"
                              value="{{ cat }}"
-                             style="flex-shrink:0;accent-color:var(--accent);"
+                             style="flex-shrink:0;width:14px;height:14px;margin:0;accent-color:var(--accent);"
                              {% if bloc.filtre_cats and cat in bloc.filtre_cats %}checked{% endif %}>
-                      <span style="font-size:13px;flex:1;">{{ cats_labels.get(cat, cat) }}</span>
+                      <span style="font-size:13px;flex:1;min-width:0;">{{ cats_labels.get(cat, cat) }}</span>
                     </label>
                     {% endfor %}
                   </div>
@@ -226,9 +226,9 @@
                       <input type="checkbox"
                              class="predef-sec-{{ bloc.id }}"
                              value="{{ sec.type }}"
-                             style="flex-shrink:0;accent-color:var(--accent);"
+                             style="flex-shrink:0;width:14px;height:14px;margin:0;accent-color:var(--accent);"
                              {% if bloc.sections_predefinies and sec.type in bloc.sections_predefinies %}checked{% endif %}>
-                      <span style="font-size:12px;flex:1;">{{ sec.label }}</span>
+                      <span style="font-size:12px;flex:1;min-width:0;">{{ sec.label }}</span>
                     </label>
                     {% endfor %}
                   </div>
