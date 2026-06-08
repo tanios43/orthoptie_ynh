@@ -5108,13 +5108,16 @@ def admin_document_modeles_exporter():
     from flask import Response
     modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
     data = {
-        'version': 1,
+        'version': 2,
         'type': 'modeles_documents',
         'modeles': [{
             'nom':   m.nom,
             'type':  m.type,
             'actif': m.actif,
-            'blocs': [{'type': b.type, 'contenu': b.contenu, 'ordre': b.ordre}
+            'blocs': [{'type': b.type, 'contenu': b.contenu, 'ordre': b.ordre,
+                       'label': b.label or '',
+                       'filtre_categories': b.filtre_categories,
+                       'sections_predef': b.sections_predef}
                       for b in m.blocs]
         } for m in modeles]
     }
@@ -5133,10 +5136,13 @@ def admin_document_modele_exporter_un(modele_id):
     from flask import Response
     m = DocumentModele.query.get_or_404(modele_id)
     data = {
-        'version': 1,
+        'version': 2,
         'type': 'modeles_documents',
         'modeles': [{'nom': m.nom, 'type': m.type, 'actif': m.actif,
-                     'blocs': [{'type': b.type, 'contenu': b.contenu, 'ordre': b.ordre}
+                     'blocs': [{'type': b.type, 'contenu': b.contenu, 'ordre': b.ordre,
+                                'label': b.label or '',
+                                'filtre_categories': b.filtre_categories,
+                                'sections_predef': b.sections_predef}
                                for b in m.blocs]}]
     }
     nom = m.nom.replace(' ', '_').lower()
@@ -5182,7 +5188,10 @@ def admin_document_modeles_importer():
                     modele_id=m.id,
                     type=b_data.get('type', 'texte'),
                     contenu=b_data.get('contenu', ''),
-                    ordre=b_data.get('ordre', 99)
+                    ordre=b_data.get('ordre', 99),
+                    label=b_data.get('label', ''),
+                    filtre_categories=b_data.get('filtre_categories'),
+                    sections_predef=b_data.get('sections_predef')
                 ))
             importes += 1
         db.session.commit()
