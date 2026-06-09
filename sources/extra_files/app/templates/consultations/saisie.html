@@ -623,6 +623,9 @@ const SECTIONS_ORDRE = {{ sections_ordre | tojson }};
 const MODELES = {{ modeles_json | tojson }};
 const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
 
+// ── Compteur global d'index de section ──
+let sectionIndex = 0;
+
 // ── Navigation sections dans le bandeau bas ──────────────────────────
 function mettreAJourSectionsNav() {
   const nav = document.getElementById('sections-nav');
