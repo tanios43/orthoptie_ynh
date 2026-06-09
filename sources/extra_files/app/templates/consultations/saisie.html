@@ -602,14 +602,17 @@
 <div style="position:fixed;bottom:0;
             left:calc(var(--sidebar-w) + 32px + 220px + 20px);right:32px;
             background:var(--surface);border-top:1px solid var(--border);
-            padding:12px 20px;display:flex;gap:10px;align-items:center;
+            padding:10px 20px;display:flex;gap:10px;align-items:center;
             border-radius:10px 10px 0 0;
             box-shadow:0 -2px 8px rgba(0,0,0,.06);z-index:90;">
-  <button form="form-bilan" type="submit" class="btn btn-primary">
+  <button form="form-bilan" type="submit" class="btn btn-primary" style="flex-shrink:0;">
     {{ 'Enregistrer les modifications' if consultation else 'Enregistrer le bilan' }}
   </button>
-  <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary">Annuler</a>
-  <span id="save-hint" style="font-size:12px;color:var(--muted);margin-left:8px;"></span>
+  <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary" style="flex-shrink:0;">Annuler</a>
+  <span id="save-hint" style="font-size:12px;color:var(--muted);margin-left:4px;flex-shrink:0;"></span>
+
+  {# Pastilles des sections — mises à jour dynamiquement par JS #}
+  <div id="sections-nav" style="display:flex;flex-wrap:wrap;gap:5px;margin-left:8px;overflow:hidden;max-height:36px;"></div>
 </div>
 
 {# Définition JSON des sections pour le JS #}
@@ -620,8 +623,30 @@ const SECTIONS_ORDRE = {{ sections_ordre | tojson }};
 const MODELES = {{ modeles_json | tojson }};
 const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
 
-// ── Compteur global d'index de section ──
-let sectionIndex = 0;
+// ── Navigation sections dans le bandeau bas ──────────────────────────
+function mettreAJourSectionsNav() {
+  const nav = document.getElementById('sections-nav');
+  if (!nav) return;
+  nav.innerHTML = '';
+  document.querySelectorAll('.bilan-section').forEach(el => {
+    const type = el.dataset.sectionType || el.dataset.type;
+    if (!type || !SECTIONS_DEF[type]) return;
+    const sec = SECTIONS_DEF[type];
+    const cat = sec.categorie || '';
+    const col = CAT_COLORS[cat] || CAT_COLORS[''] || {bg:'#f0f4ff',color:'#534AB7',icon:'ti-file'};
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.title = sec.label;
+    btn.style.cssText = `padding:3px 9px;border-radius:6px;font-size:11px;font-weight:500;
+      background:${col.bg};border:0.5px solid ${col.color}22;color:${col.color};
+      cursor:pointer;white-space:nowrap;transition:filter .15s;`;
+    btn.innerHTML = `<i class="ti ${col.icon}" style="font-size:11px;margin-right:3px;opacity:.8;"></i>${sec.label}`;
+    btn.onclick = () => el.scrollIntoView({behavior:'smooth', block:'center'});
+    btn.onmouseover = () => btn.style.filter = 'brightness(.9)';
+    btn.onmouseout  = () => btn.style.filter = '';
+    nav.appendChild(btn);
+  });
+}
 
 // ── Templates HTML des types de champs ──
 function champHTML(idx, champ, val) {
@@ -1514,6 +1539,7 @@ function renumeroter() {
     const num = el.querySelector('.bilan-section-num');
     if (num) num.textContent = i + 1;
   });
+  mettreAJourSectionsNav();
 }
 
 // ── Format sphère avec signe + ──
@@ -1526,7 +1552,9 @@ function formatSignedFloat(input) {
 }
 
 // ── Initialisation ──
-// ── Drawer historique de section ──────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  mettreAJourSectionsNav();
+});
 
 let currentDrawerIdx = null;  // index de la section dont on affiche l'historique
 
