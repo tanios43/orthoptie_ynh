@@ -1159,17 +1159,38 @@ class SectionDef(db.Model):
     actif            = db.Column(db.Boolean, default=True)
     obs_defaut       = db.Column(db.Text, default='')
     avec_observations = db.Column(db.Boolean, default=True)
-    categorie        = db.Column(db.String(50), default='')  # catégorie visuelle
-    nb_colonnes      = db.Column(db.Integer, default=2)      # nb colonnes dans la grille
+    categorie        = db.Column(db.String(50), default='')
+    nb_colonnes      = db.Column(db.Integer, default=2)
     champs     = db.relationship('ChampDef', backref='section',
                                order_by='ChampDef.ordre', cascade='all, delete-orphan')
+    fichiers   = db.relationship('SectionDefFichier', backref='section_def',
+                               order_by='SectionDefFichier.ordre', cascade='all, delete-orphan')
     def to_dict(self):
         return {'label': self.label,
                 'obs_defaut': self.obs_defaut or '',
                 'avec_observations': self.avec_observations if self.avec_observations is not None else True,
                 'categorie': self.categorie or '',
                 'nb_colonnes': self.nb_colonnes or 2,
-                'champs': [c.to_dict() for c in self.champs if c.actif]}
+                'champs': [c.to_dict() for c in self.champs if c.actif],
+                'fichiers': [f.to_dict() for f in self.fichiers]}
+
+
+class SectionDefFichier(db.Model):
+    """Fichier attaché à une définition de section (feuilles d'exercices, etc.)."""
+    __tablename__ = 'section_def_fichier'
+    id             = db.Column(db.Integer, primary_key=True)
+    section_def_id = db.Column(db.Integer, db.ForeignKey('section_def.id'), nullable=False)
+    nom_original   = db.Column(db.String(255), nullable=False)
+    nom_stocke     = db.Column(db.String(255), nullable=False)
+    type_fichier   = db.Column(db.String(10), default='pdf')  # 'pdf' ou 'image'
+    titre          = db.Column(db.String(200), default='')
+    ordre          = db.Column(db.Integer, default=0)
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {'id': self.id, 'nom_original': self.nom_original,
+                'nom_stocke': self.nom_stocke, 'type_fichier': self.type_fichier,
+                'titre': self.titre or self.nom_original, 'ordre': self.ordre}
 
 
 class ChampDef(db.Model):
@@ -4713,6 +4734,68 @@ def admin_section_nouvelle():
     db.session.add(s); db.session.commit()
     flash(f'Section « {label} » créée.', 'success')
     return redirect(url_for('admin_section_detail', section_id=s.id))
+
+
+@app.route('/admin/section/<int:section_id>/fichiers/ajouter', methods=['POST'])
+@login_required
+def admin_section_fichier_ajouter(section_id):
+    """Upload un fichier (PDF ou image) attaché à une définition de section."""
+    if current_user.role != 'admin':
+        return 'Accès refusé', 403
+    sec = SectionDef.query.get_or_404(section_id)
+    f = request.files.get('fichier')
+    if not f or not f.filename:
+        flash('Aucun fichier sélectionné.', 'danger')
+        return redirect(url_for('admin_section_detail', section_id=section_id))
+
+    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+    if ext not in ('pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'):
+        flash('Format non supporté. Utilisez PDF ou image (jpg, png…).', 'danger')
+        return redirect(url_for('admin_section_detail', section_id=section_id))
+
+    type_fichier = 'pdf' if ext == 'pdf' else 'image'
+    import uuid as _uuid
+    nom_stocke = f'secdef_{sec.id}_{_uuid.uuid4().hex[:8]}.{ext}'
+    dest_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'section_def')
+    os.makedirs(dest_dir, exist_ok=True)
+    f.save(os.path.join(dest_dir, nom_stocke))
+
+    titre = request.form.get('titre', '').strip() or f.filename
+    ordre = SectionDefFichier.query.filter_by(section_def_id=sec.id).count()
+    db.session.add(SectionDefFichier(
+        section_def_id=sec.id, nom_original=f.filename,
+        nom_stocke=nom_stocke, type_fichier=type_fichier,
+        titre=titre, ordre=ordre
+    ))
+    db.session.commit()
+    flash('Fichier ajouté.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=section_id))
+
+
+@app.route('/admin/section-def-fichier/<int:fichier_id>/supprimer', methods=['POST'])
+@login_required
+def admin_section_fichier_supprimer(fichier_id):
+    if current_user.role != 'admin':
+        return 'Accès refusé', 403
+    fic = SectionDefFichier.query.get_or_404(fichier_id)
+    section_id = fic.section_def_id
+    # Supprimer le fichier physique
+    path = os.path.join(app.config['UPLOAD_FOLDER'], 'section_def', fic.nom_stocke)
+    if os.path.exists(path):
+        os.remove(path)
+    db.session.delete(fic)
+    db.session.commit()
+    flash('Fichier supprimé.', 'success')
+    return redirect(url_for('admin_section_detail', section_id=section_id))
+
+
+@app.route('/section-def-fichier/<path:filename>')
+@login_required
+def section_def_fichier(filename):
+    """Sert les fichiers attachés aux définitions de sections."""
+    return send_from_directory(
+        os.path.join(app.config['UPLOAD_FOLDER'], 'section_def'), filename
+    )
 
 
 @app.route('/admin/section/<int:section_id>')

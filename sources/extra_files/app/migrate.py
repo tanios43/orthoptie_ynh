@@ -271,6 +271,16 @@ _pre_migrations = [
         "ALTER TABLE document_bloc ADD COLUMN label TEXT DEFAULT ''",
         "ALTER TABLE document_bloc ADD COLUMN filtre_categories TEXT DEFAULT NULL",
         "ALTER TABLE document_bloc ADD COLUMN sections_predef TEXT DEFAULT NULL",
+        """CREATE TABLE IF NOT EXISTS section_def_fichier (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            section_def_id INTEGER NOT NULL REFERENCES section_def(id) ON DELETE CASCADE,
+            nom_original TEXT NOT NULL,
+            nom_stocke TEXT NOT NULL,
+            type_fichier TEXT DEFAULT 'pdf',
+            titre TEXT DEFAULT '',
+            ordre INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
         """CREATE TABLE IF NOT EXISTS favori (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             praticien_id INTEGER NOT NULL REFERENCES praticien(id),

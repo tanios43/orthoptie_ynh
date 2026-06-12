@@ -626,6 +626,13 @@ const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
 // ── Compteur global d'index de section ──
 let sectionIndex = 0;
 
+function imprimerFichiersSection(type) {
+  const fichiers = SECTIONS_DEF[type]?.fichiers || [];
+  fichiers.forEach(fic => {
+    window.open(`/section-def-fichier/${fic.nom_stocke}`, '_blank');
+  });
+}
+
 // ── Navigation sections dans le bandeau bas ──────────────────────────
 function mettreAJourSectionsNav() {
   const nav = document.getElementById('sections-nav');
@@ -1055,6 +1062,14 @@ function renderSection(type, label, idx, titre, obs, donnees) {
                 font-size:10px;font-weight:500;padding:2px 7px;text-decoration:none;flex-shrink:0;"
          onmouseover="this.style.background='rgba(0,0,0,.2)'"
          onmouseout="this.style.background='rgba(0,0,0,.1)'">📄 Générer</a>` : ''}
+      ${SECTIONS_DEF[type]?.fichiers?.length ? `
+      <button type="button" tabindex="-1"
+              onclick="event.stopPropagation();imprimerFichiersSection('${type}')"
+              title="Imprimer les exercices"
+              style="background:rgba(0,0,0,.1);border-radius:4px;color:${col.color};
+                     font-size:10px;font-weight:500;padding:2px 7px;border:none;cursor:pointer;flex-shrink:0;"
+              onmouseover="this.style.background='rgba(0,0,0,.2)'"
+              onmouseout="this.style.background='rgba(0,0,0,.1)'">🖨️ Exercices</button>` : ''}
       ${type === 'refraction_subj' ? `
       <div style="position:relative;display:inline-block;" onclick="event.stopPropagation()">
         <button type="button" tabindex="-1"
