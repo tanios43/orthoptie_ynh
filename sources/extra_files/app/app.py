@@ -3706,6 +3706,7 @@ def admin_sauvegarde_exporter():
 
     data_dir    = app.config['DATA_FOLDER']
     uploads_dir = app.config['UPLOAD_FOLDER']
+    install_dir = os.path.dirname(__file__)
     db_enc      = os.path.join(data_dir, 'orthoptie_v2.enc.db')
     db_std      = os.path.join(app.instance_path, 'orthoptie_v2.db')
 
