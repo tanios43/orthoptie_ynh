@@ -86,6 +86,16 @@ if [ -f "${SFTP_CONFIG}" ]; then
             "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/db/"
         DB_STATUS=$?
 
+        # Fichiers critiques install_dir (db_key, secret_key, entete.docx)
+        for FNAME in ".db_key" ".secret_key" "entete.docx"; do
+            if [ -f "${INSTALL_DIR}/${FNAME}" ]; then
+                rsync -az --timeout=30 \
+                    -e "ssh ${SSH_OPTS}" \
+                    "${INSTALL_DIR}/${FNAME}" \
+                    "${SFTP_USER}@${SFTP_HOST}:${SFTP_PATH}/"
+            fi
+        done
+
         # Clés SSH et config SFTP
         if [ -d "${DATA_DIR}/ssh" ]; then
             rsync -az --timeout=30 \

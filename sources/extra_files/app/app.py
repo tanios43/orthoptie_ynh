@@ -3282,7 +3282,23 @@ def admin_restaurer_nas():
             ], capture_output=True, text=True, timeout=120)
             if r.returncode != 0: errors.append(f'db: {r.stderr.strip()}')
 
-        # 2. Restaurer les clés SSH si présentes sur le NAS
+        # 2. Restaurer les fichiers critiques de install_dir si présents sur le NAS
+        install_dir_restore = os.path.dirname(__file__)
+        for fname, dest_path, mode in [
+            ('.db_key',     os.path.join(install_dir_restore, '.db_key'),     0o600),
+            ('.secret_key', os.path.join(install_dir_restore, '.secret_key'), 0o600),
+            ('entete.docx', os.path.join(install_dir_restore, 'entete.docx'), 0o644),
+        ]:
+            r_f = subprocess.run([
+                'rsync', '-az', '--no-perms', '--no-owner', '--no-group',
+                '--timeout=30', '-e', ssh_opts,
+                f'{cfg.sftp_user}@{cfg.sftp_host}:{cfg.sftp_path}/{fname}',
+                dest_path
+            ], capture_output=True, text=True, timeout=30)
+            if r_f.returncode == 0 and os.path.exists(dest_path):
+                os.chmod(dest_path, mode)
+
+        # 3. Restaurer les clés SSH si présentes sur le NAS
         subprocess.run([
             'rsync', '-az', '--no-perms', '--no-owner', '--no-group',
             '--timeout=30', '-e', ssh_opts,
