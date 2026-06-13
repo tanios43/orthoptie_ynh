@@ -24,12 +24,27 @@ else
     DB_FILE="orthoptie_v2.db"
 fi
 
-tar -czf "${BACKUP_FILE}" -C "${DATA_DIR}" \
+INSTALL_DIR="/var/www/${APP}"
+TMPDIR_BAK=$(mktemp -d)
+
+# Copier les fichiers critiques de install_dir dans le tmpdir
+[ -f "${INSTALL_DIR}/.db_key" ]     && cp "${INSTALL_DIR}/.db_key"     "${TMPDIR_BAK}/"
+[ -f "${INSTALL_DIR}/.secret_key" ] && cp "${INSTALL_DIR}/.secret_key" "${TMPDIR_BAK}/"
+[ -f "${INSTALL_DIR}/entete.docx" ] && cp "${INSTALL_DIR}/entete.docx" "${TMPDIR_BAK}/"
+
+tar -czf "${BACKUP_FILE}" \
+    -C "${DATA_DIR}" \
     "${DB_FILE}" \
     "uploads" \
     $([ -d "${DATA_DIR}/ssh" ] && echo "ssh") \
     $([ -f "${DATA_DIR}/sftp_config.sh" ] && echo "sftp_config.sh") \
+    -C "${TMPDIR_BAK}" \
+    $([ -f "${TMPDIR_BAK}/.db_key" ]     && echo ".db_key") \
+    $([ -f "${TMPDIR_BAK}/.secret_key" ] && echo ".secret_key") \
+    $([ -f "${TMPDIR_BAK}/entete.docx" ] && echo "entete.docx") \
     2>/dev/null
+
+rm -rf "${TMPDIR_BAK}"
 
 if [ $? -eq 0 ]; then
     SIZE=$(du -sh "${BACKUP_FILE}" | cut -f1)

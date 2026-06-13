@@ -3715,6 +3715,11 @@ def admin_sauvegarde_exporter():
             z.write(db_enc, 'orthoptie_v2.enc.db')
         elif os.path.exists(db_std) and os.path.getsize(db_std) > 0:
             z.write(db_std, 'orthoptie_v2.db')
+        # Fichiers critiques de install_dir
+        for fname in ('.db_key', '.secret_key', 'entete.docx'):
+            fpath = os.path.join(install_dir, fname)
+            if os.path.exists(fpath):
+                z.write(fpath, fname)
         # Uploads
         for root, dirs, files in os.walk(uploads_dir):
             for file in files:
@@ -3788,6 +3793,14 @@ def admin_sauvegarde_importer():
                     db_tmp = os.path.join(tmpdir, 'orthoptie_v2.enc.db')
                 elif 'orthoptie_v2.db' in names:
                     z.extract('orthoptie_v2.db', tmpdir)
+                # Fichiers critiques install_dir
+                for fname in ('.db_key', '.secret_key', 'entete.docx'):
+                    if fname in names:
+                        z.extract(fname, tmpdir)
+                        dest = os.path.join(install_dir, fname)
+                        shutil.copy2(os.path.join(tmpdir, fname), dest)
+                        if fname in ('.db_key', '.secret_key'):
+                            os.chmod(dest, 0o600)
                 for name in names:
                     if name.startswith('uploads/'):
                         z.extract(name, tmpdir)
