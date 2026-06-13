@@ -65,26 +65,34 @@
 
     <div id="sections-list" style="padding:8px;">
       {% for s in sections %}
+      {% set col = section_style(s.type_key, s.categorie or '') %}
       <div class="section-row" data-id="{{ s.id }}"
            style="display:flex;align-items:center;gap:10px;
-                  padding:10px 12px;border-radius:8px;margin-bottom:4px;
-                  background:var(--surface);border:1px solid var(--border);
+                  padding:8px 12px;border-radius:8px;margin-bottom:4px;
+                  background:{{ col.bg }};border:0.5px solid {{ col.color }}22;
                   cursor:grab;">
-        <span style="color:var(--muted);font-size:14px;cursor:grab;">⠿</span>
+        <span style="color:{{ col.color }};font-size:14px;cursor:grab;opacity:.6;">⠿</span>
+        <i class="ti {{ col.icon }}" style="font-size:14px;color:{{ col.color }};opacity:.7;flex-shrink:0;"></i>
         <div style="flex:1;">
-          <span style="font-size:14px;font-weight:500;">{{ s.label }}</span>
+          <span style="font-size:14px;font-weight:500;color:{{ col.color }};">{{ s.label }}</span>
           {% if s.builtin %}
-            <span class="badge badge-gray" style="margin-left:6px;font-size:10px;">native</span>
+            <span style="margin-left:6px;font-size:10px;background:rgba(0,0,0,.08);
+                         color:{{ col.color }};border-radius:4px;padding:1px 5px;">native</span>
           {% endif %}
           {% if not s.actif %}
             <span class="badge badge-warn" style="margin-left:6px;font-size:10px;">désactivée</span>
           {% endif %}
-          <span class="text-sm text-muted" style="margin-left:8px;">
+          <span style="margin-left:8px;font-size:11px;color:{{ col.color }};opacity:.6;">
             {{ s.champs|selectattr('actif')|list|length }} champ(s)
+            {% if s.fichiers %} · 📎 {{ s.fichiers|length }}{% endif %}
           </span>
         </div>
         <a href="{{ url_for('admin_section_detail', section_id=s.id) }}"
-           class="btn btn-secondary btn-sm">Éditer</a>
+           style="font-size:11px;padding:3px 10px;border-radius:5px;
+                  background:rgba(0,0,0,.08);color:{{ col.color }};
+                  text-decoration:none;font-weight:500;border:none;"
+           onmouseover="this.style.background='rgba(0,0,0,.15)'"
+           onmouseout="this.style.background='rgba(0,0,0,.08)'">Éditer</a>
       </div>
       {% endfor %}
     </div>
