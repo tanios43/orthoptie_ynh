@@ -4567,12 +4567,11 @@ def profil():
 @app.route('/admin/sections/exporter')
 @login_required
 def admin_sections_exporter():
-    """Exporte toutes les sections (natives et personnalisées) en JSON."""
-    import json
-    from flask import Response
+    """Exporte toutes les sections en ZIP (JSON + fichiers ressources)."""
+    import json, zipfile, io
     sections = SectionDef.query.order_by(SectionDef.ordre).all()
     data = {
-        'version': 1,
+        'version': 2,
         'type': 'sections_def',
         'sections': [{
             'type_key':          s.type_key,
@@ -4590,34 +4589,71 @@ def admin_sections_exporter():
                 'type':    c.type,
                 'ordre':   c.ordre,
                 'options': [o.valeur for o in c.options if o.actif]
-            } for c in s.champs if c.actif]
+            } for c in s.champs if c.actif],
+            'fichiers': [{
+                'nom_original': f.nom_original,
+                'nom_stocke':   f.nom_stocke,
+                'type_fichier': f.type_fichier,
+                'titre':        f.titre or '',
+                'ordre':        f.ordre
+            } for f in s.fichiers]
         } for s in sections]
     }
+
+    # Créer un ZIP avec le JSON + les fichiers ressources
+    buf = io.BytesIO()
+    section_def_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'section_def')
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.writestr('sections_def.json', json.dumps(data, indent=2, ensure_ascii=False))
+        for s in sections:
+            for f in s.fichiers:
+                path = os.path.join(section_def_dir, f.nom_stocke)
+                if os.path.exists(path):
+                    z.write(path, f'fichiers/{f.nom_stocke}')
+    buf.seek(0)
+
+    from flask import Response
     return Response(
-        json.dumps(data, indent=2, ensure_ascii=False),
-        mimetype='application/json',
-        headers={'Content-Disposition': 'attachment; filename=sections_def.json'}
+        buf.read(),
+        mimetype='application/zip',
+        headers={'Content-Disposition': 'attachment; filename=sections_def.zip'}
     )
 
 
 @app.route('/admin/sections/importer', methods=['POST'])
 @login_required
 def admin_sections_importer():
-    """Importe des sections depuis un JSON."""
-    import json
+    """Importe des sections depuis un JSON ou ZIP (avec fichiers ressources)."""
+    import json, zipfile, io, shutil
     f = request.files.get('fichier_sections')
-    if not f or not f.filename.endswith('.json'):
-        flash('Fichier invalide — JSON requis.', 'danger')
+    if not f or not (f.filename.endswith('.json') or f.filename.endswith('.zip')):
+        flash('Fichier invalide — JSON ou ZIP requis.', 'danger')
         return redirect(url_for('admin_sections'))
+
+    # Extraire le JSON et les fichiers selon le format
+    fichiers_zip = {}  # {nom_stocke: bytes}
     try:
-        data = json.load(f)
+        if f.filename.endswith('.zip'):
+            with zipfile.ZipFile(io.BytesIO(f.read())) as z:
+                with z.open('sections_def.json') as jf:
+                    data = json.load(jf)
+                for name in z.namelist():
+                    if name.startswith('fichiers/') and name != 'fichiers/':
+                        nom_stocke = name.split('/')[-1]
+                        fichiers_zip[nom_stocke] = z.read(name)
+        else:
+            data = json.load(f)
+
         if data.get('type') != 'sections_def':
             flash('Fichier non reconnu — ce n\'est pas un export de sections.', 'danger')
             return redirect(url_for('admin_sections'))
+
         mode       = request.form.get('mode', 'ajouter')
         importees  = 0
         mises_a_j  = 0
         ignorees   = 0
+        section_def_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'section_def')
+        os.makedirs(section_def_dir, exist_ok=True)
 
         for s_data in data.get('sections', []):
             type_key = s_data.get('type_key', '').strip()
@@ -4628,13 +4664,11 @@ def admin_sections_importer():
 
             if existing:
                 if s_data.get('builtin') and existing.builtin:
-                    # Section native → mettre à jour seulement les propriétés éditables
                     existing.label             = s_data.get('label', existing.label)
                     existing.obs_defaut        = s_data.get('obs_defaut', existing.obs_defaut)
                     existing.avec_observations = s_data.get('avec_observations', existing.avec_observations)
                     existing.categorie         = s_data.get('categorie', existing.categorie)
                     existing.nb_colonnes       = s_data.get('nb_colonnes', existing.nb_colonnes or 2)
-                    # Ajouter les champs manquants (sans supprimer les existants)
                     existing_names = {c.name for c in existing.champs}
                     for i, c_data in enumerate(s_data.get('champs', [])):
                         if c_data['name'] not in existing_names:
@@ -4646,17 +4680,17 @@ def admin_sections_importer():
                             )
                             db.session.add(nc)
                     mises_a_j += 1
+                    target = existing
                 elif mode == 'ajouter':
                     ignorees += 1
                     continue
-                else:  # remplacer section personnalisée
+                else:
                     existing.label             = s_data.get('label', existing.label)
                     existing.obs_defaut        = s_data.get('obs_defaut', '')
                     existing.avec_observations = s_data.get('avec_observations', True)
                     existing.categorie         = s_data.get('categorie', '')
                     existing.nb_colonnes       = s_data.get('nb_colonnes', 2)
                     existing.actif             = s_data.get('actif', True)
-                    # Remplacer les champs
                     for c in list(existing.champs):
                         db.session.delete(c)
                     db.session.flush()
@@ -4672,11 +4706,8 @@ def admin_sections_importer():
                         for val in c_data.get('options', []):
                             db.session.add(OptionDef(champ_id=nc.id, valeur=val, ordre=0))
                     mises_a_j += 1
+                    target = existing
             else:
-                # Nouvelle section personnalisée
-                if s_data.get('builtin'):
-                    # Native non trouvée localement — créer comme personnalisée
-                    pass
                 ns = SectionDef(
                     type_key         = type_key,
                     label            = s_data.get('label', type_key),
@@ -4702,6 +4733,26 @@ def admin_sections_importer():
                     for val in c_data.get('options', []):
                         db.session.add(OptionDef(champ_id=nc.id, valeur=val, ordre=0))
                 importees += 1
+                target = ns
+
+            # Restaurer les fichiers ressources
+            if fichiers_zip and target:
+                db.session.flush()
+                existing_noms = {fic.nom_stocke for fic in target.fichiers}
+                for f_data in s_data.get('fichiers', []):
+                    nom_stocke = f_data.get('nom_stocke', '')
+                    if nom_stocke in fichiers_zip and nom_stocke not in existing_noms:
+                        dest = os.path.join(section_def_dir, nom_stocke)
+                        with open(dest, 'wb') as out:
+                            out.write(fichiers_zip[nom_stocke])
+                        db.session.add(SectionDefFichier(
+                            section_def_id=target.id,
+                            nom_original=f_data.get('nom_original', nom_stocke),
+                            nom_stocke=nom_stocke,
+                            type_fichier=f_data.get('type_fichier', 'pdf'),
+                            titre=f_data.get('titre', ''),
+                            ordre=f_data.get('ordre', 0)
+                        ))
 
         db.session.commit()
         msg = f'✅ {importees} section(s) importée(s), {mises_a_j} mise(s) à jour.'
