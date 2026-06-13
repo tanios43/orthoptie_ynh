@@ -1370,7 +1370,33 @@ function ajouterSection(type, label) {
       }
       redir.value = 'modifier#section-' + type;
       if (window._setBilanEnregistrement) window._setBilanEnregistrement();
-      setTimeout(() => form.submit(), 800);
+      setTimeout(() => {
+        // Forcer la synchronisation de tous les champs avant soumission
+        // 1. Champs WYSIWYG contenteditable
+        document.querySelectorAll('.wysiwyg-field[contenteditable]').forEach(div => {
+          const hidden = document.getElementById(div.id + '_hidden');
+          if (hidden) hidden.value = htmlToMd(div.innerHTML);
+        });
+        // 2. Renuméroter les champs selon l'ordre réel
+        const sections = document.querySelectorAll('#sections-container .bilan-section');
+        sections.forEach((sec, newOrdre) => {
+          const oldIdx = parseInt(sec.dataset.idx);
+          if (oldIdx !== newOrdre) {
+            sec.querySelectorAll('[name]').forEach(el => {
+              if (el.name.startsWith(`champ__${oldIdx}__`)) {
+                el.name = el.name.replace(`champ__${oldIdx}__`, `champ__${newOrdre}__`);
+              }
+            });
+            sec.dataset.idx = newOrdre;
+          }
+        });
+        // 3. Soumettre — requestSubmit déclenche les événements submit
+        if (form.requestSubmit) {
+          form.requestSubmit();
+        } else {
+          form.submit();
+        }
+      }, 800);
     }
     return;
   }
@@ -1709,7 +1735,6 @@ function copierDepuisHistorique(entryIdx, sectionIdx) {
 
 // ── Sauvegarder le bilan puis rediriger vers la génération ──
 function sauverEtGenerer(sectionType) {
-  // Ajouter un champ hidden pour indiquer la redirection post-save
   let redir = document.getElementById('redirect_after');
   if (!redir) {
     redir = document.createElement('input');
@@ -1720,7 +1745,12 @@ function sauverEtGenerer(sectionType) {
   }
   redir.value = `/consultation/${CONSULTATION_ID}/document?section=${sectionType}`;
   if (window._setBilanEnregistrement) window._setBilanEnregistrement();
-  document.getElementById('form-bilan').submit();
+  const form = document.getElementById('form-bilan');
+  if (form.requestSubmit) {
+    form.requestSubmit();
+  } else {
+    form.submit();
+  }
 }
 
 // ── Recherche de section ──
