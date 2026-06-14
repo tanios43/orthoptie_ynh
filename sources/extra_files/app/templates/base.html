@@ -146,21 +146,18 @@
       min-width: 16px; height: 16px; font-size: 10px;
       opacity: 1 !important;
     }
-    /* Tooltip en mode collapsed */
-    .sidebar.collapsed .nav-item {
-      position: relative;
-    }
-    .sidebar.collapsed .nav-item:hover::after {
-      content: attr(data-label);
-      position: absolute; left: calc(var(--sidebar-collapsed-w) - 8px); top: 50%;
-      transform: translateY(-50%);
+    /* Tooltip en mode collapsed — géré par JS pour bypasser overflow:hidden */
+    #sidebar-tooltip {
+      position: fixed;
       background: #1C2B3A; color: #fff;
       padding: 5px 12px; border-radius: 6px;
       font-size: 12px; white-space: nowrap;
-      pointer-events: none; z-index: 200;
+      pointer-events: none; z-index: 500;
       box-shadow: 0 2px 8px rgba(0,0,0,.3);
       border: 1px solid rgba(255,255,255,.1);
+      opacity: 0; transition: opacity .15s;
     }
+    #sidebar-tooltip.visible { opacity: 1; }
 
     .sidebar-footer {
       padding: 12px 16px;
@@ -878,6 +875,30 @@ function sendPing() {
   } else if (pref === '1') {
     setCollapsed(true, false);
   }
+
+  // Tooltip JS pour les nav-items en mode collapsed
+  const tooltip = document.createElement('div');
+  tooltip.id = 'sidebar-tooltip';
+  document.body.appendChild(tooltip);
+
+  document.querySelectorAll('.nav-item[data-label]').forEach(item => {
+    item.addEventListener('mouseenter', function() {
+      if (!sidebar.classList.contains('collapsed')) return;
+      const label = this.getAttribute('data-label');
+      if (!label) return;
+      tooltip.textContent = label;
+      const rect = this.getBoundingClientRect();
+      const collapsedW = parseInt(getComputedStyle(document.documentElement)
+        .getPropertyValue('--sidebar-collapsed-w')) || 56;
+      tooltip.style.top = (rect.top + rect.height / 2) + 'px';
+      tooltip.style.left = (collapsedW + 8) + 'px';
+      tooltip.style.transform = 'translateY(-50%)';
+      tooltip.classList.add('visible');
+    });
+    item.addEventListener('mouseleave', function() {
+      tooltip.classList.remove('visible');
+    });
+  });
 })();
 </script>
 {% endif %}
