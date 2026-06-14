@@ -428,10 +428,10 @@
     .empty-state p { font-size: 14px; }
   </style>
 </head>
-<body>
+<body class="{% if request.cookies.get('sidebar_collapsed') == '1' %}sidebar-collapsed{% endif %}">
 
 {% if current_user.is_authenticated %}
-<aside class="sidebar" id="sidebar">
+<aside class="sidebar{% if request.cookies.get('sidebar_collapsed') == '1' %} collapsed{% endif %}" id="sidebar">
   <div class="sidebar-toggle-row">
     <button class="sidebar-toggle" onclick="toggleSidebar()" title="Réduire/Agrandir">‹</button>
   </div>
@@ -846,7 +846,10 @@ function sendPing() {
       sidebar.classList.remove('collapsed');
       document.body.classList.remove('sidebar-collapsed');
     }
-    if (save) localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
+    if (save) {
+      localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
+      document.cookie = `sidebar_collapsed=${collapsed ? '1' : '0'};path=/;max-age=31536000`;
+    }
   }
 
   // Appliquer l'état SANS transition au chargement
@@ -859,7 +862,6 @@ function sendPing() {
   } else if (mq.matches) {
     setCollapsed(true, false);
   }
-  // Réactiver la transition après
   requestAnimationFrame(() => {
     requestAnimationFrame(() => { sidebar.style.transition = ''; });
   });
