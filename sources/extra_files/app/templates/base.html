@@ -849,6 +849,21 @@ function sendPing() {
     if (save) localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
   }
 
+  // Appliquer l'état SANS transition au chargement
+  sidebar.style.transition = 'none';
+  const pref = localStorage.getItem('sidebar-collapsed');
+  if (pref === '1') {
+    setCollapsed(true, false);
+  } else if (pref === '0') {
+    setCollapsed(false, false);
+  } else if (mq.matches) {
+    setCollapsed(true, false);
+  }
+  // Réactiver la transition après
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { sidebar.style.transition = ''; });
+  });
+
   function toggleSidebar() {
     const isCollapsed = sidebar.classList.contains('collapsed');
     setCollapsed(!isCollapsed, true);
@@ -859,21 +874,10 @@ function sendPing() {
   const mq = window.matchMedia('(max-width: 900px)');
   function handleMQ(e) {
     const pref = localStorage.getItem('sidebar-collapsed');
-    if (pref !== null) return; // respecter la préférence utilisateur
+    if (pref !== null) return;
     setCollapsed(e.matches, false);
   }
   mq.addEventListener('change', handleMQ);
-
-  // Initialisation
-  const pref = localStorage.getItem('sidebar-collapsed');
-  if (pref === '1') {
-    setCollapsed(true, false);
-  } else if (pref === '0') {
-    setCollapsed(false, false);
-  } else if (mq.matches) {
-    // Pas de préférence et fenêtre étroite → replier
-    setCollapsed(true, false);
-  }
 
   // Tooltip JS pour les nav-items en mode collapsed
   const tooltip = document.createElement('div');
