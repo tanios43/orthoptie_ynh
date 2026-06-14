@@ -22,7 +22,7 @@
       <div class="field-grid field-grid-2">
         <div class="field-group">
           <label class="field-label">Nom *</label>
-          <input type="text" name="nom" value="{{ patient.nom if patient else (form_data.nom if form_data else '') }}" required placeholder="DUPONT">
+          <input type="text" name="nom" id="field-nom" value="{{ patient.nom if patient else (form_data.nom if form_data else '') }}" required placeholder="DUPONT"{% if not patient %} autofocus{% endif %}>
         </div>
         <div class="field-group">
           <label class="field-label">Prénom *</label>
