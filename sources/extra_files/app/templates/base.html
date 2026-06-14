@@ -147,15 +147,19 @@
       opacity: 1 !important;
     }
     /* Tooltip en mode collapsed */
+    .sidebar.collapsed .nav-item {
+      position: relative;
+    }
     .sidebar.collapsed .nav-item:hover::after {
       content: attr(data-label);
-      position: absolute; left: calc(var(--sidebar-collapsed-w) + 8px); top: 50%;
+      position: absolute; left: calc(var(--sidebar-collapsed-w) - 8px); top: 50%;
       transform: translateY(-50%);
       background: #1C2B3A; color: #fff;
-      padding: 4px 10px; border-radius: 6px;
+      padding: 5px 12px; border-radius: 6px;
       font-size: 12px; white-space: nowrap;
       pointer-events: none; z-index: 200;
       box-shadow: 0 2px 8px rgba(0,0,0,.3);
+      border: 1px solid rgba(255,255,255,.1);
     }
 
     .sidebar-footer {
