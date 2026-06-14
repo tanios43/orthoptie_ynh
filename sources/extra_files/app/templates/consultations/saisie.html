@@ -599,7 +599,7 @@
 </div>
 
 {# Barre de sauvegarde fixe en bas — toujours visible quelle que soit la hauteur du contenu #}
-<div style="position:fixed;bottom:0;
+<div id="bottom-bar" style="position:fixed;bottom:0;
             left:calc(var(--sidebar-w) + 32px + 220px + 20px);right:32px;
             background:var(--surface);border-top:1px solid var(--border);
             padding:10px 20px;display:flex;gap:10px;align-items:center;
@@ -631,6 +631,21 @@ function imprimerFichiersSection(type) {
   fichiers.forEach(fic => {
     window.open(`/section-def-fichier/${fic.nom_stocke}`, '_blank');
   });
+}
+
+// ── Adapter le bandeau bas à la largeur de la sidebar ────────────────
+function updateBottomBar() {
+  const collapsed = document.getElementById('sidebar')?.classList.contains('collapsed');
+  const w = collapsed ? 'var(--sidebar-collapsed-w)' : 'var(--sidebar-w)';
+  const bar = document.getElementById('bottom-bar');
+  if (bar) bar.style.left = `calc(${w} + 32px + 220px + 20px)`;
+}
+
+// Observer les changements de classe sur la sidebar
+const _sidebarEl = document.getElementById('sidebar');
+if (_sidebarEl) {
+  new MutationObserver(updateBottomBar).observe(_sidebarEl, { attributes: true, attributeFilter: ['class'] });
+  updateBottomBar();
 }
 
 // ── Navigation sections dans le bandeau bas ──────────────────────────
