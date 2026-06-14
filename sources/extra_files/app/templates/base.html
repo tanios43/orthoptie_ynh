@@ -140,6 +140,12 @@
       overflow: hidden; text-overflow: ellipsis;
     }
     .sidebar.collapsed .nav-item .nav-label { opacity: 0; width: 0; }
+    .sidebar.collapsed .nav-item [style*="background:#E24B4A"],
+    .sidebar.collapsed .nav-item [style*="background:#EF9F27"] {
+      position: absolute; top: 4px; right: 4px;
+      min-width: 16px; height: 16px; font-size: 10px;
+      opacity: 1 !important;
+    }
     /* Tooltip en mode collapsed */
     .sidebar.collapsed .nav-item:hover::after {
       content: attr(data-label);
