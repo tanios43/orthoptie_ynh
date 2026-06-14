@@ -33,6 +33,7 @@
       --font:      'DM Sans', sans-serif;
       --font-serif:'DM Serif Display', serif;
       --sidebar-w: 240px;
+      --sidebar-collapsed-w: 56px;
     }
 
     body {
@@ -44,83 +45,128 @@
       min-height: 100vh;
     }
 
-    /* ── SIDEBAR ── */
+    /* ── SIDEBAR COLLAPSIBLE ── */
     .sidebar {
       position: fixed; top: 0; left: 0; bottom: 0;
       width: var(--sidebar-w);
       background: var(--sidebar);
       display: flex; flex-direction: column;
       z-index: 100;
+      transition: width .22s ease;
+      overflow: hidden;
+    }
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed-w);
     }
     .sidebar-brand {
-      padding: 24px 20px 20px;
+      padding: 16px 12px 14px;
       border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex; align-items: center; gap: 10px;
+      min-height: 64px;
+      overflow: hidden;
     }
     .sidebar-brand .logo-mark {
-      width: 36px; height: 36px; border-radius: 8px;
+      width: 32px; height: 32px; border-radius: 8px;
       background: var(--accent);
       display: flex; align-items: center; justify-content: center;
       font-family: var(--font-serif);
-      color: #fff; font-size: 18px; font-weight: 400;
-      margin-bottom: 10px;
+      color: #fff; font-size: 16px; font-weight: 400;
+      flex-shrink: 0;
+    }
+    .sidebar-brand-text {
+      overflow: hidden; white-space: nowrap;
+      transition: opacity .15s, width .22s;
     }
     .sidebar-brand h1 {
-      font-size: 13px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       color: #fff; letter-spacing: .3px;
-      line-height: 1.3;
+      line-height: 1.3; white-space: nowrap;
     }
     .sidebar-brand p {
-      font-size: 11px; color: rgba(255,255,255,.4);
-      margin-top: 2px;
+      font-size: 10px; color: rgba(255,255,255,.4);
+      margin-top: 1px; white-space: nowrap;
     }
+    .sidebar.collapsed .sidebar-brand-text { opacity: 0; width: 0; }
 
-    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
-    .nav-section { padding: 16px 20px 6px; }
+    /* Toggle button */
+    .sidebar-toggle {
+      position: absolute; top: 16px; right: -12px;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent); border: 2px solid var(--bg);
+      color: #fff; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 101;
+      transition: transform .22s;
+      box-shadow: 0 2px 6px rgba(0,0,0,.3);
+    }
+    .sidebar.collapsed .sidebar-toggle { transform: rotate(180deg); }
+
+    .sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; overflow-x: hidden; }
+    .nav-section { padding: 12px 16px 4px; white-space: nowrap; }
     .nav-section span {
       font-size: 10px; font-weight: 600; letter-spacing: 1px;
       color: rgba(255,255,255,.3); text-transform: uppercase;
+      transition: opacity .15s;
     }
+    .sidebar.collapsed .nav-section span { opacity: 0; }
     .nav-item {
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 20px;
+      padding: 9px 16px;
       color: rgba(255,255,255,.65);
       text-decoration: none; font-size: 14px; font-weight: 400;
       border-left: 3px solid transparent;
       transition: all .15s;
+      white-space: nowrap; overflow: hidden;
+      position: relative;
     }
-    .nav-item:hover {
-      background: var(--sidebar-hover);
-      color: #fff;
-    }
+    .nav-item:hover { background: var(--sidebar-hover); color: #fff; }
     .nav-item.active {
-      background: var(--sidebar-hover);
-      color: #fff;
+      background: var(--sidebar-hover); color: #fff;
       border-left-color: var(--accent);
     }
     .nav-item .icon {
-      width: 18px; text-align: center; font-size: 15px; flex-shrink: 0;
+      width: 20px; text-align: center; font-size: 15px; flex-shrink: 0;
+    }
+    .nav-item .nav-label {
+      transition: opacity .15s; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .sidebar.collapsed .nav-item .nav-label { opacity: 0; width: 0; }
+    /* Tooltip en mode collapsed */
+    .sidebar.collapsed .nav-item:hover::after {
+      content: attr(data-label);
+      position: absolute; left: calc(var(--sidebar-collapsed-w) + 8px); top: 50%;
+      transform: translateY(-50%);
+      background: #1C2B3A; color: #fff;
+      padding: 4px 10px; border-radius: 6px;
+      font-size: 12px; white-space: nowrap;
+      pointer-events: none; z-index: 200;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
     }
 
     .sidebar-footer {
-      padding: 16px 20px;
+      padding: 12px 16px;
       border-top: 1px solid rgba(255,255,255,.08);
+      overflow: hidden;
     }
-    .user-chip {
-      display: flex; align-items: center; gap: 10px;
-    }
+    .user-chip { display: flex; align-items: center; gap: 10px; }
     .user-avatar {
-      width: 32px; height: 32px; border-radius: 50%;
+      width: 30px; height: 30px; border-radius: 50%;
       background: var(--accent);
       display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0;
+      font-size: 11px; font-weight: 600; color: #fff; flex-shrink: 0;
     }
-    .user-name { font-size: 13px; color: rgba(255,255,255,.8); font-weight: 500; }
-    .user-role { font-size: 11px; color: rgba(255,255,255,.35); }
+    .user-info { overflow: hidden; transition: opacity .15s, width .22s; white-space: nowrap; }
+    .sidebar.collapsed .user-info { opacity: 0; width: 0; }
+    .user-name { font-size: 12px; color: rgba(255,255,255,.8); font-weight: 500; }
+    .user-role { font-size: 10px; color: rgba(255,255,255,.35); }
     .logout-link {
-      display: block; margin-top: 10px;
-      font-size: 12px; color: rgba(255,255,255,.3);
-      text-decoration: none; padding: 4px 0;
+      display: block; margin-top: 8px;
+      font-size: 11px; color: rgba(255,255,255,.3);
+      text-decoration: none; padding: 3px 0;
+      transition: opacity .15s;
     }
+    .sidebar.collapsed .logout-link { opacity: 0; pointer-events: none; }
     .logout-link:hover { color: rgba(255,255,255,.6); }
 
     /* ── MAIN ── */
@@ -128,7 +174,9 @@
       margin-left: var(--sidebar-w);
       min-height: 100vh;
       display: flex; flex-direction: column;
+      transition: margin-left .22s ease;
     }
+    body.sidebar-collapsed .main { margin-left: var(--sidebar-collapsed-w); }
     .topbar {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -336,16 +384,13 @@
     .data-table a { color: var(--accent); text-decoration: none; font-weight: 500; }
     .data-table a:hover { text-decoration: underline; }
 
-    /* Responsive tablette */
+    /* Responsive */
     @media (max-width: 900px) {
-      :root { --sidebar-w: 200px; }
       .content { padding: 20px 16px; }
       .field-grid-4 { grid-template-columns: 1fr 1fr; }
       .field-grid-3 { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 700px) {
-      .sidebar { transform: translateX(-100%); }
-      .main { margin-left: 0; }
       .field-grid-2, .field-grid-3, .field-grid-4 { grid-template-columns: 1fr; }
     }
 
@@ -371,120 +416,123 @@
 <body>
 
 {% if current_user.is_authenticated %}
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
+  <button class="sidebar-toggle" onclick="toggleSidebar()" title="Réduire/Agrandir">‹</button>
+
   <div class="sidebar-brand">
     <div class="logo-mark">O</div>
-    <h1>Cabinet d'Orthoptie</h1>
-    <p>Dossiers patients</p>
+    <div class="sidebar-brand-text">
+      <h1>Cabinet d'Orthoptie</h1>
+      <p>Dossiers patients</p>
+    </div>
   </div>
 
   <nav class="sidebar-nav">
     <div class="nav-section"><span>Navigation</span></div>
-    <a href="{{ url_for('index') }}"
+    <a href="{{ url_for('index') }}" data-label="Mes patients"
        class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
-      <span class="icon">⊞</span> Mes patients
+      <span class="icon">⊞</span><span class="nav-label"> Mes patients</span>
     </a>
-    <a href="{{ url_for('recherche') }}"
+    <a href="{{ url_for('recherche') }}" data-label="Recherche"
        class="nav-item {% if request.endpoint == 'recherche' %}active{% endif %}">
-      <span class="icon">⌕</span> Recherche
+      <span class="icon">⌕</span><span class="nav-label"> Recherche</span>
     </a>
-    <a href="{{ url_for('mon_historique') }}"
+    <a href="{{ url_for('mon_historique') }}" data-label="Mon historique"
        class="nav-item {% if request.endpoint == 'mon_historique' %}active{% endif %}">
-      <span class="icon">🕐</span> Mon historique
+      <span class="icon">🕐</span><span class="nav-label"> Mon historique</span>
     </a>
-    <a href="{{ url_for('messages_liste') }}" id="msg-nav-link"
+    <a href="{{ url_for('messages_liste') }}" id="msg-nav-link" data-label="Messages"
        class="nav-item {% if request.endpoint in ['messages_liste','messages_conversation','messages_conversation_multi'] %}active{% endif %}"
-       style="display:flex;align-items:center;justify-content:space-between;">
-      <span><span class="icon">💬</span> Messages</span>
+       style="justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span class="icon">💬</span><span class="nav-label">Messages</span>
+      </span>
       {% if messages_non_lus %}
       <span id="msg-badge" style="background:#E24B4A;color:white;border-radius:9px;min-width:18px;height:18px;
                    display:inline-flex;align-items:center;justify-content:center;
-                   font-size:11px;padding:0 5px;">{{ messages_non_lus }}</span>
+                   font-size:11px;padding:0 5px;flex-shrink:0;">{{ messages_non_lus }}</span>
       {% endif %}
     </a>
-
-    <a href="{{ url_for('notes_liste') }}"
+    <a href="{{ url_for('notes_liste') }}" data-label="Notes &amp; Tâches"
        class="nav-item {% if request.endpoint in ['notes_liste','note_nouvelle','tache_nouvelle'] %}active{% endif %}"
-       style="display:flex;align-items:center;justify-content:space-between;">
-      <span><span class="icon">📝</span> Notes &amp; Tâches</span>
+       style="justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span class="icon">📝</span><span class="nav-label">Notes &amp; Tâches</span>
+      </span>
       {% if nb_taches_actives %}
       <span style="background:#EF9F27;color:white;border-radius:9px;min-width:18px;height:18px;
                    display:inline-flex;align-items:center;justify-content:center;
-                   font-size:11px;padding:0 5px;">{{ nb_taches_actives }}</span>
+                   font-size:11px;padding:0 5px;flex-shrink:0;">{{ nb_taches_actives }}</span>
       {% endif %}
     </a>
-
-    <a href="{{ url_for('repondeur') }}"
+    <a href="{{ url_for('repondeur') }}" data-label="Répondeur"
        class="nav-item {% if request.endpoint == 'repondeur' %}active{% endif %}">
-      <span><span class="icon">📞</span> Répondeur</span>
+      <span class="icon">📞</span><span class="nav-label"> Répondeur</span>
     </a>
-
-    <a href="{{ url_for('favoris') }}"
+    <a href="{{ url_for('favoris') }}" data-label="Mes favoris"
        class="nav-item {% if request.endpoint == 'favoris' %}active{% endif %}">
-      <span><span class="icon">🔖</span> Mes favoris</span>
+      <span class="icon">🔖</span><span class="nav-label"> Mes favoris</span>
     </a>
 
     <div class="nav-section"><span>Actions</span></div>
-    <a href="{{ url_for('patient_nouveau') }}"
+    <a href="{{ url_for('patient_nouveau') }}" data-label="Nouveau patient"
        class="nav-item {% if request.endpoint == 'patient_nouveau' %}active{% endif %}">
-      <span class="icon">+</span> Nouveau patient
+      <span class="icon">+</span><span class="nav-label"> Nouveau patient</span>
     </a>
 
     <div class="nav-section"><span>Configuration</span></div>
-    <a href="{{ url_for('admin_sections') }}"
+    <a href="{{ url_for('admin_sections') }}" data-label="Sections du bilan"
        class="nav-item {% if request.endpoint in ['admin_sections','admin_section_detail'] %}active{% endif %}">
-      <span class="icon">⚙</span> Sections du bilan
+      <span class="icon">⚙</span><span class="nav-label"> Sections du bilan</span>
     </a>
-    <a href="{{ url_for('admin_modeles') }}"
+    <a href="{{ url_for('admin_modeles') }}" data-label="Modèles de bilan"
        class="nav-item {% if request.endpoint and 'modele' in request.endpoint and 'document' not in request.endpoint %}active{% endif %}">
-      <span class="icon">🗂</span> Modèles de bilan
+      <span class="icon">🗂</span><span class="nav-label"> Modèles de bilan</span>
     </a>
-    <a href="/admin/document-modeles"
+    <a href="/admin/document-modeles" data-label="Modèles de documents"
        class="nav-item {% if request.endpoint and 'document' in request.endpoint %}active{% endif %}">
-      <span class="icon">📄</span> Modèles de documents
+      <span class="icon">📄</span><span class="nav-label"> Modèles de docs</span>
     </a>
     {% if current_user.is_admin %}
-    <a href="{{ url_for('admin_praticiens') }}"
+    <a href="{{ url_for('admin_praticiens') }}" data-label="Praticiens"
        class="nav-item {% if request.endpoint and 'praticien' in request.endpoint and request.endpoint != 'profil' %}active{% endif %}">
-      <span class="icon">👥</span> Praticiens
+      <span class="icon">👥</span><span class="nav-label"> Praticiens</span>
     </a>
-    <a href="{{ url_for('admin_cabinets') }}"
+    <a href="{{ url_for('admin_cabinets') }}" data-label="Cabinets"
        class="nav-item {% if request.endpoint and 'cabinet' in request.endpoint %}active{% endif %}">
-      <span class="icon">🏥</span> Cabinets
+      <span class="icon">🏥</span><span class="nav-label"> Cabinets</span>
     </a>
-    <a href="{{ url_for('admin_sauvegarde') }}"
+    <a href="{{ url_for('admin_sauvegarde') }}" data-label="Sauvegardes"
        class="nav-item {% if request.endpoint == 'admin_sauvegarde' %}active{% endif %}">
-      <span class="icon">💾</span> Sauvegardes
+      <span class="icon">💾</span><span class="nav-label"> Sauvegardes</span>
     </a>
-    <a href="{{ url_for('admin_configuration') }}"
+    <a href="{{ url_for('admin_configuration') }}" data-label="Configuration"
        class="nav-item {% if request.endpoint == 'admin_configuration' %}active{% endif %}">
-      <span class="icon">⚙️</span> Configuration
+      <span class="icon">⚙️</span><span class="nav-label"> Configuration</span>
     </a>
-    <a href="{{ url_for('admin_journal') }}"
+    <a href="{{ url_for('admin_journal') }}" data-label="Journal RGPD"
        class="nav-item {% if request.endpoint == 'admin_journal' %}active{% endif %}">
-      <span class="icon">🔒</span> Journal RGPD
+      <span class="icon">🔒</span><span class="nav-label"> Journal RGPD</span>
     </a>
-    <a href="{{ url_for('admin_categories') }}"
+    <a href="{{ url_for('admin_categories') }}" data-label="Catégories"
        class="nav-item {% if request.endpoint in ['admin_categories','admin_categorie_creer','admin_categorie_modifier','admin_categorie_supprimer'] %}active{% endif %}">
-      <span class="icon">🎨</span> Catégories
+      <span class="icon">🎨</span><span class="nav-label"> Catégories</span>
     </a>
     {% endif %}
   </nav>
 
   <div class="sidebar-footer">
     <div class="user-chip">
-      <div class="user-avatar">
-        {{ current_user.prenom[0] }}{{ current_user.nom[0] }}
-      </div>
-      <div>
+      <div class="user-avatar">{{ current_user.prenom[0] }}{{ current_user.nom[0] }}</div>
+      <div class="user-info">
         <div class="user-name">{{ current_user.prenom }} {{ current_user.nom }}</div>
         <div class="user-role">{{ current_user.titre }}</div>
       </div>
     </div>
     <a href="{{ url_for('profil') }}" class="logout-link">⚙ Mon profil</a>
-    <a href="{{ url_for('aide') }}"
-       class="nav-item {% if request.endpoint == 'aide' %}active{% endif %}">
-      <span class="icon">📖</span> Manuel
+    <a href="{{ url_for('aide') }}" data-label="Manuel"
+       class="nav-item {% if request.endpoint == 'aide' %}active{% endif %}" style="padding:6px 0;">
+      <span class="icon">📖</span><span class="nav-label"> Manuel</span>
     </a>
     <a href="{{ url_for('logout') }}" class="logout-link">→ Déconnexion</a>
   </div>
@@ -765,6 +813,52 @@ function sendPing() {
   }
 
   setTimeout(() => { pollMessages(); setInterval(pollMessages, 30000); }, 10000);
+})();
+</script>
+
+<script>
+// ── Sidebar collapsible ─────────────────────────────────────────────
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+
+  function setCollapsed(collapsed, save) {
+    if (collapsed) {
+      sidebar.classList.add('collapsed');
+      document.body.classList.add('sidebar-collapsed');
+    } else {
+      sidebar.classList.remove('collapsed');
+      document.body.classList.remove('sidebar-collapsed');
+    }
+    if (save) localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
+  }
+
+  function toggleSidebar() {
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    setCollapsed(!isCollapsed, true);
+  }
+  window.toggleSidebar = toggleSidebar;
+
+  // Auto-collapse sous 900px
+  const mq = window.matchMedia('(max-width: 900px)');
+  function handleMQ(e) {
+    if (e.matches) {
+      setCollapsed(true, false);
+    } else {
+      // Restaurer la préférence utilisateur
+      const pref = localStorage.getItem('sidebar-collapsed');
+      setCollapsed(pref === '1', false);
+    }
+  }
+  mq.addEventListener('change', handleMQ);
+
+  // Initialisation
+  const pref = localStorage.getItem('sidebar-collapsed');
+  if (mq.matches) {
+    setCollapsed(true, false);
+  } else if (pref === '1') {
+    setCollapsed(true, false);
+  }
 })();
 </script>
 {% endif %}
