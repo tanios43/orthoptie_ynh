@@ -855,24 +855,23 @@ function sendPing() {
   }
   window.toggleSidebar = toggleSidebar;
 
-  // Auto-collapse sous 900px
+  // Auto-collapse sous 900px seulement si pas de préférence utilisateur explicite
   const mq = window.matchMedia('(max-width: 900px)');
   function handleMQ(e) {
-    if (e.matches) {
-      setCollapsed(true, false);
-    } else {
-      // Restaurer la préférence utilisateur
-      const pref = localStorage.getItem('sidebar-collapsed');
-      setCollapsed(pref === '1', false);
-    }
+    const pref = localStorage.getItem('sidebar-collapsed');
+    if (pref !== null) return; // respecter la préférence utilisateur
+    setCollapsed(e.matches, false);
   }
   mq.addEventListener('change', handleMQ);
 
   // Initialisation
   const pref = localStorage.getItem('sidebar-collapsed');
-  if (mq.matches) {
+  if (pref === '1') {
     setCollapsed(true, false);
-  } else if (pref === '1') {
+  } else if (pref === '0') {
+    setCollapsed(false, false);
+  } else if (mq.matches) {
+    // Pas de préférence et fenêtre étroite → replier
     setCollapsed(true, false);
   }
 
