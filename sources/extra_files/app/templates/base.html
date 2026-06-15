@@ -399,7 +399,27 @@
     .data-table a { color: var(--accent); text-decoration: none; font-weight: 500; }
     .data-table a:hover { text-decoration: underline; }
 
-    /* Responsive */
+    /* ── Bandeau bas adaptatif ── */
+    .bottom-bar {
+      position: fixed; bottom: 0;
+      left: var(--sidebar-w);
+      right: 0;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 12px 20px; display: flex; gap: 10px; align-items: center;
+      border-radius: 10px 10px 0 0;
+      box-shadow: 0 -2px 8px rgba(0,0,0,.06); z-index: 90; flex-wrap: wrap;
+      transition: left .22s ease;
+    }
+    body.sidebar-collapsed .bottom-bar {
+      left: var(--sidebar-collapsed-w);
+    }
+    /* Variante avec colonne latérale (saisie bilan) */
+    .bottom-bar.with-col {
+      left: calc(var(--sidebar-w) + 252px);
+    }
+    body.sidebar-collapsed .bottom-bar.with-col {
+      left: calc(var(--sidebar-collapsed-w) + 252px);
+    }
     @media (max-width: 900px) {
       .content { padding: 20px 16px; }
       .field-grid-4 { grid-template-columns: 1fr 1fr; }

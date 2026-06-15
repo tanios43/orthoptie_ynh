@@ -324,12 +324,7 @@
   </div>
 
   {# Barre d'actions fixe #}
-  <div style="position:fixed;bottom:0;
-              left:calc(var(--sidebar-w, 220px) + 32px);right:32px;
-              background:var(--surface);border-top:1px solid var(--border);
-              padding:12px 20px;display:flex;gap:10px;align-items:center;
-              border-radius:10px 10px 0 0;box-shadow:0 -2px 8px rgba(0,0,0,.06);
-              z-index:90;flex-wrap:wrap;">
+  <div class="bottom-bar">
     <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button>
     <button type="submit" name="action" value="ajouter_seance" class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
