@@ -600,10 +600,6 @@
 
 {# Barre de sauvegarde fixe en bas — toujours visible quelle que soit la hauteur du contenu #}
 <div id="bottom-bar" class="bottom-bar with-col">
-            background:var(--surface);border-top:1px solid var(--border);
-            padding:10px 20px;display:flex;gap:10px;align-items:center;
-            border-radius:10px 10px 0 0;
-            box-shadow:0 -2px 8px rgba(0,0,0,.06);z-index:90;">
   <button form="form-bilan" type="submit" class="btn btn-primary" style="flex-shrink:0;">
     {{ 'Enregistrer les modifications' if consultation else 'Enregistrer le bilan' }}
   </button>
