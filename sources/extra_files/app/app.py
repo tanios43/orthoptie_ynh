@@ -444,7 +444,7 @@ app.config['SECRET_KEY']                = _secret_key
 app.config['SESSION_COOKIE_SECURE']     = True
 app.config['SESSION_COOKIE_HTTPONLY']   = True
 app.config['SESSION_COOKIE_SAMESITE']   = 'Lax'
-app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(hours=24)
+app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(minutes=30)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 # ── Configuration WOPI / Collabora ──────────────────────────────────────────
@@ -1382,6 +1382,8 @@ def setup_premier_compte():
 def logout():
     session.pop('cabinet_id', None)
     logout_user()
+    if request.args.get('auto'):
+        flash('Vous avez été déconnecté automatiquement après 30 minutes d\'inactivité.', 'info')
     return redirect(url_for('login'))
 
 

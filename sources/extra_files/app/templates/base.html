@@ -926,6 +926,81 @@ function sendPing() {
     });
   });
 })();
+// ── Déconnexion automatique après 30min d'inactivité ─────────────────
+(function() {
+  const TIMEOUT    = 30 * 60 * 1000; // 30 minutes
+  const WARN_BEFORE = 2 * 60 * 1000;  // avertir 2min avant
+  let timer, warnTimer;
+
+  // Bannière d'avertissement
+  const banner = document.createElement('div');
+  banner.id = 'inactivity-banner';
+  banner.style.cssText = `display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
+    background:#E24B4A;color:#fff;text-align:center;padding:10px 16px;font-size:14px;
+    font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.2);`;
+  banner.innerHTML = `⚠️ Déconnexion automatique dans <span id="inactivity-countdown">2:00</span> 
+    en raison d'inactivité. 
+    <button onclick="resetInactivityTimer()" 
+      style="margin-left:12px;padding:4px 12px;border-radius:6px;border:2px solid #fff;
+             background:transparent;color:#fff;cursor:pointer;font-weight:600;">
+      Rester connecté
+    </button>`;
+  document.body.appendChild(banner);
+
+  let countdownInterval;
+
+  function startCountdown() {
+    banner.style.display = 'block';
+    let remaining = WARN_BEFORE;
+    updateCountdown(remaining);
+    countdownInterval = setInterval(() => {
+      remaining -= 1000;
+      updateCountdown(remaining);
+      if (remaining <= 0) clearInterval(countdownInterval);
+    }, 1000);
+  }
+
+  function updateCountdown(ms) {
+    const el = document.getElementById('inactivity-countdown');
+    if (!el) return;
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function doLogout() {
+    clearInterval(countdownInterval);
+    // Sur la page d'édition de bilan — sauvegarder d'abord
+    const formBilan = document.getElementById('form-bilan');
+    if (formBilan) {
+      const redir = document.getElementById('redirect_after') || document.createElement('input');
+      redir.type = 'hidden'; redir.name = 'redirect_after'; redir.id = 'redirect_after';
+      redir.value = '/logout?auto=1';
+      formBilan.appendChild(redir);
+      banner.innerHTML = '💾 Enregistrement du bilan avant déconnexion…';
+      if (formBilan.requestSubmit) { formBilan.requestSubmit(); }
+      else { formBilan.submit(); }
+    } else {
+      window.location.href = '/logout?auto=1';
+    }
+  }
+
+  function resetInactivityTimer() {
+    clearTimeout(timer);
+    clearTimeout(warnTimer);
+    clearInterval(countdownInterval);
+    banner.style.display = 'none';
+    warnTimer = setTimeout(startCountdown, TIMEOUT - WARN_BEFORE);
+    timer     = setTimeout(doLogout, TIMEOUT);
+  }
+  window.resetInactivityTimer = resetInactivityTimer;
+
+  // Réinitialiser sur toute interaction
+  ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
+
+  // Démarrer
+  resetInactivityTimer();
+})();
 </script>
-{% endif %}
-</html>
