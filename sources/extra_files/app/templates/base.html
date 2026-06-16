@@ -179,10 +179,21 @@
       display: block; margin-top: 8px;
       font-size: 11px; color: rgba(255,255,255,.3);
       text-decoration: none; padding: 3px 0;
-      transition: opacity .15s;
+      transition: opacity .15s, color .15s;
     }
-    .sidebar.collapsed .logout-link { opacity: 0; pointer-events: none; }
+    .sidebar.collapsed .logout-link { opacity: 0; pointer-events: none; height: 0; margin: 0; }
     .logout-link:hover { color: rgba(255,255,255,.6); }
+    /* Bouton déconnexion visible en mode replié */
+    .sidebar-logout-icon {
+      display: none;
+    }
+    .sidebar.collapsed .sidebar-logout-icon {
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px 0; color: rgba(255,255,255,.5);
+      text-decoration: none; font-size: 18px;
+      transition: color .15s;
+    }
+    .sidebar.collapsed .sidebar-logout-icon:hover { color: #E24B4A; }
 
     /* ── MAIN ── */
     .main {
@@ -571,6 +582,7 @@
       <span class="icon">📖</span><span class="nav-label"> Manuel</span>
     </a>
     <a href="{{ url_for('logout') }}" class="logout-link">→ Déconnexion</a>
+    <a href="{{ url_for('logout') }}" class="sidebar-logout-icon" title="Déconnexion">⏻</a>
   </div>
 </aside>
 {% endif %}
