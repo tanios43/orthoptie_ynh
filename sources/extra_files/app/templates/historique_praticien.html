@@ -29,7 +29,7 @@
 
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:500;">
-            {{ patient.prenom }} {{ patient.nom }}
+            {{ patient.nom | upper }} {{ patient.prenom }}
           </div>
           <div style="font-size:12px;color:var(--muted);margin-top:1px;">
             {% if patient.date_naissance %}
