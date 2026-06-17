@@ -3438,8 +3438,6 @@ def admin_sauvegarde_lancer():
     return redirect(url_for('admin_sauvegarde'))
 
 
-@app.route('/admin/nettoyage-fichiers', methods=['POST'])
-@login_required
 def _nettoyer_fichiers_temporaires():
     """Supprime les fichiers WOPI >24h et les fichiers sections orphelins."""
     import glob
@@ -3460,8 +3458,7 @@ def _nettoyer_fichiers_temporaires():
     # 2. Fichiers sections orphelins (pas en base)
     sections_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'sections')
     if os.path.exists(sections_dir):
-        with app.app_context():
-            in_db = {r[0] for r in db.session.query(FichierSection.nom_stocke).all()}
+        in_db = {r[0] for r in db.session.query(FichierSection.nom_stocke).all()}
         for f in glob.glob(os.path.join(sections_dir, '**', '*.docx'), recursive=True):
             if os.path.basename(f) not in in_db:
                 try:
@@ -3472,6 +3469,8 @@ def _nettoyer_fichiers_temporaires():
     return stats
 
 
+@app.route('/admin/nettoyage-fichiers', methods=['POST'])
+@login_required
 @admin_required
 def admin_nettoyage_fichiers():
     """Supprime les fichiers WOPI temporaires et les fichiers sections orphelins."""
