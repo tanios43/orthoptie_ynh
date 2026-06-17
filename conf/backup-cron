@@ -13,6 +13,15 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"; }
 mkdir -p "${BACKUP_DIR}"
 log "=== Démarrage sauvegarde ==="
 
+# ── 0. Nettoyage préalable des fichiers temporaires ───────────────────
+log "Nettoyage des fichiers WOPI temporaires (>24h)..."
+WOPI_DIR="${DATA_DIR}/uploads/wopi"
+if [ -d "${WOPI_DIR}" ]; then
+    WOPI_COUNT=$(find "${WOPI_DIR}" -name "*.docx" -mtime +1 | wc -l)
+    find "${WOPI_DIR}" -name "*.docx" -mtime +1 -delete 2>/dev/null
+    log "Nettoyage WOPI : ${WOPI_COUNT} fichier(s) supprimé(s)"
+fi
+
 # ── 1. Sauvegarde locale complète ─────────────────────────────────────
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/orthoptie_backup_${DATE}.tar.gz"
@@ -34,6 +43,7 @@ TMPDIR_BAK=$(mktemp -d)
 
 tar -czf "${BACKUP_FILE}" \
     -C "${DATA_DIR}" \
+    --exclude="uploads/wopi" \
     "${DB_FILE}" \
     "uploads" \
     $([ -d "${DATA_DIR}/ssh" ] && echo "ssh") \

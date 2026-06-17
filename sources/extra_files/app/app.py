@@ -3440,28 +3440,28 @@ def admin_sauvegarde_lancer():
 
 @app.route('/admin/nettoyage-fichiers', methods=['POST'])
 @login_required
-@admin_required
-def admin_nettoyage_fichiers():
-    """Supprime les fichiers WOPI temporaires et les fichiers sections orphelins."""
-    import os, glob
+def _nettoyer_fichiers_temporaires():
+    """Supprime les fichiers WOPI >24h et les fichiers sections orphelins."""
+    import glob
     stats = {'wopi': 0, 'orphelins': 0}
 
-    # 1. Nettoyer les fichiers WOPI temporaires de plus de 24h
+    # 1. Fichiers WOPI temporaires de plus de 24h
     wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
     if os.path.exists(wopi_dir):
         for f in glob.glob(os.path.join(wopi_dir, '*.docx')):
             try:
                 age = datetime.utcnow().timestamp() - os.path.getmtime(f)
-                if age > 86400:  # > 24h
+                if age > 86400:
                     os.remove(f)
                     stats['wopi'] += 1
             except Exception:
                 pass
 
-    # 2. Nettoyer les fichiers sections orphelins (pas en base)
+    # 2. Fichiers sections orphelins (pas en base)
     sections_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'sections')
     if os.path.exists(sections_dir):
-        in_db = {r[0] for r in db.session.query(FichierSection.nom_stocke).all()}
+        with app.app_context():
+            in_db = {r[0] for r in db.session.query(FichierSection.nom_stocke).all()}
         for f in glob.glob(os.path.join(sections_dir, '**', '*.docx'), recursive=True):
             if os.path.basename(f) not in in_db:
                 try:
@@ -3469,7 +3469,13 @@ def admin_nettoyage_fichiers():
                     stats['orphelins'] += 1
                 except Exception:
                     pass
+    return stats
 
+
+@admin_required
+def admin_nettoyage_fichiers():
+    """Supprime les fichiers WOPI temporaires et les fichiers sections orphelins."""
+    stats = _nettoyer_fichiers_temporaires()
     flash(f"Nettoyage : {stats['wopi']} fichiers WOPI + {stats['orphelins']} orphelins supprimés.", 'success')
     return redirect(url_for('admin_sauvegarde'))
 
@@ -3739,8 +3745,10 @@ def admin_sauvegarde_exporter():
             fpath = os.path.join(install_dir, fname)
             if os.path.exists(fpath):
                 z.write(fpath, fname)
-        # Uploads
+        # Uploads (sans wopi — fichiers temporaires)
         for root, dirs, files in os.walk(uploads_dir):
+            # Exclure le dossier wopi
+            dirs[:] = [d for d in dirs if d != 'wopi']
             for file in files:
                 full = os.path.join(root, file)
                 arcname = os.path.join('uploads', os.path.relpath(full, uploads_dir))
