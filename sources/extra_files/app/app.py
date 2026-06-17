@@ -3744,6 +3744,17 @@ def admin_sauvegarde_exporter():
             fpath = os.path.join(install_dir, fname)
             if os.path.exists(fpath):
                 z.write(fpath, fname)
+        # Fichiers critiques de data_dir (config NAS + clés SSH)
+        for fname in ('sftp_config.sh',):
+            fpath = os.path.join(data_dir, fname)
+            if os.path.exists(fpath):
+                z.write(fpath, fname)
+        ssh_dir = os.path.join(data_dir, 'ssh')
+        if os.path.exists(ssh_dir):
+            for ssh_file in os.listdir(ssh_dir):
+                fpath = os.path.join(ssh_dir, ssh_file)
+                if os.path.isfile(fpath):
+                    z.write(fpath, os.path.join('ssh', ssh_file))
         # Uploads (sans wopi — fichiers temporaires)
         for root, dirs, files in os.walk(uploads_dir):
             # Exclure le dossier wopi
@@ -3827,6 +3838,18 @@ def admin_sauvegarde_importer():
                         shutil.copy2(os.path.join(tmpdir, fname), dest)
                         if fname in ('.db_key', '.secret_key'):
                             os.chmod(dest, 0o600)
+                # Fichiers critiques data_dir (config NAS + clés SSH)
+                if 'sftp_config.sh' in names:
+                    z.extract('sftp_config.sh', tmpdir)
+                    shutil.copy2(os.path.join(tmpdir, 'sftp_config.sh'),
+                                 os.path.join(data_dir, 'sftp_config.sh'))
+                for name in names:
+                    if name.startswith('ssh/') and not name.endswith('/'):
+                        z.extract(name, tmpdir)
+                        dest = os.path.join(data_dir, name)
+                        os.makedirs(os.path.dirname(dest), exist_ok=True)
+                        shutil.copy2(os.path.join(tmpdir, name), dest)
+                        os.chmod(dest, 0o600)
                 for name in names:
                     if name.startswith('uploads/'):
                         z.extract(name, tmpdir)
