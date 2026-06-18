@@ -63,13 +63,21 @@ fi
 ynh_script_progression --message="Migration de la base de données..." --weight=2
 
 pushd "$install_dir"
-    # db.create_all() sur la base chiffrée
-    "$install_dir/venv/bin/python3" -c "from app import app, db
+    # Vérifier que enc.db et .db_key sont bien présents avant db.create_all()
+    if [ -f "$data_dir/orthoptie_v2.enc.db" ] && [ -s "$data_dir/orthoptie_v2.enc.db" ] && [ -f "$install_dir/.db_key" ]; then
+        # Base chiffrée présente — db.create_all() sur enc.db
+        "$install_dir/venv/bin/python3" -c "from app import app, db
 with app.app_context():
     db.create_all()
-"
+" || true
+    elif [ ! -f "$data_dir/orthoptie_v2.enc.db" ] || [ ! -s "$data_dir/orthoptie_v2.enc.db" ]; then
+        # Pas de base chiffrée — db.create_all() sur base standard
+        "$install_dir/venv/bin/python3" -c "from app import app, db
+with app.app_context():
+    db.create_all()
+" || true
+    fi
     # Supprimer la base standard résiduelle AVANT migrate.py
-    # pour que migrate.py utilise enc.db via SQLCipher
     if [ -f "$data_dir/orthoptie_v2.enc.db" ] && [ -s "$data_dir/orthoptie_v2.enc.db" ]; then
         rm -f "$data_dir/orthoptie_v2.db"
     fi
