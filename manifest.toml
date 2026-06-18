@@ -1,7 +1,7 @@
 packaging_format = 2
 
 id = "orthoptie"
-name = "Dossiers Patients Orthoptie"
+name = "OrthoDesk"
 description.en = "Patient records management for orthoptic practice"
 description.fr = "Gestion des dossiers patients pour cabinet d'orthoptie"
 
