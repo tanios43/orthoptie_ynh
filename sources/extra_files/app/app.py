@@ -3814,8 +3814,27 @@ def admin_sauvegarde_importer():
                     extracted = os.path.join(tmpdir, db_member)
                     if extracted != db_tmp:
                         shutil.move(extracted, db_tmp)
+                # Fichiers critiques install_dir
+                for fname in ('.db_key', '.secret_key', 'entete.docx'):
+                    if fname in members:
+                        tar.extract(fname, tmpdir)
+                        dest = os.path.join(install_dir, fname)
+                        shutil.copy2(os.path.join(tmpdir, fname), dest)
+                        if fname in ('.db_key', '.secret_key'):
+                            os.chmod(dest, 0o600)
+                # Fichiers critiques data_dir
+                if 'sftp_config.sh' in members:
+                    tar.extract('sftp_config.sh', tmpdir)
+                    shutil.copy2(os.path.join(tmpdir, 'sftp_config.sh'),
+                                 os.path.join(data_dir, 'sftp_config.sh'))
                 for member in tar.getmembers():
-                    if 'uploads/' in member.name and member.isfile():
+                    if member.name.startswith('ssh/') and member.isfile():
+                        tar.extract(member, tmpdir)
+                        dest = os.path.join(data_dir, member.name)
+                        os.makedirs(os.path.dirname(dest), exist_ok=True)
+                        shutil.copy2(os.path.join(tmpdir, member.name), dest)
+                        os.chmod(dest, 0o600)
+                    elif 'uploads/' in member.name and member.isfile():
                         tar.extract(member, tmpdir)
                         rel  = member.name.split('uploads/', 1)[1]
                         dest = os.path.join(uploads_dir, rel)
