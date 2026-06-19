@@ -612,7 +612,7 @@
 
 {# Définition JSON des sections pour le JS #}
 <script>
-const SECTIONS_DEF = {{ sections_dispo | tojson }};
+const SECTIONS_DEF = {{ (sections_all or sections_dispo) | tojson }};
 const CAT_COLORS = {{ get_categories() | tojson }};
 const SECTIONS_ORDRE = {{ sections_ordre | tojson }};
 const MODELES = {{ modeles_json | tojson }};

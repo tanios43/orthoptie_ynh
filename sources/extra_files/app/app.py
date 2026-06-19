@@ -4071,7 +4071,8 @@ def consultation_nouvelle(patient_id):
         return redirect(url_for('patient_detail', patient_id=patient_id))
     return render_template('consultations/saisie.html', patient=patient, consultation=None,
                            sections_dispo=sections_filtrees, sections_ordre=ordre_filtres,
-                           autres_consultations=autres, sections_def=sections_filtrees,
+                           autres_consultations=autres, sections_def=sections_all,
+                           sections_all=sections_all,
                            modeles=modeles, modeles_json=[m.to_dict() for m in modeles])
 
 
@@ -4132,8 +4133,8 @@ def consultation_modifier(consultation_id):
                                .order_by(Consultation.date_consult.asc()).all()
     return render_template('consultations/saisie.html', patient=c.patient, consultation=c,
                            sections_dispo=sections_filtrees, sections_ordre=ordre_filtres,
-                           autres_consultations=autres, sections_def=sections_all,
-                           modeles=[], modeles_json=[])
+                           sections_def=sections_all, sections_all=sections_all,
+                           autres_consultations=autres, modeles=[], modeles_json=[])
 
 
 @app.route('/consultation/<int:consultation_id>/supprimer', methods=['POST'])
