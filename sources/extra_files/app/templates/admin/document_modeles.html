@@ -46,11 +46,20 @@
             <label class="field-label">Nom *</label>
             <input type="text" name="nom" placeholder="Ex : Compte-rendu bilan" required autofocus>
           </div>
-          <div class="field-group" style="margin-bottom:14px;">
+          <div class="field-group" style="margin-bottom:10px;">
             <label class="field-label">Type</label>
             <select name="type">
               <option value="courrier">Courrier</option>
               <option value="ordonnance">Ordonnance</option>
+            </select>
+          </div>
+          <div class="field-group" style="margin-bottom:14px;">
+            <label class="field-label">Attribuer à</label>
+            <select name="praticien_id">
+              <option value="">Tous les praticiens</option>
+              {% for p in praticiens %}
+              <option value="{{ p.id }}">{{ p.nom }} {{ p.prenom }}</option>
+              {% endfor %}
             </select>
           </div>
           <button type="submit" class="btn btn-primary btn-sm">Créer</button>
@@ -93,6 +102,13 @@
       <div class="card-header">
         <h2 style="font-size:14px;">{{ m.nom }}</h2>
         {% if not m.actif %}<span class="badge badge-warn" style="margin-left:6px;">désactivé</span>{% endif %}
+        {% if m.praticien_id %}
+          {% set p = praticiens | selectattr('id', 'equalto', m.praticien_id) | first | default(None) %}
+          <span style="margin-left:6px;font-size:10px;background:var(--accent-lt);
+                       color:var(--accent);border-radius:4px;padding:1px 6px;">
+            👤 {{ p.nom ~ ' ' ~ p.prenom if p else '?' }}
+          </span>
+        {% endif %}
         <span class="text-sm text-muted" style="margin-left:8px;">{{ m.blocs|length }} bloc(s)</span>
         <a href="{{ url_for('admin_document_modele_detail', modele_id=m.id) }}"
            class="btn btn-secondary btn-sm" style="margin-left:auto;">Éditer</a>

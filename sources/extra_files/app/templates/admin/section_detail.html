@@ -57,6 +57,17 @@
                 {% endfor %}
               </select>
             </div>
+            <div class="field-group">
+              <label class="field-label">Attribuer à</label>
+              <select name="praticien_id">
+                <option value="">Tous les praticiens</option>
+                {% for p in praticiens %}
+                <option value="{{ p.id }}" {{ 'selected' if section.praticien_id == p.id }}>
+                  {{ p.nom }} {{ p.prenom }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
             <div class="field-group" style="grid-column:1/-1;">
               <label class="field-label">
                 Observation par défaut

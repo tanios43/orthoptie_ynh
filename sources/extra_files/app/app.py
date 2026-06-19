@@ -1088,7 +1088,8 @@ class DocumentModele(db.Model):
     nom     = db.Column(db.String(100), nullable=False)
     type    = db.Column(db.String(20), nullable=False)
     actif   = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True, default=None)
     blocs   = db.relationship('DocumentBloc', backref='modele',
                                order_by='DocumentBloc.ordre',
                                cascade='all, delete-orphan')
@@ -1161,6 +1162,7 @@ class SectionDef(db.Model):
     avec_observations = db.Column(db.Boolean, default=True)
     categorie        = db.Column(db.String(50), default='')
     nb_colonnes      = db.Column(db.Integer, default=2)
+    praticien_id     = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True, default=None)
     champs     = db.relationship('ChampDef', backref='section',
                                order_by='ChampDef.ordre', cascade='all, delete-orphan')
     fichiers   = db.relationship('SectionDefFichier', backref='section_def',
@@ -1227,7 +1229,8 @@ class ModeleBilan(db.Model):
     nom     = db.Column(db.String(100), nullable=False)
     motif   = db.Column(db.String(200), default='')
     actif   = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True, default=None)
     sections = db.relationship('ModeleBilanSection', backref='modele',
                                order_by='ModeleBilanSection.ordre',
                                cascade='all, delete-orphan')
@@ -1282,8 +1285,14 @@ def get_cabinets_praticien():
     return [pc.cabinet for pc in pcs]
 
 
-def get_sections():
-    secs = SectionDef.query.filter_by(actif=True).order_by(SectionDef.ordre).all()
+def get_sections(praticien_id=None):
+    """Retourne les sections actives visibles par le praticien (communes + les siennes)."""
+    from sqlalchemy import or_
+    q = SectionDef.query.filter_by(actif=True)
+    if praticien_id is not None:
+        q = q.filter(or_(SectionDef.praticien_id == None,
+                         SectionDef.praticien_id == praticien_id))
+    secs = q.order_by(SectionDef.ordre).all()
     return {s.type_key: s.to_dict() for s in secs}, [s.type_key for s in secs]
 
 
@@ -4026,7 +4035,7 @@ def recherche():
 @login_required
 def consultation_nouvelle(patient_id):
     patient = Patient.query.get_or_404(patient_id)
-    sections, ordre = get_sections()
+    sections, ordre = get_sections(current_user.id)
     if request.method == 'POST':
         cab = get_current_cabinet()
         c = Consultation(patient_id=patient_id, praticien_id=current_user.id,
@@ -4051,7 +4060,11 @@ def consultation_nouvelle(patient_id):
         return redirect(url_for('consultation_detail', consultation_id=c.id))
     autres = Consultation.query.filter(Consultation.patient_id == patient_id)\
                                .order_by(Consultation.date_consult.asc()).all()
-    modeles = ModeleBilan.query.filter_by(actif=True).order_by(ModeleBilan.nom).all()
+    modeles = ModeleBilan.query.filter(
+        db.or_(ModeleBilan.praticien_id == None,
+               ModeleBilan.praticien_id == current_user.id),
+        ModeleBilan.actif == True
+    ).order_by(ModeleBilan.nom).all()
     if not get_current_cabinet():
         flash('⚠️ Veuillez sélectionner un cabinet avant de créer un bilan.', 'warning')
         return redirect(url_for('patient_detail', patient_id=patient_id))
@@ -4076,7 +4089,7 @@ def consultation_detail(consultation_id):
 @login_required
 def consultation_modifier(consultation_id):
     c = Consultation.query.get_or_404(consultation_id)
-    sections, ordre = get_sections()
+    sections, ordre = get_sections(current_user.id)
     if request.method == 'POST':
         c.date_consult = _parse_date(request.form.get('date_consult')) or c.date_consult
         c.motif = request.form.get('motif')
@@ -4850,7 +4863,8 @@ def admin_sections_importer():
 @login_required
 def admin_sections():
     sections = SectionDef.query.order_by(SectionDef.ordre).all()
-    return render_template('admin/sections.html', sections=sections)
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
+    return render_template('admin/sections.html', sections=sections, praticiens=praticiens)
 
 
 @app.route('/admin/section/nouvelle', methods=['POST'])
@@ -4862,7 +4876,9 @@ def admin_section_nouvelle():
     while SectionDef.query.filter_by(type_key=key).first():
         key = f'{slugify(label)}_{i}'; i += 1
     max_o = db.session.query(db.func.max(SectionDef.ordre)).scalar() or 0
-    s = SectionDef(type_key=key, label=label, ordre=max_o+1, builtin=False)
+    praticien_id = request.form.get('praticien_id', type=int) or None
+    s = SectionDef(type_key=key, label=label, ordre=max_o+1, builtin=False,
+                   praticien_id=praticien_id)
     db.session.add(s); db.session.commit()
     flash(f'Section « {label} » créée.', 'success')
     return redirect(url_for('admin_section_detail', section_id=s.id))
@@ -4935,7 +4951,9 @@ def section_def_fichier(filename):
 def admin_section_detail(section_id):
     section = SectionDef.query.get_or_404(section_id)
     all_sections = SectionDef.query.order_by(SectionDef.ordre).all()
-    return render_template('admin/section_detail.html', section=section, all_sections=all_sections)
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
+    return render_template('admin/section_detail.html', section=section,
+                           all_sections=all_sections, praticiens=praticiens)
 
 
 @app.route('/admin/section/<int:section_id>/modifier', methods=['POST'])
@@ -4948,6 +4966,7 @@ def admin_section_modifier(section_id):
     s.avec_observations = request.form.get('avec_observations') == '1'
     s.categorie         = request.form.get('categorie', '').strip()
     s.nb_colonnes       = int(request.form.get('nb_colonnes', 2) or 2)
+    s.praticien_id      = request.form.get('praticien_id', type=int) or None
     db.session.commit(); flash('Section mise à jour.', 'success')
     return redirect(url_for('admin_section_detail', section_id=section_id))
 
@@ -5152,8 +5171,10 @@ def admin_modeles_importer():
 def admin_modeles():
     modeles = ModeleBilan.query.order_by(ModeleBilan.nom).all()
     sections, ordre = get_sections()
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
     return render_template('admin/modeles.html', modeles=modeles,
-                           sections_dispo=sections, sections_ordre=ordre)
+                           sections_dispo=sections, sections_ordre=ordre,
+                           praticiens=praticiens)
 
 
 @app.route('/admin/modele/nouveau', methods=['POST'])
@@ -5163,7 +5184,8 @@ def admin_modele_nouveau():
     if not nom:
         flash('Le nom du modèle est requis.', 'danger')
         return redirect(url_for('admin_modeles'))
-    m = ModeleBilan(nom=nom, motif=request.form.get('motif', '').strip())
+    m = ModeleBilan(nom=nom, motif=request.form.get('motif', '').strip(),
+                    praticien_id=request.form.get('praticien_id', type=int) or None)
     db.session.add(m); db.session.flush()
     types = request.form.getlist('sections[]')
     sections, ordre = get_sections()
@@ -5180,9 +5202,10 @@ def admin_modele_nouveau():
 @login_required
 def admin_modele_modifier(modele_id):
     m = ModeleBilan.query.get_or_404(modele_id)
-    m.nom   = request.form.get('nom', m.nom).strip()
-    m.motif = request.form.get('motif', '').strip()
-    m.actif = request.form.get('actif') == '1'
+    m.nom          = request.form.get('nom', m.nom).strip()
+    m.motif        = request.form.get('motif', '').strip()
+    m.actif        = request.form.get('actif') == '1'
+    m.praticien_id = request.form.get('praticien_id', type=int) or None
     for s in list(m.sections): db.session.delete(s)
     db.session.flush()
     types = request.form.getlist('sections[]')
@@ -5424,8 +5447,10 @@ def admin_document_modeles_importer():
 def admin_document_modeles():
     modeles = DocumentModele.query.order_by(DocumentModele.type, DocumentModele.nom).all()
     sections, ordre = get_sections()
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
     return render_template('admin/document_modeles.html',
-                           modeles=modeles, sections_dispo=sections, sections_ordre=ordre)
+                           modeles=modeles, sections_dispo=sections, sections_ordre=ordre,
+                           praticiens=praticiens)
 
 
 @app.route('/admin/document-modele/nouveau', methods=['POST'])
@@ -5436,7 +5461,8 @@ def admin_document_modele_nouveau():
     if not nom:
         flash('Le nom est requis.', 'danger')
         return redirect(url_for('admin_document_modeles'))
-    m = DocumentModele(nom=nom, type=type_)
+    m = DocumentModele(nom=nom, type=type_,
+                       praticien_id=request.form.get('praticien_id', type=int) or None)
     db.session.add(m); db.session.commit()
     flash(f'Modèle « {nom} » créé.', 'success')
     return redirect(url_for('admin_document_modele_detail', modele_id=m.id))
@@ -5457,21 +5483,24 @@ def admin_document_modele_detail(modele_id):
     custom_noms = [c.key for c in cats_custom]
     categories_liste = builtin_cats + [c for c in custom_noms if c not in builtin_cats]
     cats_labels = {c.key: (c.label or c.key) for c in cats_custom}
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
     return render_template('admin/document_modele_detail.html',
                            modele=m, modeles=modeles,
                            sections_dispo=sections, sections_ordre=ordre,
                            sections_liste=sections_liste,
                            categories=categories_liste,
-                           cats_labels=cats_labels)
+                           cats_labels=cats_labels,
+                           praticiens=praticiens)
 
 
 @app.route('/admin/document-modele/<int:modele_id>/modifier', methods=['POST'])
 @login_required
 def admin_document_modele_modifier(modele_id):
     m = DocumentModele.query.get_or_404(modele_id)
-    m.nom   = request.form.get('nom', m.nom).strip()
-    m.type  = request.form.get('type', m.type)
-    m.actif = request.form.get('actif') == '1'
+    m.nom          = request.form.get('nom', m.nom).strip()
+    m.type         = request.form.get('type', m.type)
+    m.actif        = request.form.get('actif') == '1'
+    m.praticien_id = request.form.get('praticien_id', type=int) or None
     db.session.commit(); flash('Modèle mis à jour.', 'success')
     return redirect(url_for('admin_document_modele_detail', modele_id=modele_id))
 
@@ -5901,9 +5930,12 @@ def editer_ordonnance_collabora(consultation_id, type_ordo):
 @login_required
 def generer_document(consultation_id):
     c = Consultation.query.get_or_404(consultation_id)
-    modeles = DocumentModele.query.filter_by(actif=True)\
-                                  .order_by(DocumentModele.type, DocumentModele.nom).all()
-    sections, _ = get_sections()
+    modeles = DocumentModele.query.filter(
+        db.or_(DocumentModele.praticien_id == None,
+               DocumentModele.praticien_id == current_user.id),
+        DocumentModele.actif == True
+    ).order_by(DocumentModele.type, DocumentModele.nom).all()
+    sections, _ = get_sections(current_user.id)
 
     if request.method == 'POST':
         modele_id      = request.form.get('modele_id', type=int)

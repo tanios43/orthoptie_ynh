@@ -39,6 +39,17 @@
               <option value="0" {{ 'selected' if not modele.actif }}>Désactivé</option>
             </select>
           </div>
+          <div class="field-group">
+            <label class="field-label">Attribuer à</label>
+            <select name="praticien_id" style="width:auto;">
+              <option value="">Tous</option>
+              {% for p in praticiens %}
+              <option value="{{ p.id }}" {{ 'selected' if modele.praticien_id == p.id }}>
+                {{ p.nom }} {{ p.prenom }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
           <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
         </form>
       </div>

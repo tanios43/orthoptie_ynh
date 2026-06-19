@@ -45,10 +45,19 @@
     <div class="card-header"><h2>Nouvelle section</h2></div>
     <div class="card-body">
       <form method="POST" action="{{ url_for('admin_section_nouvelle') }}"
-            style="display:flex;gap:10px;align-items:flex-end;">
-        <div class="field-group" style="flex:1;">
+            style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="field-group" style="flex:1;min-width:200px;">
           <label class="field-label">Nom de la section</label>
           <input type="text" name="label" placeholder="Ex : Bilan accommodation" required autofocus>
+        </div>
+        <div class="field-group" style="min-width:160px;">
+          <label class="field-label">Attribuer à</label>
+          <select name="praticien_id">
+            <option value="">Tous les praticiens</option>
+            {% for p in praticiens %}
+            <option value="{{ p.id }}">{{ p.nom }} {{ p.prenom }}</option>
+            {% endfor %}
+          </select>
         </div>
         <button type="submit" class="btn btn-primary">+ Créer</button>
       </form>
@@ -78,6 +87,13 @@
           {% if s.builtin %}
             <span style="margin-left:6px;font-size:10px;background:rgba(0,0,0,.08);
                          color:{{ col.color }};border-radius:4px;padding:1px 5px;">native</span>
+          {% endif %}
+          {% if s.praticien_id %}
+            {% set p = praticiens | selectattr('id', 'equalto', s.praticien_id) | first | default(None) %}
+            <span style="margin-left:6px;font-size:10px;background:rgba(0,0,0,.08);
+                         color:{{ col.color }};border-radius:4px;padding:1px 5px;">
+              👤 {{ p.nom ~ ' ' ~ p.prenom if p else '?' }}
+            </span>
           {% endif %}
           {% if not s.actif %}
             <span class="badge badge-warn" style="margin-left:6px;font-size:10px;">désactivée</span>

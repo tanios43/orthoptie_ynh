@@ -48,6 +48,16 @@
             <input type="text" name="nom" placeholder="Ex : Bilan enfant strabisme" required autofocus>
           </div>
 
+          <div class="field-group" style="margin-bottom:12px;">
+            <label class="field-label">Attribuer à</label>
+            <select name="praticien_id">
+              <option value="">Tous les praticiens</option>
+              {% for p in praticiens %}
+              <option value="{{ p.id }}">{{ p.nom }} {{ p.prenom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
           <div class="field-group" style="margin-bottom:14px;">
             <label class="field-label">Motif pré-rempli
               <span style="font-weight:400;color:var(--muted);font-size:10px;margin-left:4px;">
@@ -132,6 +142,18 @@
             <select name="actif" style="width:auto;">
               <option value="1" {{ 'selected' if m.actif }}>Actif</option>
               <option value="0" {{ 'selected' if not m.actif }}>Désactivé</option>
+            </select>
+          </div>
+
+          <div class="field-group" style="margin-bottom:12px;">
+            <label class="field-label">Attribuer à</label>
+            <select name="praticien_id">
+              <option value="">Tous les praticiens</option>
+              {% for p in praticiens %}
+              <option value="{{ p.id }}" {{ 'selected' if m.praticien_id == p.id }}>
+                {{ p.nom }} {{ p.prenom }}
+              </option>
+              {% endfor %}
             </select>
           </div>
 
