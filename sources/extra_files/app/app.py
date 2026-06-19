@@ -4035,7 +4035,8 @@ def recherche():
 @login_required
 def consultation_nouvelle(patient_id):
     patient = Patient.query.get_or_404(patient_id)
-    sections, ordre = get_sections(current_user.id)
+    sections_all, _ = get_sections()
+    sections_filtrees, ordre_filtres = get_sections(current_user.id)
     if request.method == 'POST':
         cab = get_current_cabinet()
         c = Consultation(patient_id=patient_id, praticien_id=current_user.id,
@@ -4045,7 +4046,7 @@ def consultation_nouvelle(patient_id):
                          classe_profession=request.form.get('classe_profession','').strip() or None,
                          cabinet_id=cab.id if cab else None)
         db.session.add(c); db.session.flush()
-        _save_sections(c.id, request.form, sections, request.files)
+        _save_sections(c.id, request.form, sections_all, request.files)
         _save_fichiers(c.id, request.files, request.form)
         db.session.commit()
         log_action('creation_consultation', patient_id=patient_id, consultation_id=c.id)
@@ -4069,8 +4070,8 @@ def consultation_nouvelle(patient_id):
         flash('⚠️ Veuillez sélectionner un cabinet avant de créer un bilan.', 'warning')
         return redirect(url_for('patient_detail', patient_id=patient_id))
     return render_template('consultations/saisie.html', patient=patient, consultation=None,
-                           sections_dispo=sections, sections_ordre=ordre,
-                           autres_consultations=autres, sections_def=sections,
+                           sections_dispo=sections_filtrees, sections_ordre=ordre_filtres,
+                           autres_consultations=autres, sections_def=sections_filtrees,
                            modeles=modeles, modeles_json=[m.to_dict() for m in modeles])
 
 
@@ -4089,7 +4090,10 @@ def consultation_detail(consultation_id):
 @login_required
 def consultation_modifier(consultation_id):
     c = Consultation.query.get_or_404(consultation_id)
-    sections, ordre = get_sections(current_user.id)
+    # Toutes les sections pour la sauvegarde (évite de perdre les sections privées d'autres praticiens)
+    sections_all, ordre_all = get_sections()
+    # Sections filtrées pour l'affichage (colonne "Ajouter une section")
+    sections_filtrees, ordre_filtres = get_sections(current_user.id)
     if request.method == 'POST':
         c.date_consult = _parse_date(request.form.get('date_consult')) or c.date_consult
         c.motif = request.form.get('motif')
@@ -4097,7 +4101,7 @@ def consultation_modifier(consultation_id):
         c.classe_profession    = request.form.get('classe_profession','').strip() or None
         for s in list(c.sections): db.session.delete(s)
         db.session.flush()
-        _save_sections(c.id, request.form, sections, request.files)
+        _save_sections(c.id, request.form, sections_all, request.files)
         _save_fichiers(c.id, request.files, request.form)
         db.session.commit()
 
@@ -4127,8 +4131,8 @@ def consultation_modifier(consultation_id):
                                        Consultation.id != c.id)\
                                .order_by(Consultation.date_consult.asc()).all()
     return render_template('consultations/saisie.html', patient=c.patient, consultation=c,
-                           sections_dispo=sections, sections_ordre=ordre,
-                           autres_consultations=autres, sections_def=sections,
+                           sections_dispo=sections_filtrees, sections_ordre=ordre_filtres,
+                           autres_consultations=autres, sections_def=sections_all,
                            modeles=[], modeles_json=[])
 
 
