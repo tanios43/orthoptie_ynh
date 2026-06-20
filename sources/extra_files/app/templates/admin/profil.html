@@ -3,6 +3,20 @@
 {% block page_title %}Mon profil{% endblock %}
 
 {% block content %}
+
+{% if session.get('must_change_password') %}
+<div style="background:#FFF3CD;border:1px solid #EF9F27;border-radius:8px;
+            padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+  <span style="font-size:22px;">🔒</span>
+  <div>
+    <strong style="color:#856404;">Mise à jour du mot de passe requise</strong><br>
+    <span style="font-size:13px;color:#856404;">
+      Votre mot de passe actuel ne respecte pas la politique de sécurité.
+      Veuillez le modifier ci-dessous avant de continuer à utiliser l'application.
+    </span>
+  </div>
+</div>
+{% endif %}
 <div style="max-width:520px;">
   <form method="POST" enctype="multipart/form-data">
     <div class="card">

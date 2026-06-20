@@ -1350,10 +1350,32 @@ def login():
             login_user(p)
             if getattr(p, 'is_default', False) or p.login == 'admin' and p.nom == '':
                 return redirect(url_for('setup_premier_compte'))
+            # Vérifier si le mot de passe respecte la politique
+            pwd_saisi = request.form.get('password', '')
+            if _valider_mot_de_passe(pwd_saisi) is not None:
+                session['must_change_password'] = True
+                flash('🔒 Votre mot de passe ne respecte pas la politique de sécurité. '
+                      'Veuillez le modifier avant de continuer.', 'warning')
+                return redirect(url_for('profil'))
             return redirect(url_for('index'))
         _record_attempt(ip)
         flash('Identifiants ou mot de passe incorrects.', 'danger')
     return render_template('login.html')
+
+
+@app.before_request
+def check_password_policy():
+    """Bloque toutes les pages si le mot de passe doit être changé."""
+    if not current_user.is_authenticated:
+        return
+    if not session.get('must_change_password'):
+        return
+    # Pages autorisées pendant la contrainte
+    allowed = {'profil', 'logout', 'static'}
+    if request.endpoint in allowed:
+        return
+    flash('🔒 Veuillez d\'abord mettre à jour votre mot de passe.', 'warning')
+    return redirect(url_for('profil'))
 
 
 @app.route('/setup/premier-compte', methods=['GET', 'POST'])
@@ -4657,6 +4679,8 @@ def profil():
                 flash(err, 'danger')
                 return redirect(url_for('profil'))
             p.set_password(pwd)
+            session.pop('must_change_password', None)
+            flash('Mot de passe mis à jour avec succès.', 'success')
 
         # Upload signature
         sig_file = request.files.get('signature')
