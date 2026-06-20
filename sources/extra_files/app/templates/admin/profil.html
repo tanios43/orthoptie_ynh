@@ -53,6 +53,13 @@
     <div class="card mt-2">
       <div class="card-header"><h2>Changer le mot de passe</h2></div>
       <div class="card-body">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;
+                    background:var(--bg);border-radius:6px;padding:8px 12px;
+                    border:1px solid var(--border);">
+          🔒 Politique : <strong>10 caractères minimum</strong>,
+          avec au moins <strong>1 majuscule</strong>, <strong>1 chiffre</strong>
+          et <strong>1 caractère spécial</strong> (!@#$%…)
+        </div>
         <div class="field-grid field-grid-2">
           <div class="field-group">
             <label class="field-label">
@@ -61,7 +68,14 @@
                 (laisser vide pour ne pas changer)
               </span>
             </label>
-            <input type="password" name="password" autocomplete="new-password" placeholder="••••••••">
+            <input type="password" name="password" id="pwd-input"
+                   autocomplete="new-password" placeholder="••••••••"
+                   oninput="evalPwd(this.value)">
+            <div id="pwd-strength" style="margin-top:6px;height:4px;border-radius:2px;
+                                          background:var(--border);overflow:hidden;">
+              <div id="pwd-bar" style="height:100%;width:0%;transition:width .3s,background .3s;"></div>
+            </div>
+            <div id="pwd-hint" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
           </div>
           <div class="field-group">
             <label class="field-label">Confirmer</label>
@@ -70,6 +84,25 @@
         </div>
       </div>
     </div>
+
+    <script>
+    function evalPwd(v) {
+      const bar = document.getElementById('pwd-bar');
+      const hint = document.getElementById('pwd-hint');
+      if (!v) { bar.style.width='0%'; hint.textContent=''; return; }
+      let score = 0, msgs = [];
+      if (v.length >= 10) score++; else msgs.push('10 caractères min');
+      if (/[A-Z]/.test(v)) score++; else msgs.push('1 majuscule');
+      if (/[0-9]/.test(v)) score++; else msgs.push('1 chiffre');
+      if (/[^A-Za-z0-9]/.test(v)) score++; else msgs.push('1 caractère spécial');
+      const colors = ['#E24B4A','#EF9F27','#4CAF50','#2E7D6B'];
+      const labels = ['Très faible','Faible','Bon','Fort'];
+      bar.style.width = (score * 25) + '%';
+      bar.style.background = colors[score-1] || '#E24B4A';
+      hint.style.color = colors[score-1] || '#E24B4A';
+      hint.textContent = score === 4 ? '✓ Mot de passe fort' : 'Manque : ' + msgs.join(', ');
+    }
+    </script>
 
     <div class="card mt-2">
       <div class="card-header"><h2>Signature</h2></div>

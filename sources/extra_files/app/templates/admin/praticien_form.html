@@ -101,15 +101,46 @@
               *
               {% endif %}
             </label>
-            <input type="password" name="password" autocomplete="new-password"
+            <input type="password" name="password" id="pwd-input-admin"
+                   autocomplete="new-password"
                    placeholder="{{ '••••••••' if praticien else 'Mot de passe initial' }}"
-                   {{ 'required' if not praticien }}>
+                   {{ 'required' if not praticien }}
+                   oninput="evalPwdAdmin(this.value)">
+            <div id="pwd-strength-admin" style="margin-top:6px;height:4px;border-radius:2px;
+                                                 background:var(--border);overflow:hidden;">
+              <div id="pwd-bar-admin" style="height:100%;width:0%;transition:width .3s,background .3s;"></div>
+            </div>
+            <div id="pwd-hint-admin" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
           </div>
           <div class="field-group">
             <label class="field-label">Confirmer le mot de passe</label>
             <input type="password" name="password2" autocomplete="new-password"
                    placeholder="••••••••">
           </div>
+          <div style="grid-column:1/-1;font-size:12px;color:var(--muted);
+                      background:var(--bg);border-radius:6px;padding:8px 12px;
+                      border:1px solid var(--border);">
+            🔒 Politique : <strong>10 caractères minimum</strong>,
+            avec au moins <strong>1 majuscule</strong>, <strong>1 chiffre</strong>
+            et <strong>1 caractère spécial</strong> (!@#$%…)
+          </div>
+          <script>
+          function evalPwdAdmin(v) {
+            const bar = document.getElementById('pwd-bar-admin');
+            const hint = document.getElementById('pwd-hint-admin');
+            if (!v) { bar.style.width='0%'; hint.textContent=''; return; }
+            let score = 0, msgs = [];
+            if (v.length >= 10) score++; else msgs.push('10 car. min');
+            if (/[A-Z]/.test(v)) score++; else msgs.push('1 majuscule');
+            if (/[0-9]/.test(v)) score++; else msgs.push('1 chiffre');
+            if (/[^A-Za-z0-9]/.test(v)) score++; else msgs.push('1 spécial');
+            const colors = ['#E24B4A','#EF9F27','#4CAF50','#2E7D6B'];
+            bar.style.width = (score * 25) + '%';
+            bar.style.background = colors[score-1] || '#E24B4A';
+            hint.style.color = colors[score-1] || '#E24B4A';
+            hint.textContent = score === 4 ? '✓ Fort' : 'Manque : ' + msgs.join(', ');
+          }
+          </script>
           {% if praticien %}
           <div class="field-group">
             <label class="field-label">Statut</label>

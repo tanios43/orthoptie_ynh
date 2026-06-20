@@ -1296,6 +1296,20 @@ def get_sections(praticien_id=None):
     return {s.type_key: s.to_dict() for s in secs}, [s.type_key for s in secs]
 
 
+def _valider_mot_de_passe(pwd):
+    """Vérifie la politique de mot de passe. Retourne None si OK, sinon un message d'erreur."""
+    import re
+    if len(pwd) < 10:
+        return 'Le mot de passe doit contenir au moins 10 caractères.'
+    if not re.search(r'[A-Z]', pwd):
+        return 'Le mot de passe doit contenir au moins une majuscule.'
+    if not re.search(r'[0-9]', pwd):
+        return 'Le mot de passe doit contenir au moins un chiffre.'
+    if not re.search(r'[^A-Za-z0-9]', pwd):
+        return 'Le mot de passe doit contenir au moins un caractère spécial.'
+    return None
+
+
 def slugify(text):
     text = unicodedata.normalize('NFD', text.lower())
     text = ''.join(c for c in text if unicodedata.category(c) != 'Mn')
@@ -4503,6 +4517,10 @@ def admin_praticien_nouveau():
         )
         pwd = request.form.get('password', '').strip()
         if pwd:
+            err = _valider_mot_de_passe(pwd)
+            if err:
+                flash(err, 'danger')
+                return redirect(url_for('admin_praticien_nouveau'))
             p.set_password(pwd)
         db.session.add(p); db.session.commit()
         flash(f'Praticien {p} créé.', 'success')
@@ -4535,6 +4553,10 @@ def admin_praticien_modifier(praticien_id):
         if pwd:
             if pwd != pwd2:
                 flash('Les mots de passe ne correspondent pas.', 'danger')
+                return redirect(url_for('admin_praticien_modifier', praticien_id=praticien_id))
+            err = _valider_mot_de_passe(pwd)
+            if err:
+                flash(err, 'danger')
                 return redirect(url_for('admin_praticien_modifier', praticien_id=praticien_id))
             p.set_password(pwd)
         db.session.commit()
@@ -4629,6 +4651,10 @@ def profil():
         if pwd:
             if pwd != pwd2:
                 flash('Les mots de passe ne correspondent pas.', 'danger')
+                return redirect(url_for('profil'))
+            err = _valider_mot_de_passe(pwd)
+            if err:
+                flash(err, 'danger')
                 return redirect(url_for('profil'))
             p.set_password(pwd)
 
