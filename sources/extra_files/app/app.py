@@ -4679,8 +4679,11 @@ def profil():
                 flash(err, 'danger')
                 return redirect(url_for('profil'))
             p.set_password(pwd)
+            db.session.commit()
             session.pop('must_change_password', None)
-            flash('Mot de passe mis à jour avec succès.', 'success')
+            logout_user()
+            flash('Mot de passe mis à jour. Veuillez vous reconnecter.', 'success')
+            return redirect(url_for('login'))
 
         # Upload signature
         sig_file = request.files.get('signature')
