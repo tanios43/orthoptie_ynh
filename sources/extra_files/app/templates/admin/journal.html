@@ -1,58 +1,128 @@
 {% extends "base.html" %}
-{% block title %}Journal d'accès{% endblock %}
+{% block title %}Journal d'accès RGPD{% endblock %}
 {% block page_title %}🔒 Journal d'accès RGPD{% endblock %}
 
 {% block content %}
-<div style="max-width:960px;margin:0 auto;">
+<div style="max-width:1100px;margin:0 auto;">
 
+  {# Filtres #}
   <div class="card" style="margin-bottom:16px;">
-    <div class="card-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <form method="GET" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <select name="praticien_id" onchange="this.form.submit()"
-                style="font-size:13px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);">
-          <option value="">Tous les praticiens</option>
-          {% for p in praticiens %}
-          <option value="{{ p.id }}" {{ 'selected' if praticien_filter == p.id }}>
-            {{ p.prenom }} {{ p.nom }}
-          </option>
-          {% endfor %}
-        </select>
-        <span style="font-size:12px;color:var(--muted);">{{ entrees|length }} entrées affichées</span>
+    <div class="card-body">
+      <form method="GET" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="field-group" style="min-width:150px;">
+          <label class="field-label">Praticien</label>
+          <select name="praticien_id">
+            <option value="">Tous</option>
+            {% for p in praticiens %}
+            <option value="{{ p.id }}" {{ 'selected' if praticien_filter == p.id }}>
+              {{ p.nom }} {{ p.prenom }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field-group" style="min-width:180px;">
+          <label class="field-label">Patient</label>
+          <select name="patient_id">
+            <option value="">Tous</option>
+            {% for p in patients %}
+            <option value="{{ p.id }}" {{ 'selected' if patient_filter == p.id }}>
+              {{ p.nom }} {{ p.prenom }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field-group" style="min-width:140px;">
+          <label class="field-label">Action</label>
+          <select name="action">
+            <option value="">Toutes</option>
+            {% set labels = {
+              'patient_detail': 'Dossier patient',
+              'consultation_detail': 'Visualisation bilan',
+              'edition_consultation': 'Édition bilan',
+              'impression_dossier': 'Impression dossier',
+              'creation_patient': 'Création patient',
+              'modification_patient': 'Modification patient',
+              'suppression_patient': 'Suppression patient',
+              'creation_consultation': 'Nouveau bilan',
+              'modification_consultation': 'Modification bilan',
+              'suppression_consultation': 'Suppression bilan',
+            } %}
+            {% for a in actions %}
+            <option value="{{ a }}" {{ 'selected' if action_filter == a }}>
+              {{ labels.get(a, a) }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Du</label>
+          <input type="date" name="date_debut" value="{{ date_debut }}" style="width:140px;">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Au</label>
+          <input type="date" name="date_fin" value="{{ date_fin }}" style="width:140px;">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
+        <a href="{{ url_for('admin_journal') }}" class="btn btn-secondary btn-sm">Réinitialiser</a>
+        <a href="{{ request.url }}&export=csv" class="btn btn-secondary btn-sm" style="margin-left:auto;">
+          ⬇ Export CSV
+        </a>
       </form>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+        {{ entrees|length }} entrée(s) affichée(s)
+      </div>
     </div>
   </div>
 
+  {# Tableau #}
   <div class="card">
-    <div class="card-body" style="padding:0;">
+    <div class="card-body" style="padding:0;overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead>
           <tr style="background:var(--bg);border-bottom:1px solid var(--border);">
-            <th style="padding:8px 12px;text-align:left;font-weight:600;">Date / Heure</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:600;white-space:nowrap;">Date / Heure</th>
             <th style="padding:8px 12px;text-align:left;font-weight:600;">Praticien</th>
             <th style="padding:8px 12px;text-align:left;font-weight:600;">Action</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:600;">Patient</th>
             <th style="padding:8px 12px;text-align:left;font-weight:600;">Détail</th>
             <th style="padding:8px 12px;text-align:left;font-weight:600;">IP</th>
           </tr>
         </thead>
         <tbody>
           {% for e in entrees %}
+          {% set action_labels = {
+            'patient_detail': '👁 Dossier patient',
+            'consultation_detail': '👁 Visualisation bilan',
+            'edition_consultation': '✏️ Édition bilan',
+            'impression_dossier': '🖨 Impression dossier',
+            'creation_patient': '➕ Création patient',
+            'modification_patient': '📝 Modification patient',
+            'suppression_patient': '🗑 Suppression patient',
+            'creation_consultation': '➕ Nouveau bilan',
+            'modification_consultation': '📝 Modification bilan',
+            'suppression_consultation': '🗑 Suppression bilan',
+            'lecture_suivi_amblyopie': '👁 Suivi amblyopie',
+            'lecture_suivi_bv': '👁 Suivi BV',
+            'lecture_suivi_nv': '👁 Suivi NV',
+            'lecture_suivi_vb': '👁 Suivi VB',
+          } %}
           <tr style="border-bottom:1px solid var(--border);">
             <td style="padding:7px 12px;color:var(--muted);white-space:nowrap;">
               {{ e.created_at | localtime }}
             </td>
             <td style="padding:7px 12px;white-space:nowrap;">
-              {{ e.praticien.prenom }} {{ e.praticien.nom }}
+              {% if e.praticien %}{{ e.praticien.nom }} {{ e.praticien.prenom }}{% endif %}
+            </td>
+            <td style="padding:7px 12px;white-space:nowrap;">
+              {{ action_labels.get(e.action, e.action) }}
             </td>
             <td style="padding:7px 12px;">
-              {% set labels = {
-                'patient_detail': '👁 Dossier patient',
-                'consultation_detail': '👁 Visualisation bilan',
-                'impression_dossier': '🖨 Impression dossier',
-                'creation_patient': '➕ Création patient',
-                'creation_consultation': '➕ Nouveau bilan',
-                'modification_consultation': '✏️ Modification bilan',
-              } %}
-              {{ labels.get(e.action, e.action) }}
+              {% if e.patient_id and e.patient %}
+              <a href="{{ url_for('patient_detail', patient_id=e.patient_id) }}"
+                 style="color:var(--accent);text-decoration:none;font-weight:500;">
+                {{ e.patient.nom }} {{ e.patient.prenom }}
+              </a>
+              {% endif %}
             </td>
             <td style="padding:7px 12px;color:var(--muted);">{{ e.detail }}</td>
             <td style="padding:7px 12px;color:var(--muted);font-family:monospace;font-size:10px;">
@@ -61,7 +131,7 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="5" style="padding:24px;text-align:center;color:var(--muted);">
+            <td colspan="6" style="padding:24px;text-align:center;color:var(--muted);">
               Aucune entrée dans le journal.
             </td>
           </tr>

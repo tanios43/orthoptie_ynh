@@ -1659,6 +1659,7 @@ def patient_supprimer(patient_id):
         return redirect(url_for('patient_modifier', patient_id=patient_id))
 
     nom = str(patient)
+    log_acces('suppression_patient', patient_id=patient_id, detail=f'Patient supprimé: {nom}')
     # Supprimer les fichiers liés puis les consultations
     for c in patient.consultations:
         for f in FichierSection.query.filter_by(consultation_id=c.id).all():
@@ -3990,15 +3991,61 @@ def admin_journal():
     if current_user.role != 'admin':
         flash('Accès réservé aux administrateurs.', 'danger')
         return redirect(url_for('index'))
-    page = request.args.get('page', 1, type=int)
+
     praticien_filter = request.args.get('praticien_id', type=int)
+    patient_filter   = request.args.get('patient_id', type=int)
+    date_debut       = request.args.get('date_debut', '')
+    date_fin         = request.args.get('date_fin', '')
+    action_filter    = request.args.get('action', '')
+    export_csv       = request.args.get('export') == 'csv'
+
     q = JournalAcces.query.order_by(JournalAcces.created_at.desc())
     if praticien_filter:
         q = q.filter_by(praticien_id=praticien_filter)
-    entrees = q.limit(200).all()
+    if patient_filter:
+        q = q.filter_by(patient_id=patient_filter)
+    if action_filter:
+        q = q.filter_by(action=action_filter)
+    if date_debut:
+        try:
+            q = q.filter(JournalAcces.created_at >= datetime.strptime(date_debut, '%Y-%m-%d'))
+        except ValueError: pass
+    if date_fin:
+        try:
+            q = q.filter(JournalAcces.created_at <= datetime.strptime(date_fin + ' 23:59:59', '%Y-%m-%d %H:%M:%S'))
+        except ValueError: pass
+
+    if export_csv:
+        import csv, io
+        entrees = q.all()
+        buf = io.StringIO()
+        w = csv.writer(buf, delimiter=';')
+        w.writerow(['Date/Heure', 'Praticien', 'Action', 'Patient', 'Detail', 'IP'])
+        for e in entrees:
+            patient_nom = f'{e.patient.nom} {e.patient.prenom}' if e.patient_id and e.patient else ''
+            praticien_nom = f'{e.praticien.nom} {e.praticien.prenom}' if e.praticien else ''
+            w.writerow([
+                e.created_at.strftime('%d/%m/%Y %H:%M:%S'),
+                praticien_nom, e.action, patient_nom,
+                e.detail or '', e.ip_address or ''
+            ])
+        from flask import Response
+        return Response(
+            '\ufeff' + buf.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=journal_rgpd.csv'}
+        )
+
+    entrees  = q.limit(500).all()
     praticiens = Praticien.query.order_by(Praticien.nom).all()
+    patients   = Patient.query.order_by(Patient.nom).all()
+    actions    = db.session.query(JournalAcces.action).distinct().all()
+    actions    = [a[0] for a in actions]
     return render_template('admin/journal.html', entrees=entrees,
-                           praticiens=praticiens, praticien_filter=praticien_filter)
+                           praticiens=praticiens, praticien_filter=praticien_filter,
+                           patients=patients, patient_filter=patient_filter,
+                           date_debut=date_debut, date_fin=date_fin,
+                           action_filter=action_filter, actions=actions)
 
 
 @app.route('/aide')
@@ -4131,6 +4178,9 @@ def consultation_modifier(consultation_id):
     sections_all, ordre_all = get_sections()
     # Sections filtrées pour l'affichage (colonne "Ajouter une section")
     sections_filtrees, ordre_filtres = get_sections(current_user.id)
+    if request.method == 'GET':
+        log_acces('edition_consultation', patient_id=c.patient_id, consultation_id=c.id,
+                  detail=f'Édition bilan du {c.date_consult}')
     if request.method == 'POST':
         c.date_consult = _parse_date(request.form.get('date_consult')) or c.date_consult
         c.motif = request.form.get('motif')
