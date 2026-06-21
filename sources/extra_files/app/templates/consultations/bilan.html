@@ -18,7 +18,6 @@
 
 {% block topbar_actions %}
   <a href="{{ url_for('patient_detail', patient_id=consultation.patient_id) }}" class="btn btn-secondary btn-sm">← Fiche patient</a>
-  <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}" class="btn btn-primary btn-sm">✎ Modifier</a>
 {% endblock %}
 
 {%- macro sph(val) -%}
@@ -59,18 +58,18 @@
 {% block content %}
 <div style="max-width:860px;">
 
-  {# En-tête patient #}
-  <div class="card" style="margin-bottom:16px;">
+  {# ── En-tête patient + actions ── #}
+  <div class="card" style="margin-bottom:12px;">
     <div class="card-body" style="padding:14px 20px;">
-      <div class="flex flex-center justify-between">
+      <div class="flex flex-center justify-between" style="gap:12px;flex-wrap:wrap;">
         <div class="flex flex-center gap-3">
           <div style="width:44px;height:44px;border-radius:50%;background:var(--accent-lt);
                       display:flex;align-items:center;justify-content:center;
-                      font-weight:600;color:var(--accent);font-size:16px;">
+                      font-weight:600;color:var(--accent);font-size:16px;flex-shrink:0;">
             {{ c.patient.prenom[0] }}{{ c.patient.nom[0] }}
           </div>
           <div>
-            <div style="font-size:16px;font-weight:600;">{{ c.patient.prenom }} {{ c.patient.nom }}</div>
+            <div style="font-size:16px;font-weight:600;">{{ c.patient.nom }} {{ c.patient.prenom }}</div>
             <div class="text-sm text-muted">
               {% if c.patient.date_naissance %}
                 {{ c.patient.date_naissance.strftime('%d/%m/%Y') }} —
@@ -79,32 +78,95 @@
                 </span>
               {% endif %}
             </div>
+            {% if c.motif %}
+            <div class="text-sm text-muted" style="margin-top:2px;">{{ c.motif }}</div>
+            {% endif %}
           </div>
         </div>
-        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
           {% set coul = c.praticien.couleur or '#2E7D6B' %}
           <span style="display:inline-flex;align-items:center;gap:6px;
-                       padding:4px 12px;border-radius:20px;font-size:13px;font-weight:500;
-                       background:{{ coul }}20;color:{{ coul }};
-                       border:1px solid {{ coul }}40;">
-            <span style="width:9px;height:9px;border-radius:50%;
-                         background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+                       padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;
+                       background:{{ coul }}20;color:{{ coul }};border:1px solid {{ coul }}40;">
+            <span style="width:8px;height:8px;border-radius:50%;background:{{ coul }};display:inline-block;"></span>
             {{ c.praticien.titre }} {{ c.praticien.prenom }} {{ c.praticien.nom }}
           </span>
-{% if c.cabinet %}
-            {% set cc = c.cabinet.couleur or '#1C2B3A' %}
-            <span style="display:inline-flex;align-items:center;gap:4px;
-                         padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;
-                         background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
-              <span style="width:8px;height:8px;border-radius:50%;
-                           background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
-              🏥 {{ c.cabinet.nom }}
-            </span>
-            {% endif %}
-          {% if c.motif %}<div class="text-sm" style="color:var(--muted);">{{ c.motif }}</div>{% endif %}
+          {% if c.cabinet %}
+          {% set cc = c.cabinet.couleur or '#1C2B3A' %}
+          <span style="display:inline-flex;align-items:center;gap:4px;
+                       padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;
+                       background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+            🏥 {{ c.cabinet.nom }}
+          </span>
+          {% endif %}
         </div>
       </div>
     </div>
+
+    {# Barre navigation + actions #}
+    <div style="padding:10px 18px;border-top:1px solid var(--border);
+                display:flex;align-items:center;justify-content:space-between;
+                gap:10px;flex-wrap:wrap;background:var(--bg);">
+
+      {# Navigation précédent / suivant #}
+      <div style="display:flex;align-items:center;gap:8px;">
+        {% if bilan_precedent %}
+        <a href="{{ url_for('consultation_detail', consultation_id=bilan_precedent.id) }}"
+           class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 10px;">
+          ← {{ bilan_precedent.date_consult.strftime('%d/%m/%Y') }}
+        </a>
+        {% else %}
+        <span class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 10px;opacity:.4;cursor:default;">← —</span>
+        {% endif %}
+        <span style="font-size:11px;color:var(--muted);">{{ num_bilan }} / {{ total_bilans }}</span>
+        {% if bilan_suivant %}
+        <a href="{{ url_for('consultation_detail', consultation_id=bilan_suivant.id) }}"
+           class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 10px;">
+          {{ bilan_suivant.date_consult.strftime('%d/%m/%Y') }} →
+        </a>
+        {% else %}
+        <span class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 10px;opacity:.4;cursor:default;">— →</span>
+        {% endif %}
+      </div>
+
+      {# Boutons d'action #}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <a href="{{ url_for('consultation_modifier', consultation_id=c.id) }}"
+           class="btn btn-secondary btn-sm" style="font-size:12px;">✎ Modifier</a>
+        {% for sec in c.sections %}
+          {% if sec.type == 'courrier' %}
+          <a href="{{ url_for('generer_document', consultation_id=c.id) }}?section=courrier"
+             class="btn btn-secondary btn-sm" style="font-size:12px;">✉️ Courrier</a>
+          {% endif %}
+          {% if sec.type in ['ordonnance','ordonnance_lunettes','prescription'] %}
+          <a href="{{ url_for('generer_document', consultation_id=c.id) }}?section={{ sec.type }}"
+             class="btn btn-secondary btn-sm" style="font-size:12px;">📋 Ordonnance</a>
+          {% endif %}
+        {% endfor %}
+        <a href="{{ url_for('consultation_detail', consultation_id=c.id) }}?print=1"
+           onclick="window.print();return false;"
+           class="btn btn-secondary btn-sm" style="font-size:12px;">🖨️ Imprimer</a>
+      </div>
+    </div>
+
+    {# Pastilles de sections #}
+    {% if c.sections %}
+    <div style="padding:8px 18px;border-top:1px solid var(--border);
+                display:flex;flex-wrap:wrap;gap:5px;">
+      {% for sec in c.sections %}
+        {% set col = section_style(sec.type, sec.categorie) %}
+        <a href="#sec-{{ loop.index }}"
+           style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:500;
+                  background:{{ col.bg }};color:{{ col.color }};text-decoration:none;
+                  border:0.5px solid {{ col.color }}22;white-space:nowrap;
+                  transition:filter .15s;"
+           onmouseover="this.style.filter='brightness(.9)'"
+           onmouseout="this.style.filter=''">
+          {{ sec.label }}
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 
   {# Sections du bilan #}
@@ -113,7 +175,7 @@
     {% set def = sections_def.get(sec.type, {}) %}
     {% set col = section_style(sec.type, sec.categorie) %}
 
-    <div class="card" style="margin-bottom:12px;overflow:hidden;">
+    <div class="card" id="sec-{{ loop.index }}" style="margin-bottom:12px;overflow:hidden;">
       <div class="card-header" style="background:{{ col.bg }};color:{{ col.color }};border-bottom:1px solid rgba(0,0,0,.08);">
         <span style="background:rgba(0,0,0,.1);color:{{ col.color }};border-radius:50%;
                      width:20px;height:20px;display:inline-flex;align-items:center;

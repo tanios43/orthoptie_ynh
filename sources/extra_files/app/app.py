@@ -4167,7 +4167,19 @@ def consultation_detail(consultation_id):
     log_action('lecture_consultation', patient_id=c.patient_id, consultation_id=consultation_id)
     log_acces('consultation_detail', patient_id=c.patient_id, consultation_id=consultation_id,
               detail=f'{c.patient.prenom} {c.patient.nom} — {c.date_consult.strftime("%d/%m/%Y")}')
-    return render_template('consultations/bilan.html', consultation=c, sections_def=sections)
+
+    # Navigation précédent / suivant
+    toutes = Consultation.query.filter_by(patient_id=c.patient_id)\
+                               .order_by(Consultation.date_consult.asc(), Consultation.id.asc()).all()
+    idx = next((i for i, x in enumerate(toutes) if x.id == c.id), None)
+    bilan_precedent = toutes[idx - 1] if idx and idx > 0 else None
+    bilan_suivant   = toutes[idx + 1] if idx is not None and idx < len(toutes) - 1 else None
+    total_bilans    = len(toutes)
+    num_bilan       = (idx + 1) if idx is not None else 1
+
+    return render_template('consultations/bilan.html', consultation=c, sections_def=sections,
+                           bilan_precedent=bilan_precedent, bilan_suivant=bilan_suivant,
+                           num_bilan=num_bilan, total_bilans=total_bilans)
 
 
 @app.route('/consultation/<int:consultation_id>/modifier', methods=['GET', 'POST'])
