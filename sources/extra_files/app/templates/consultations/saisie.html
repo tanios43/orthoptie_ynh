@@ -480,7 +480,7 @@
           <div class="field-group" style="grid-column:span 2;">
             <label class="field-label">Médecin prescripteur</label>
             <input type="text" name="medecin_prescripteur"
-              value="{{ consultation.medecin_prescripteur if consultation else (patient.medecin_referent or '') }}"
+              value="{{ consultation.medecin_prescripteur if consultation else (patient.medecin_referent or 'Dr ') }}"
               placeholder="Dr Martin">
           </div>
           <div class="field-group" style="grid-column:span 2;">
