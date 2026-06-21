@@ -144,7 +144,7 @@ document.addEventListener('click', e => {
       <div class="field-grid field-grid-2">
         <div class="field-group">
           <label class="field-label">Médecin référent</label>
-          <input type="text" name="medecin_referent" value="{{ patient.medecin_referent if patient else '' }}" placeholder="Dr Martin">
+          <input type="text" name="medecin_referent" value="{{ patient.medecin_referent if patient else 'Dr ' }}" placeholder="Dr Martin">
         </div>
         <div class="field-group">
           <label class="field-label">N° Sécurité sociale</label>
