@@ -6549,15 +6549,16 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
     )
 
     # Classe / profession
+    type_cp   = consultation.type_classe_profession or 'Classe'
     classe_str = (consultation.classe_profession or '')
     doc_xml = doc_xml.replace(
         'Classe : </w:t></w:r></w:p>',
-        f'Classe : {esc(classe_str)}</w:t></w:r></w:p>'
+        f'{type_cp} : {esc(classe_str)}</w:t></w:r></w:p>'
     )
     # Fallback avec tab
     doc_xml = doc_xml.replace(
         'Classe : </w:t>',
-        f'Classe : {esc(classe_str)}</w:t>'
+        f'{type_cp} : {esc(classe_str)}</w:t>'
     )
 
     # Âge — pattern adapté au template YunoHost
