@@ -284,6 +284,7 @@ _pre_migrations = [
         "ALTER TABLE section_def ADD COLUMN praticien_id INTEGER REFERENCES praticien(id) DEFAULT NULL",
         "ALTER TABLE modele_bilan ADD COLUMN praticien_id INTEGER REFERENCES praticien(id) DEFAULT NULL",
         "ALTER TABLE document_modele ADD COLUMN praticien_id INTEGER REFERENCES praticien(id) DEFAULT NULL",
+        "ALTER TABLE consultation ADD COLUMN type_classe_profession TEXT DEFAULT 'Classe'",
         """CREATE TABLE IF NOT EXISTS favori (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             praticien_id INTEGER NOT NULL REFERENCES praticien(id),

@@ -81,6 +81,16 @@
             {% if c.motif %}
             <div class="text-sm text-muted" style="margin-top:2px;">{{ c.motif }}</div>
             {% endif %}
+            {% if c.medecin_prescripteur %}
+            <div class="text-sm text-muted" style="margin-top:2px;">
+              Prescrit par {{ c.medecin_prescripteur }}
+            </div>
+            {% endif %}
+            {% if c.classe_profession %}
+            <div class="text-sm text-muted" style="margin-top:2px;">
+              {{ c.type_classe_profession or 'Classe' }} : {{ c.classe_profession }}
+            </div>
+            {% endif %}
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">

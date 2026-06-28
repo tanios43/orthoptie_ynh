@@ -485,9 +485,15 @@
           </div>
           <div class="field-group" style="grid-column:span 2;">
             <label class="field-label">Classe / Profession</label>
-            <input type="text" name="classe_profession"
-              value="{{ consultation.classe_profession if consultation else '' }}"
-              placeholder="CE1, lycée, infirmière…">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select name="type_classe_profession" style="width:130px;flex-shrink:0;">
+                <option value="Classe" {{ 'selected' if not consultation or not consultation.type_classe_profession or consultation.type_classe_profession == 'Classe' }}>Classe</option>
+                <option value="Profession" {{ 'selected' if consultation and consultation.type_classe_profession == 'Profession' }}>Profession</option>
+              </select>
+              <input type="text" name="classe_profession"
+                value="{{ consultation.classe_profession if consultation else '' }}"
+                placeholder="CE1, lycée, infirmière…" style="flex:1;">
+            </div>
           </div>
         </div>
       </div>

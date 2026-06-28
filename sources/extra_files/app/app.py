@@ -596,6 +596,7 @@ class Consultation(db.Model):
     motif                 = db.Column(db.Text)
     medecin_prescripteur  = db.Column(db.String(200))
     classe_profession     = db.Column(db.String(200))
+    type_classe_profession = db.Column(db.String(20), default='Classe')
     cabinet_id            = db.Column(db.Integer, db.ForeignKey('cabinet.id'))
     created_at   = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -4127,6 +4128,7 @@ def consultation_nouvelle(patient_id):
                          motif=request.form.get('motif'),
                          medecin_prescripteur=request.form.get('medecin_prescripteur','').strip() or None,
                          classe_profession=request.form.get('classe_profession','').strip() or None,
+                         type_classe_profession=request.form.get('type_classe_profession','Classe'),
                          cabinet_id=cab.id if cab else None)
         db.session.add(c); db.session.flush()
         _save_sections(c.id, request.form, sections_all, request.files)
@@ -4197,7 +4199,8 @@ def consultation_modifier(consultation_id):
         c.date_consult = _parse_date(request.form.get('date_consult')) or c.date_consult
         c.motif = request.form.get('motif')
         c.medecin_prescripteur = request.form.get('medecin_prescripteur','').strip() or None
-        c.classe_profession    = request.form.get('classe_profession','').strip() or None
+        c.classe_profession     = request.form.get('classe_profession','').strip() or None
+        c.type_classe_profession = request.form.get('type_classe_profession','Classe')
         for s in list(c.sections): db.session.delete(s)
         db.session.flush()
         _save_sections(c.id, request.form, sections_all, request.files)
@@ -6099,7 +6102,7 @@ def _resoudre_variables(texte, consultation, praticien, cabinet, pc):
         '{{patient.ddn}}':      p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '',
         '{{patient.age}}':      age,
         '{{patient.medecin}}':  p.medecin_referent or '',
-        '{{consultation.classe}}': consultation.classe_profession or '',
+        '{{consultation.classe}}': f"{consultation.type_classe_profession or 'Classe'} {consultation.classe_profession or ''}".strip(),
         '{{date}}':             consultation.date_consult.strftime('%d/%m/%Y'),
         '{{praticien.nom}}':    f'{praticien.prenom} {praticien.nom}',
         '{{praticien.titre}}':  praticien.titre or '',
