@@ -4128,7 +4128,7 @@ def consultation_nouvelle(patient_id):
                          motif=request.form.get('motif'),
                          medecin_prescripteur=request.form.get('medecin_prescripteur','').strip() or None,
                          classe_profession=request.form.get('classe_profession','').strip() or None,
-                         type_classe_profession=request.form.get('type_classe_profession','Classe'),
+                         type_classe_profession=request.form.get('type_classe_profession','Classe') if request.form.get('classe_profession','').strip() else None,
                          cabinet_id=cab.id if cab else None)
         db.session.add(c); db.session.flush()
         _save_sections(c.id, request.form, sections_all, request.files)
@@ -4200,7 +4200,7 @@ def consultation_modifier(consultation_id):
         c.motif = request.form.get('motif')
         c.medecin_prescripteur = request.form.get('medecin_prescripteur','').strip() or None
         c.classe_profession     = request.form.get('classe_profession','').strip() or None
-        c.type_classe_profession = request.form.get('type_classe_profession','Classe')
+        c.type_classe_profession = request.form.get('type_classe_profession','Classe') if request.form.get('classe_profession','').strip() else None
         for s in list(c.sections): db.session.delete(s)
         db.session.flush()
         _save_sections(c.id, request.form, sections_all, request.files)
@@ -6549,17 +6549,23 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
     )
 
     # Classe / profession
-    type_cp   = consultation.type_classe_profession or 'Classe'
-    classe_str = (consultation.classe_profession or '')
-    doc_xml = doc_xml.replace(
-        'Classe : </w:t></w:r></w:p>',
-        f'{type_cp} : {esc(classe_str)}</w:t></w:r></w:p>'
-    )
-    # Fallback avec tab
-    doc_xml = doc_xml.replace(
-        'Classe : </w:t>',
-        f'{type_cp} : {esc(classe_str)}</w:t>'
-    )
+    type_cp    = consultation.type_classe_profession or 'Classe'
+    classe_str = (consultation.classe_profession or '').strip()
+    if classe_str:
+        doc_xml = doc_xml.replace(
+            'Classe : </w:t></w:r></w:p>',
+            f'{type_cp} : {esc(classe_str)}</w:t></w:r></w:p>'
+        )
+        doc_xml = doc_xml.replace(
+            'Classe : </w:t>',
+            f'{type_cp} : {esc(classe_str)}</w:t>'
+        )
+    else:
+        # Supprimer la ligne entière si vide
+        import re as _re
+        doc_xml = _re.sub(r'<w:p\b[^>]*>(?:(?!<w:p[ >]).)*?Classe\s*:\s*</w:t>.*?</w:p>', '', doc_xml, flags=_re.DOTALL)
+        doc_xml = doc_xml.replace('Classe : </w:t></w:r></w:p>', '')
+        doc_xml = doc_xml.replace('Classe : </w:t>', '')
 
     # Âge — pattern adapté au template YunoHost
     doc_xml = doc_xml.replace(
