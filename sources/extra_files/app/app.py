@@ -6551,21 +6551,14 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
     # Classe / profession
     type_cp    = consultation.type_classe_profession or 'Classe'
     classe_str = (consultation.classe_profession or '').strip()
-    if classe_str:
-        doc_xml = doc_xml.replace(
-            'Classe : </w:t></w:r></w:p>',
-            f'{type_cp} : {esc(classe_str)}</w:t></w:r></w:p>'
-        )
-        doc_xml = doc_xml.replace(
-            'Classe : </w:t>',
-            f'{type_cp} : {esc(classe_str)}</w:t>'
-        )
-    else:
-        # Supprimer la ligne entière si vide
-        import re as _re
-        doc_xml = _re.sub(r'<w:p\b[^>]*>(?:(?!<w:p[ >]).)*?Classe\s*:\s*</w:t>.*?</w:p>', '', doc_xml, flags=_re.DOTALL)
-        doc_xml = doc_xml.replace('Classe : </w:t></w:r></w:p>', '')
-        doc_xml = doc_xml.replace('Classe : </w:t>', '')
+    doc_xml = doc_xml.replace(
+        'Classe : </w:t></w:r></w:p>',
+        f'{type_cp} : {esc(classe_str)}</w:t></w:r></w:p>'
+    )
+    doc_xml = doc_xml.replace(
+        'Classe : </w:t>',
+        f'{type_cp} : {esc(classe_str)}</w:t>'
+    )
 
     # Âge — pattern adapté au template YunoHost
     doc_xml = doc_xml.replace(

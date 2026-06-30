@@ -491,7 +491,7 @@
                 <option value="Profession" {{ 'selected' if consultation and consultation.type_classe_profession == 'Profession' }}>Profession</option>
               </select>
               <input type="text" name="classe_profession"
-                value="{{ consultation.classe_profession if consultation else '' }}"
+                value="{{ consultation.classe_profession or '' if consultation else '' }}"
                 placeholder="CE1, lycée, infirmière…" style="flex:1;">
             </div>
           </div>
