@@ -6548,6 +6548,12 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
         f'Médecin prescripteur : {esc(medecin_str)}</w:t>'
     )
 
+    # Âge — pattern adapté au template YunoHost (traité AVANT Classe pour éviter conflit de pattern)
+    doc_xml = doc_xml.replace(
+        'Âge : </w:t><w:tab/><w:tab/>',
+        f'Âge : {esc(age_str)}</w:t><w:tab/><w:tab/>'
+    )
+
     # Classe / profession
     type_cp    = consultation.type_classe_profession or 'Classe'
     classe_str = (consultation.classe_profession or '').strip()
@@ -6566,12 +6572,6 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
             '<w:tab/><w:tab/><w:t xml:space="preserve">Classe : </w:t>',
             '<w:t xml:space="preserve"></w:t>'
         )
-
-    # Âge — pattern adapté au template YunoHost
-    doc_xml = doc_xml.replace(
-        'Âge : </w:t><w:tab/><w:tab/>',
-        f'Âge : {esc(age_str)}</w:t><w:tab/><w:tab/>'
-    )
 
     # Commune et date — pattern adapté
     # "A Yssingeaux, le " → "A [commune], le [date]"
