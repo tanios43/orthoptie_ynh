@@ -6551,14 +6551,22 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
     # Classe / profession
     type_cp    = consultation.type_classe_profession or 'Classe'
     classe_str = (consultation.classe_profession or '').strip()
-    doc_xml = doc_xml.replace(
-        'Classe : </w:t></w:r></w:p>',
-        f'{type_cp} : {esc(classe_str)}</w:t></w:r></w:p>'
-    )
-    doc_xml = doc_xml.replace(
-        'Classe : </w:t>',
-        f'{type_cp} : {esc(classe_str)}</w:t>'
-    )
+    if classe_str:
+        doc_xml = doc_xml.replace(
+            'Classe : </w:t></w:r></w:p>',
+            f'{type_cp} : {esc(classe_str)}</w:t></w:r></w:p>'
+        )
+        doc_xml = doc_xml.replace(
+            'Classe : </w:t>',
+            f'{type_cp} : {esc(classe_str)}</w:t>'
+        )
+    else:
+        # Supprimer uniquement le label "Classe : " (et les tabs juste avant), sans toucher à Âge
+        import re as _re
+        doc_xml = _re.sub(r'(<w:tab/>){1,2}(<w:r[^>]*>)?(<w:rPr>.*?</w:rPr>)?<w:t[^>]*>Classe\s*:\s*</w:t>',
+                          '', doc_xml, count=1)
+        doc_xml = doc_xml.replace('Classe : </w:t></w:r></w:p>', '</w:t></w:r></w:p>')
+        doc_xml = doc_xml.replace('Classe : </w:t>', '</w:t>')
 
     # Âge — pattern adapté au template YunoHost
     doc_xml = doc_xml.replace(
