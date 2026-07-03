@@ -1441,12 +1441,18 @@ function ajouterSection(type, label) {
   if (icon) icon.classList.add('open');
   // Focus sur le premier champ saisissable de la section
   setTimeout(() => {
-    const firstInput = newEl.querySelector('input:not([type="hidden"]):not([type="color"]), select, textarea');
+    const firstInput = newEl.querySelector(
+      'input:not([type="hidden"]):not([type="color"]):not([type="checkbox"]):not([type="radio"]), ' +
+      'select, textarea, [contenteditable="true"]'
+    );
     if (firstInput) {
       firstInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      firstInput.focus();
+      setTimeout(() => firstInput.focus(), 100);
+    } else {
+      // Fallback : scroller vers la section
+      newEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, 80);
+  }, 150);
 }
 
 // ── Supprimer une section ──
