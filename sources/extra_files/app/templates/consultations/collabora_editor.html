@@ -3,8 +3,12 @@
 {% block page_title %}✎ Édition du document{% endblock %}
 
 {% block topbar_actions %}
+  {% if consultation %}
   <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}#section-{{ section_type }}"
      class="btn btn-secondary btn-sm">← Retour au bilan</a>
+  {% else %}
+  <a href="javascript:history.back()" class="btn btn-secondary btn-sm">← Retour</a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -42,8 +46,12 @@
     </div>
 
     <div style="margin-top:20px;">
+      {% if consultation %}
       <a href="{{ url_for('consultation_modifier', consultation_id=consultation.id) }}#section-{{ section_type }}"
          class="btn btn-secondary btn-sm">← Retour au bilan</a>
+      {% else %}
+      <a href="javascript:history.back()" class="btn btn-secondary btn-sm">← Retour</a>
+      {% endif %}
     </div>
 
   </div>
@@ -54,7 +62,7 @@
 window.addEventListener('load', function() {
   setTimeout(function() {
     window.open('{{ editor_url }}', '_blank');
-  }, 600);
+  }, 800);
 });
 </script>
 {% endblock %}
