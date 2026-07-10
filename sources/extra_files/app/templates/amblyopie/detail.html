@@ -351,10 +351,12 @@ function genOrdo(type) {
     heures: document.getElementById('occ-heures')?.value || '',
     duree: document.getElementById('occ-duree')?.value || '',
     notes: document.getElementById('occ-notes')?.value || '',
+    occ_seance: document.getElementById('occ-seance')?.value || '',
     od_num: document.getElementById('ryser-od-num')?.value || '',
     od_av: document.getElementById('ryser-od-av')?.value || '',
     og_num: document.getElementById('ryser-og-num')?.value || '',
     og_av: document.getElementById('ryser-og-av')?.value || '',
+    ryser_seance: document.getElementById('ryser-seance')?.value || '',
   }));
   document.getElementById('modal-occlusion').style.display = 'none';
   document.getElementById('modal-ryser').style.display = 'none';
@@ -396,17 +398,18 @@ document.addEventListener('DOMContentLoaded', function() {
   if (pending) {
     sessionStorage.removeItem('pendingOrdo');
     const d = JSON.parse(pending);
-    // Remplir les champs et lancer
     if (d.type === 'occlusion') {
       if (document.getElementById('occ-oeil')) document.getElementById('occ-oeil').value = d.oeil;
       if (document.getElementById('occ-heures')) document.getElementById('occ-heures').value = d.heures;
       if (document.getElementById('occ-duree')) document.getElementById('occ-duree').value = d.duree;
       if (document.getElementById('occ-notes')) document.getElementById('occ-notes').value = d.notes;
+      if (document.getElementById('occ-seance')) document.getElementById('occ-seance').value = d.occ_seance || '';
     } else {
       if (document.getElementById('ryser-od-num')) document.getElementById('ryser-od-num').value = d.od_num;
       if (document.getElementById('ryser-od-av')) document.getElementById('ryser-od-av').value = d.od_av;
       if (document.getElementById('ryser-og-num')) document.getElementById('ryser-og-num').value = d.og_num;
       if (document.getElementById('ryser-og-av')) document.getElementById('ryser-og-av').value = d.og_av;
+      if (document.getElementById('ryser-seance')) document.getElementById('ryser-seance').value = d.ryser_seance || '';
     }
     _ouvrir_ordo(d.type);
   }
