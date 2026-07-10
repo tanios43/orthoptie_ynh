@@ -209,14 +209,21 @@
             <td colspan="7" style="padding:4px 6px 6px;border-bottom:0.5px solid var(--border);">
               <div style="display:flex;flex-wrap:wrap;gap:6px;">
                 {% for ordo in ordos %}
-                <a href="{{ url_for('ordo_telecharger', token=ordo.token) }}"
-                   target="_blank"
-                   style="display:inline-flex;align-items:center;gap:5px;font-size:11px;
-                          padding:3px 9px;border-radius:6px;
-                          background:#EEEDFE;color:#3C3489;text-decoration:none;
-                          border:0.5px solid #AFA9EC;">
-                  📋 {{ '🩹 Occlusion' if ordo.type == 'occlusion' else '🔵 Ryser' }}
-                </a>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                  <a href="{{ url_for('ordo_telecharger', token=ordo.token) }}"
+                     style="display:inline-flex;align-items:center;gap:5px;font-size:11px;
+                            padding:3px 9px;border-radius:6px 0 0 6px;
+                            background:#EEEDFE;color:#3C3489;text-decoration:none;
+                            border:0.5px solid #AFA9EC;">
+                    📋 {{ '🩹 Occlusion' if ordo.type == 'occlusion' else '🔵 Ryser' }}
+                  </a>
+                  <button type="button"
+                          onclick="supprimerOrdo('{{ ordo.token }}', this)"
+                          style="padding:3px 7px;border-radius:0 6px 6px 0;
+                                 background:#FEEEEE;color:#C53030;border:0.5px solid #F5A5A5;
+                                 font-size:11px;cursor:pointer;"
+                          title="Supprimer">✕</button>
+                </span>
                 {% endfor %}
               </div>
             </td>
@@ -344,6 +351,17 @@
 </form>
 
 <script>
+function supprimerOrdo(token, btn) {
+  if (!confirm('Supprimer cette ordonnance ?')) return;
+  fetch(`/ordo/supprimer/${token}`, { method: 'POST' })
+    .then(r => {
+      if (r.ok) {
+        const span = btn.closest('span');
+        span.remove();
+      }
+    });
+}
+
 function ouvrirPopupOrdo(type) {
   // Construire la liste des séances depuis les inputs du tableau
   const seanceInputs = Array.from(document.querySelectorAll('input[name^="seance_"][name$="_date"]'))

@@ -7535,6 +7535,31 @@ def _get_collabora_url(filename):
     return f"{get_collabora_url()}/browser/dist/cool.html?"
 
 
+@app.route('/ordo/supprimer/<token>', methods=['POST'])
+@login_required
+def ordo_supprimer(token):
+    """Supprime une ordonnance de suivi amblyopie."""
+    import json, os
+    sess = WopiSession.query.filter_by(token=token).first_or_404()
+
+    # Supprimer le fichier physique
+    if sess.chemin_fichier and os.path.exists(sess.chemin_fichier):
+        os.remove(sess.chemin_fichier)
+
+    # Retirer le token de doc_ordo de la séance correspondante
+    seances = SeanceAmblyopie.query.all()
+    for seance in seances:
+        if seance.doc_ordo:
+            ordos = json.loads(seance.doc_ordo)
+            new_ordos = [o for o in ordos if o.get('token') != token]
+            if len(new_ordos) != len(ordos):
+                seance.doc_ordo = json.dumps(new_ordos)
+
+    db.session.delete(sess)
+    db.session.commit()
+    return '', 204
+
+
 @app.route('/ordo/telecharger/<token>')
 @login_required
 def ordo_telecharger(token):
