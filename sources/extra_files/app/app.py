@@ -7621,6 +7621,15 @@ def wopi_file_contents(token):
         if not data:
             return '', 200
 
+        # Cas ordonnance suivi amblyopie (consultation_id = 0) — écrire directement sur le fichier
+        if not sess.consultation_id:
+            if sess.chemin_fichier and os.path.exists(os.path.dirname(sess.chemin_fichier)):
+                with open(sess.chemin_fichier, 'wb') as fh:
+                    fh.write(data)
+                db.session.commit()
+                app.logger.info(f"WOPI: ordonnance suivi mise à jour {sess.chemin_fichier}")
+            return '', 200
+
         # Écrire directement sur le fichier original si possible
         folder = os.path.join(app.config['UPLOAD_FOLDER'],
                               'sections', str(sess.consultation_id))
