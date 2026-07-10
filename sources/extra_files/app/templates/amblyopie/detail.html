@@ -235,11 +235,11 @@
     <button type="submit" name="action" value="ajouter_seance" class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
     <button type="button" class="btn btn-secondary"
-            onclick="document.getElementById('modal-occlusion').style.display='flex'">
+            onclick="ouvrirPopupOrdo('occlusion')">
       🩹 Ordonnance occlusion
     </button>
     <button type="button" class="btn btn-secondary"
-            onclick="document.getElementById('modal-ryser').style.display='flex'">
+            onclick="ouvrirPopupOrdo('ryser')">
       🔵 Ordonnance Ryser
     </button>
     <a href="{{ url_for('patient_detail', patient_id=suivi.patient_id) }}"
@@ -344,6 +344,26 @@
 </form>
 
 <script>
+function ouvrirPopupOrdo(type) {
+  // Construire la liste des séances depuis les inputs du tableau
+  const options = '<option value="">— Aucune séance —</option>' +
+    Array.from(document.querySelectorAll('input[name^="seance_"][name$="_date"]'))
+      .map(input => {
+        const name = input.name; // seance_123_date
+        const id = name.split('_')[1];
+        const date = input.value;
+        const num = input.closest('tr')?.querySelector('td:first-child')?.textContent?.trim() || '';
+        if (!date) return '';
+        return `<option value="${id}">Séance ${num} — ${date.split('-').reverse().join('/')}</option>`;
+      }).filter(Boolean).join('');
+
+  document.getElementById('occ-seance').innerHTML = options;
+  document.getElementById('ryser-seance').innerHTML = options;
+
+  const modal = type === 'occlusion' ? 'modal-occlusion' : 'modal-ryser';
+  document.getElementById(modal).style.display = 'flex';
+}
+
 function genOrdo(type) {
   // Stocker les paramètres pour après la sauvegarde
   sessionStorage.setItem('pendingOrdo', JSON.stringify({type,
