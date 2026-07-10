@@ -346,19 +346,27 @@
 <script>
 function ouvrirPopupOrdo(type) {
   // Construire la liste des séances depuis les inputs du tableau
+  const seanceInputs = Array.from(document.querySelectorAll('input[name^="seance_"][name$="_date"]'))
+    .filter(input => input.value);
+
   const options = '<option value="">— Aucune séance —</option>' +
-    Array.from(document.querySelectorAll('input[name^="seance_"][name$="_date"]'))
-      .map(input => {
-        const name = input.name; // seance_123_date
-        const id = name.split('_')[1];
-        const date = input.value;
-        const num = input.closest('tr')?.querySelector('td:first-child')?.textContent?.trim() || '';
-        if (!date) return '';
-        return `<option value="${id}">Séance ${num} — ${date.split('-').reverse().join('/')}</option>`;
-      }).filter(Boolean).join('');
+    seanceInputs.map(input => {
+      const name = input.name;
+      const id = name.split('_')[1];
+      const date = input.value;
+      const num = input.closest('tr')?.querySelector('td:first-child')?.textContent?.trim() || '';
+      return `<option value="${id}">Séance ${num} — ${date.split('-').reverse().join('/')}</option>`;
+    }).join('');
 
   document.getElementById('occ-seance').innerHTML = options;
   document.getElementById('ryser-seance').innerHTML = options;
+
+  // Sélectionner automatiquement la dernière séance
+  if (seanceInputs.length > 0) {
+    const lastId = seanceInputs[seanceInputs.length - 1].name.split('_')[1];
+    document.getElementById('occ-seance').value = lastId;
+    document.getElementById('ryser-seance').value = lastId;
+  }
 
   const modal = type === 'occlusion' ? 'modal-occlusion' : 'modal-ryser';
   document.getElementById(modal).style.display = 'flex';
