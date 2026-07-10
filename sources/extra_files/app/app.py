@@ -7538,13 +7538,21 @@ def _get_collabora_url(filename):
 @app.route('/ordo/telecharger/<token>')
 @login_required
 def ordo_telecharger(token):
-    """Télécharge une ordonnance depuis son token WOPI."""
-    from flask import send_file
+    """Ouvre une ordonnance existante dans Collabora."""
+    import urllib.parse
     sess = WopiSession.query.filter_by(token=token).first_or_404()
-    return send_file(sess.chemin_fichier,
-                     as_attachment=True,
-                     download_name=sess.nom_fichier,
-                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    nom_doc = sess.nom_fichier or 'ordonnance.docx'
+    wopi_src = f"{get_wopi_base_url()}/wopi/files/{token}"
+    collabora_action_url = _get_collabora_url(nom_doc)
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&darkTheme=false&ignoreSysTheme=1"
+    editor_url = editor_url.replace('?&', '?').replace('&&', '&')
+    return render_template('consultations/collabora_editor.html',
+                           consultation=None,
+                           editor_url=editor_url,
+                           nom_fichier=nom_doc,
+                           token=token,
+                           section_type='ordonnance',
+                           collabora_url=get_collabora_url())
 
 
 @app.route('/wopi/files/<token>')
