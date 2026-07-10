@@ -1856,15 +1856,18 @@ def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
         return 'Type inconnu', 404
 
     # Créer un objet consultation factice pour _generer_ordonnance_docx
+    _cabinet  = cabinet
+    _praticien = praticien
+
     class _FakeConsult:
         patient = p
         date_consult = s.date_bilan
         medecin_prescripteur = s.ophthalmo or ''
         classe_profession = None
         type_classe_profession = None
-        cabinet = cabinet
+        cabinet = _cabinet
 
-    docx_path = _generer_ordonnance_docx(_FakeConsult(), praticien, cabinet, pc,
+    docx_path = _generer_ordonnance_docx(_FakeConsult(), _praticien, _cabinet, pc,
                                           titre_ordo, lignes_ordo)
 
     wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
