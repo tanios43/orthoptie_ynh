@@ -301,27 +301,21 @@
 
 <script>
 function genOrdo(type) {
-  // D'abord sauvegarder le suivi
-  const form = document.querySelector('form[id="form-suivi"], form');
-  if (form) {
-    const hidden = document.createElement('input');
-    hidden.type = 'hidden'; hidden.name = 'action'; hidden.value = 'save';
-    form.appendChild(hidden);
-    // Stocker les paramètres pour après la sauvegarde
-    sessionStorage.setItem('pendingOrdo', JSON.stringify({type,
-      oeil: document.getElementById('occ-oeil')?.value || '',
-      heures: document.getElementById('occ-heures')?.value || '',
-      duree: document.getElementById('occ-duree')?.value || '',
-      notes: document.getElementById('occ-notes')?.value || '',
-      od_num: document.getElementById('ryser-od-num')?.value || '',
-      od_av: document.getElementById('ryser-od-av')?.value || '',
-      og_num: document.getElementById('ryser-og-num')?.value || '',
-      og_av: document.getElementById('ryser-og-av')?.value || '',
-    }));
-    form.submit();
-    return;
-  }
-  _ouvrir_ordo(type);
+  // Stocker les paramètres pour après la sauvegarde
+  sessionStorage.setItem('pendingOrdo', JSON.stringify({type,
+    oeil: document.getElementById('occ-oeil')?.value || '',
+    heures: document.getElementById('occ-heures')?.value || '',
+    duree: document.getElementById('occ-duree')?.value || '',
+    notes: document.getElementById('occ-notes')?.value || '',
+    od_num: document.getElementById('ryser-od-num')?.value || '',
+    od_av: document.getElementById('ryser-od-av')?.value || '',
+    og_num: document.getElementById('ryser-og-num')?.value || '',
+    og_av: document.getElementById('ryser-og-av')?.value || '',
+  }));
+  document.getElementById('modal-occlusion').style.display = 'none';
+  document.getElementById('modal-ryser').style.display = 'none';
+  // Simuler le clic sur le bouton Enregistrer
+  document.querySelector('button[name="action"][value="save"]').click();
 }
 
 function _ouvrir_ordo(type) {
