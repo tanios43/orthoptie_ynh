@@ -1840,7 +1840,7 @@ def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
             f'Durée : {duree}' if duree else '',
             notes if notes else '',
         ]
-        nom_doc = f'{p.nom}_{p.prenom}_{s.date_bilan.strftime("%Y%m%d")}_Occlusion.docx'
+        nom_doc = f'{p.nom}_{p.prenom}_{s.derniere_seance_date.strftime("%Y%m%d")}_Occlusion.docx'
 
     elif type_ordo == 'ryser':
         od_n = request.args.get('od_num', '')
@@ -1851,7 +1851,7 @@ def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
         lignes_ordo = []
         if od_n: lignes_ordo.append(f'OD : Ryser N°{od_n}, laissant une AV de {od_a}/10')
         if og_n: lignes_ordo.append(f'OG : Ryser N°{og_n}, laissant une AV de {og_a}/10')
-        nom_doc = f'{p.nom}_{p.prenom}_{s.date_bilan.strftime("%Y%m%d")}_Ryser.docx'
+        nom_doc = f'{p.nom}_{p.prenom}_{s.derniere_seance_date.strftime("%Y%m%d")}_Ryser.docx'
     else:
         return 'Type inconnu', 404
 
@@ -1861,7 +1861,7 @@ def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
 
     class _FakeConsult:
         patient = p
-        date_consult = s.date_bilan
+        date_consult = s.derniere_seance_date
         medecin_prescripteur = s.ophthalmo or ''
         classe_profession = None
         type_classe_profession = None

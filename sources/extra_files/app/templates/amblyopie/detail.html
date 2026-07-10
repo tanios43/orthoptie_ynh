@@ -301,21 +301,45 @@
 
 <script>
 function genOrdo(type) {
+  // D'abord sauvegarder le suivi
+  const form = document.querySelector('form[id="form-suivi"], form');
+  if (form) {
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.name = 'action'; hidden.value = 'save';
+    form.appendChild(hidden);
+    // Stocker les paramètres pour après la sauvegarde
+    sessionStorage.setItem('pendingOrdo', JSON.stringify({type,
+      oeil: document.getElementById('occ-oeil')?.value || '',
+      heures: document.getElementById('occ-heures')?.value || '',
+      duree: document.getElementById('occ-duree')?.value || '',
+      notes: document.getElementById('occ-notes')?.value || '',
+      od_num: document.getElementById('ryser-od-num')?.value || '',
+      od_av: document.getElementById('ryser-od-av')?.value || '',
+      og_num: document.getElementById('ryser-og-num')?.value || '',
+      og_av: document.getElementById('ryser-og-av')?.value || '',
+    }));
+    form.submit();
+    return;
+  }
+  _ouvrir_ordo(type);
+}
+
+function _ouvrir_ordo(type) {
   let url;
   if (type === 'occlusion') {
-    const oeil   = document.getElementById('occ-oeil').value;
-    const heures = document.getElementById('occ-heures').value;
-    const duree  = document.getElementById('occ-duree').value;
-    const notes  = document.getElementById('occ-notes').value;
+    const oeil   = document.getElementById('occ-oeil')?.value || '';
+    const heures = document.getElementById('occ-heures')?.value || '';
+    const duree  = document.getElementById('occ-duree')?.value || '';
+    const notes  = document.getElementById('occ-notes')?.value || '';
     url = `{{ url_for('suivi_amblyopie_ordonnance', suivi_id=suivi.id, type_ordo='occlusion') }}`
         + `?oeil=${encodeURIComponent(oeil)}&heures=${encodeURIComponent(heures)}`
         + `&duree=${encodeURIComponent(duree)}&notes=${encodeURIComponent(notes)}`;
     document.getElementById('modal-occlusion').style.display = 'none';
   } else {
-    const od_num = document.getElementById('ryser-od-num').value;
-    const od_av  = document.getElementById('ryser-od-av').value;
-    const og_num = document.getElementById('ryser-og-num').value;
-    const og_av  = document.getElementById('ryser-og-av').value;
+    const od_num = document.getElementById('ryser-od-num')?.value || '';
+    const od_av  = document.getElementById('ryser-od-av')?.value || '';
+    const og_num = document.getElementById('ryser-og-num')?.value || '';
+    const og_av  = document.getElementById('ryser-og-av')?.value || '';
     url = `{{ url_for('suivi_amblyopie_ordonnance', suivi_id=suivi.id, type_ordo='ryser') }}`
         + `?od_num=${encodeURIComponent(od_num)}&od_av=${encodeURIComponent(od_av)}`
         + `&og_num=${encodeURIComponent(og_num)}&og_av=${encodeURIComponent(og_av)}`;
@@ -323,6 +347,28 @@ function genOrdo(type) {
   }
   window.location.href = url;
 }
+
+// Après rechargement, relancer l'ordo si en attente
+document.addEventListener('DOMContentLoaded', function() {
+  const pending = sessionStorage.getItem('pendingOrdo');
+  if (pending) {
+    sessionStorage.removeItem('pendingOrdo');
+    const d = JSON.parse(pending);
+    // Remplir les champs et lancer
+    if (d.type === 'occlusion') {
+      if (document.getElementById('occ-oeil')) document.getElementById('occ-oeil').value = d.oeil;
+      if (document.getElementById('occ-heures')) document.getElementById('occ-heures').value = d.heures;
+      if (document.getElementById('occ-duree')) document.getElementById('occ-duree').value = d.duree;
+      if (document.getElementById('occ-notes')) document.getElementById('occ-notes').value = d.notes;
+    } else {
+      if (document.getElementById('ryser-od-num')) document.getElementById('ryser-od-num').value = d.od_num;
+      if (document.getElementById('ryser-od-av')) document.getElementById('ryser-od-av').value = d.od_av;
+      if (document.getElementById('ryser-og-num')) document.getElementById('ryser-og-num').value = d.og_num;
+      if (document.getElementById('ryser-og-av')) document.getElementById('ryser-og-av').value = d.og_av;
+    }
+    _ouvrir_ordo(d.type);
+  }
+});
 
 function toggle(id) {
   const body = document.getElementById('sec-' + id);
