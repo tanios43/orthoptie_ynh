@@ -201,6 +201,28 @@
        value="{{ seance.notes or '' }}">
             </td>
           </tr>
+          {% if seance.doc_ordo %}
+          {% set ordos = seance.doc_ordo | fromjson %}
+          {% if ordos %}
+          <tr style="background:{% if loop.index is odd %}white{% else %}#EEEDFE22{% endif %};">
+            <td></td>
+            <td colspan="7" style="padding:4px 6px 6px;border-bottom:0.5px solid var(--border);">
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                {% for ordo in ordos %}
+                <a href="{{ url_for('ordo_telecharger', token=ordo.token) }}"
+                   target="_blank"
+                   style="display:inline-flex;align-items:center;gap:5px;font-size:11px;
+                          padding:3px 9px;border-radius:6px;
+                          background:#EEEDFE;color:#3C3489;text-decoration:none;
+                          border:0.5px solid #AFA9EC;">
+                  📋 {{ '🩹 Occlusion' if ordo.type == 'occlusion' else '🔵 Ryser' }}
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+          {% endif %}
           {% endfor %}
         </tbody>
       </table>
@@ -236,6 +258,17 @@
                 box-shadow:0 8px 32px rgba(0,0,0,.2);">
       <h3 style="margin-bottom:16px;">🩹 Ordonnance d'occlusion</h3>
       <div class="field-group" style="margin-bottom:10px;">
+        <label class="field-label">Rattacher à la séance</label>
+        <select id="occ-seance">
+          <option value="">— Aucune séance —</option>
+          {% for seance in suivi.seances %}
+          {% if seance.date_seance %}
+          <option value="{{ seance.id }}">Séance {{ seance.numero }} — {{ seance.date_seance.strftime('%d/%m/%Y') }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field-group" style="margin-bottom:10px;">
         <label class="field-label">Œil à occlure</label>
         <select id="occ-oeil">
           <option value="OD">Œil droit (OD)</option>
@@ -268,6 +301,17 @@
     <div style="background:var(--surface);border-radius:12px;padding:24px;width:380px;
                 box-shadow:0 8px 32px rgba(0,0,0,.2);">
       <h3 style="margin-bottom:16px;">🔵 Ordonnance Filtre Ryser</h3>
+      <div class="field-group" style="margin-bottom:10px;">
+        <label class="field-label">Rattacher à la séance</label>
+        <select id="ryser-seance">
+          <option value="">— Aucune séance —</option>
+          {% for seance in suivi.seances %}
+          {% if seance.date_seance %}
+          <option value="{{ seance.id }}">Séance {{ seance.numero }} — {{ seance.date_seance.strftime('%d/%m/%Y') }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div class="field-group">
           <label class="field-label">OD — N°</label>
@@ -321,22 +365,26 @@ function genOrdo(type) {
 function _ouvrir_ordo(type) {
   let url;
   if (type === 'occlusion') {
-    const oeil   = document.getElementById('occ-oeil')?.value || '';
-    const heures = document.getElementById('occ-heures')?.value || '';
-    const duree  = document.getElementById('occ-duree')?.value || '';
-    const notes  = document.getElementById('occ-notes')?.value || '';
+    const oeil    = document.getElementById('occ-oeil')?.value || '';
+    const heures  = document.getElementById('occ-heures')?.value || '';
+    const duree   = document.getElementById('occ-duree')?.value || '';
+    const notes   = document.getElementById('occ-notes')?.value || '';
+    const seance  = document.getElementById('occ-seance')?.value || '';
     url = `{{ url_for('suivi_amblyopie_ordonnance', suivi_id=suivi.id, type_ordo='occlusion') }}`
         + `?oeil=${encodeURIComponent(oeil)}&heures=${encodeURIComponent(heures)}`
-        + `&duree=${encodeURIComponent(duree)}&notes=${encodeURIComponent(notes)}`;
+        + `&duree=${encodeURIComponent(duree)}&notes=${encodeURIComponent(notes)}`
+        + (seance ? `&seance_id=${seance}` : '');
     document.getElementById('modal-occlusion').style.display = 'none';
   } else {
     const od_num = document.getElementById('ryser-od-num')?.value || '';
     const od_av  = document.getElementById('ryser-od-av')?.value || '';
     const og_num = document.getElementById('ryser-og-num')?.value || '';
     const og_av  = document.getElementById('ryser-og-av')?.value || '';
+    const seance = document.getElementById('ryser-seance')?.value || '';
     url = `{{ url_for('suivi_amblyopie_ordonnance', suivi_id=suivi.id, type_ordo='ryser') }}`
         + `?od_num=${encodeURIComponent(od_num)}&od_av=${encodeURIComponent(od_av)}`
-        + `&og_num=${encodeURIComponent(og_num)}&og_av=${encodeURIComponent(og_av)}`;
+        + `&og_num=${encodeURIComponent(og_num)}&og_av=${encodeURIComponent(og_av)}`
+        + (seance ? `&seance_id=${seance}` : '');
     document.getElementById('modal-ryser').style.display = 'none';
   }
   window.location.href = url;

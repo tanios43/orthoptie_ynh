@@ -197,6 +197,13 @@ def inject_globals_count():
     return {'messages_non_lus': 0, 'nb_taches_actives': 0}
 
 
+@app.template_filter('fromjson')
+def fromjson_filter(s):
+    import json
+    try: return json.loads(s or '[]')
+    except: return []
+
+
 @app.template_filter('mdhtml')
 def md_to_contenteditable(text):
     """Convertit le Markdown en HTML compatible contenteditable (format natif Chrome)."""
@@ -854,6 +861,7 @@ class SeanceAmblyopie(db.Model):
     av_notes    = db.Column(db.Text, default='')
     ese         = db.Column(db.String(50), default='')
     notes       = db.Column(db.Text, default='')
+    doc_ordo    = db.Column(db.Text, default='')  # JSON liste des tokens d'ordonnances
 
     praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
 
@@ -1815,8 +1823,9 @@ def suivi_amblyopie_detail(suivi_id):
 @login_required
 def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
     """Génère une ordonnance (occlusion ou ryser) depuis le suivi amblyopie."""
-    import os, shutil, uuid, urllib.parse
+    import os, shutil, uuid, urllib.parse, json
     s = SuiviAmblyopie.query.get_or_404(suivi_id)
+    seance_id = request.args.get('seance_id', type=int)
     p = s.patient
     praticien = s.praticien
     cabinet   = s.cabinet
@@ -1876,6 +1885,16 @@ def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
     shutil.copy2(docx_path, permanent_path)
 
     token = _wopi_token_for(0, type_ordo, permanent_path, nom_doc, section_ordre=0)
+
+    # Rattacher à la séance si spécifiée
+    if seance_id:
+        seance = SeanceAmblyopie.query.get(seance_id)
+        if seance and seance.suivi_id == suivi_id:
+            existing = json.loads(seance.doc_ordo or '[]')
+            existing.append({'token': token, 'nom': nom_doc, 'type': type_ordo})
+            seance.doc_ordo = json.dumps(existing)
+            db.session.commit()
+
     wopi_src = f"{get_wopi_base_url()}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(nom_doc)
     editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&darkTheme=false&ignoreSysTheme=1"
@@ -7514,6 +7533,18 @@ def _get_collabora_url(filename):
     # Fallback : URL directe standard Collabora/CODE
     # Format : https://collabora.domain.fr/browser/dist/cool.html?
     return f"{get_collabora_url()}/browser/dist/cool.html?"
+
+
+@app.route('/ordo/telecharger/<token>')
+@login_required
+def ordo_telecharger(token):
+    """Télécharge une ordonnance depuis son token WOPI."""
+    from flask import send_file
+    sess = WopiSession.query.filter_by(token=token).first_or_404()
+    return send_file(sess.chemin_fichier,
+                     as_attachment=True,
+                     download_name=sess.nom_fichier,
+                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 
 @app.route('/wopi/files/<token>')
