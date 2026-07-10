@@ -360,8 +360,15 @@ function genOrdo(type) {
   }));
   document.getElementById('modal-occlusion').style.display = 'none';
   document.getElementById('modal-ryser').style.display = 'none';
-  // Simuler le clic sur le bouton Enregistrer
-  document.querySelector('button[name="action"][value="save"]').click();
+  // Synchroniser les champs WYSIWYG (contenteditable → hidden inputs)
+  document.querySelectorAll('[contenteditable="true"]').forEach(div => {
+    const hidden = document.getElementById(div.id + '_hidden');
+    if (hidden) hidden.value = div.innerText;
+  });
+  // Petit délai pour laisser le temps à la synchro
+  setTimeout(() => {
+    document.querySelector('button[name="action"][value="save"]').click();
+  }, 100);
 }
 
 function _ouvrir_ordo(type) {
