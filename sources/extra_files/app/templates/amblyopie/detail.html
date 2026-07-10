@@ -212,6 +212,14 @@
     <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button>
     <button type="submit" name="action" value="ajouter_seance" class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
+    <button type="button" class="btn btn-secondary"
+            onclick="document.getElementById('modal-occlusion').style.display='flex'">
+      🩹 Ordonnance occlusion
+    </button>
+    <button type="button" class="btn btn-secondary"
+            onclick="document.getElementById('modal-ryser').style.display='flex'">
+      🔵 Ordonnance Ryser
+    </button>
     <a href="{{ url_for('patient_detail', patient_id=suivi.patient_id) }}"
        class="btn btn-secondary" style="margin-left:auto;">← Retour patient</a>
     <form method="POST" action="{{ url_for('suivi_amblyopie_supprimer', suivi_id=suivi.id) }}"
@@ -221,12 +229,101 @@
     </form>
   </div>
 
+  {# Modal ordonnance occlusion #}
+  <div id="modal-occlusion" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+       z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border-radius:12px;padding:24px;width:380px;
+                box-shadow:0 8px 32px rgba(0,0,0,.2);">
+      <h3 style="margin-bottom:16px;">🩹 Ordonnance d'occlusion</h3>
+      <div class="field-group" style="margin-bottom:10px;">
+        <label class="field-label">Œil à occlure</label>
+        <select id="occ-oeil">
+          <option value="OD">Œil droit (OD)</option>
+          <option value="OG">Œil gauche (OG)</option>
+        </select>
+      </div>
+      <div class="field-group" style="margin-bottom:10px;">
+        <label class="field-label">Heures par jour</label>
+        <input type="number" id="occ-heures" placeholder="ex: 2" min="0" max="24">
+      </div>
+      <div class="field-group" style="margin-bottom:10px;">
+        <label class="field-label">Durée</label>
+        <input type="text" id="occ-duree" placeholder="ex: 3 mois">
+      </div>
+      <div class="field-group" style="margin-bottom:16px;">
+        <label class="field-label">Notes complémentaires</label>
+        <textarea id="occ-notes" rows="2" placeholder="Facultatif"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('modal-occlusion').style.display='none'">Annuler</button>
+        <button type="button" class="btn btn-primary" onclick="genOrdo('occlusion')">Générer</button>
+      </div>
+    </div>
+  </div>
+
+  {# Modal ordonnance Ryser #}
+  <div id="modal-ryser" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+       z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border-radius:12px;padding:24px;width:380px;
+                box-shadow:0 8px 32px rgba(0,0,0,.2);">
+      <h3 style="margin-bottom:16px;">🔵 Ordonnance Filtre Ryser</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="field-group">
+          <label class="field-label">OD — N°</label>
+          <input type="text" id="ryser-od-num" placeholder="ex: 3">
+        </div>
+        <div class="field-group">
+          <label class="field-label">OD — AV laissée (/10)</label>
+          <input type="text" id="ryser-od-av" placeholder="ex: 2">
+        </div>
+        <div class="field-group">
+          <label class="field-label">OG — N°</label>
+          <input type="text" id="ryser-og-num" placeholder="ex: 2">
+        </div>
+        <div class="field-group">
+          <label class="field-label">OG — AV laissée (/10)</label>
+          <input type="text" id="ryser-og-av" placeholder="ex: 4">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+        <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('modal-ryser').style.display='none'">Annuler</button>
+        <button type="button" class="btn btn-primary" onclick="genOrdo('ryser')">Générer</button>
+      </div>
+    </div>
+  </div>
+
   {# Espace pour ne pas cacher le contenu sous la barre fixe #}
   <div style="height:64px;"></div>
 
 </form>
 
 <script>
+function genOrdo(type) {
+  let url;
+  if (type === 'occlusion') {
+    const oeil   = document.getElementById('occ-oeil').value;
+    const heures = document.getElementById('occ-heures').value;
+    const duree  = document.getElementById('occ-duree').value;
+    const notes  = document.getElementById('occ-notes').value;
+    url = `{{ url_for('suivi_amblyopie_ordonnance', suivi_id=suivi.id, type_ordo='occlusion') }}`
+        + `?oeil=${encodeURIComponent(oeil)}&heures=${encodeURIComponent(heures)}`
+        + `&duree=${encodeURIComponent(duree)}&notes=${encodeURIComponent(notes)}`;
+    document.getElementById('modal-occlusion').style.display = 'none';
+  } else {
+    const od_num = document.getElementById('ryser-od-num').value;
+    const od_av  = document.getElementById('ryser-od-av').value;
+    const og_num = document.getElementById('ryser-og-num').value;
+    const og_av  = document.getElementById('ryser-og-av').value;
+    url = `{{ url_for('suivi_amblyopie_ordonnance', suivi_id=suivi.id, type_ordo='ryser') }}`
+        + `?od_num=${encodeURIComponent(od_num)}&od_av=${encodeURIComponent(od_av)}`
+        + `&og_num=${encodeURIComponent(og_num)}&og_av=${encodeURIComponent(og_av)}`;
+    document.getElementById('modal-ryser').style.display = 'none';
+  }
+  window.location.href = url;
+}
+
 function toggle(id) {
   const body = document.getElementById('sec-' + id);
   const icon = document.getElementById('ico-' + id);

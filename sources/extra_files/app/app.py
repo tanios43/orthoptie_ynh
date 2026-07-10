@@ -1811,6 +1811,82 @@ def suivi_amblyopie_detail(suivi_id):
     return render_template('amblyopie/detail.html', suivi=s, praticiens=praticiens)
 
 
+@app.route('/suivi-amblyopie/<int:suivi_id>/ordonnance/<type_ordo>')
+@login_required
+def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
+    """Génère une ordonnance (occlusion ou ryser) depuis le suivi amblyopie."""
+    import os, shutil, uuid, urllib.parse
+    s = SuiviAmblyopie.query.get_or_404(suivi_id)
+    p = s.patient
+    praticien = s.praticien
+    cabinet   = s.cabinet
+    pc = None
+    if cabinet:
+        pc = PraticienCabinet.query.filter_by(
+            praticien_id=praticien.id, cabinet_id=cabinet.id).first()
+
+    date_str = s.date_bilan.strftime('%d/%m/%Y')
+    esc = lambda x: (x or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    if type_ordo == 'occlusion':
+        oeil   = request.args.get('oeil', '')
+        heures = request.args.get('heures', '')
+        duree  = request.args.get('duree', '')
+        notes  = request.args.get('notes', '')
+        titre_ordo  = 'ORDONNANCE — OCCLUSION'
+        lignes_ordo = [
+            f'Occlusion de l\'{oeil} par Ortopad / Opticlude' if oeil else 'Occlusion',
+            f'{heures} heures par jour' if heures else '',
+            f'Durée : {duree}' if duree else '',
+            notes if notes else '',
+        ]
+        nom_doc = f'{p.nom}_{p.prenom}_{s.date_bilan.strftime("%Y%m%d")}_Occlusion.docx'
+
+    elif type_ordo == 'ryser':
+        od_n = request.args.get('od_num', '')
+        od_a = request.args.get('od_av', '')
+        og_n = request.args.get('og_num', '')
+        og_a = request.args.get('og_av', '')
+        titre_ordo  = 'ORDONNANCE — FILTRE RYSER'
+        lignes_ordo = []
+        if od_n: lignes_ordo.append(f'OD : Ryser N°{od_n}, laissant une AV de {od_a}/10')
+        if og_n: lignes_ordo.append(f'OG : Ryser N°{og_n}, laissant une AV de {og_a}/10')
+        nom_doc = f'{p.nom}_{p.prenom}_{s.date_bilan.strftime("%Y%m%d")}_Ryser.docx'
+    else:
+        return 'Type inconnu', 404
+
+    # Créer un objet consultation factice pour _generer_ordonnance_docx
+    class _FakeConsult:
+        patient = p
+        date_consult = s.date_bilan
+        medecin_prescripteur = s.ophthalmo or ''
+        classe_profession = None
+        type_classe_profession = None
+        cabinet = cabinet
+
+    docx_path = _generer_ordonnance_docx(_FakeConsult(), praticien, cabinet, pc,
+                                          titre_ordo, lignes_ordo)
+
+    wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
+    os.makedirs(wopi_dir, exist_ok=True)
+    permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
+    shutil.copy2(docx_path, permanent_path)
+
+    token = _wopi_token_for(0, type_ordo, permanent_path, nom_doc, section_ordre=0)
+    wopi_src = f"{get_wopi_base_url()}/wopi/files/{token}"
+    collabora_action_url = _get_collabora_url(nom_doc)
+    editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&darkTheme=false&ignoreSysTheme=1"
+    editor_url = editor_url.replace('?&', '?').replace('&&', '&')
+
+    return render_template('consultations/collabora_editor.html',
+                           consultation=None,
+                           editor_url=editor_url,
+                           nom_fichier=nom_doc,
+                           token=token,
+                           section_type=type_ordo,
+                           collabora_url=get_collabora_url())
+
+
 @app.route('/suivi-amblyopie/<int:suivi_id>/supprimer', methods=['POST'])
 @login_required
 def suivi_amblyopie_supprimer(suivi_id):
