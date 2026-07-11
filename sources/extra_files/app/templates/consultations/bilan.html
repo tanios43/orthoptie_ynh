@@ -55,6 +55,59 @@
 
 {% set c = consultation %}
 
+{% block extra_head %}
+<style>
+@media print {
+  /* Masquer les éléments de navigation */
+  .sidebar, .topbar, .bottom-bar,
+  .nav-item, .sidebar-toggle,
+  [class*="btn"], a[href*="modifier"],
+  a[href*="generer"], a[href*="imprimer"],
+  #sections-nav { display: none !important; }
+
+  /* Mise en page */
+  body { background: white !important; font-size: 11pt; }
+  .main { margin-left: 0 !important; }
+  .content { padding: 0 !important; }
+
+  /* Cartes sans ombre */
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    break-inside: avoid;
+    margin-bottom: 8px !important;
+  }
+
+  /* En-tête patient compact */
+  .card:first-child { margin-bottom: 12px !important; }
+
+  /* Barre navigation/actions — masquer */
+  .card:first-child > div:nth-child(2),
+  .card:first-child > div:nth-child(3) { display: none !important; }
+
+  /* Sections */
+  .card-header { padding: 6px 12px !important; }
+  .card-body { padding: 8px 12px !important; }
+
+  /* Tableaux OD/OG */
+  .od-og-table { font-size: 10pt; }
+
+  /* Couleurs de catégories conservées */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Pied de page avec nom + date */
+  @page {
+    margin: 1.5cm 1.5cm 2cm 1.5cm;
+    @bottom-center {
+      content: "{{ c.patient.nom }} {{ c.patient.prenom }} — Bilan du {{ c.date_consult.strftime('%d/%m/%Y') }} — {{ c.praticien.titre }} {{ c.praticien.nom }}";
+      font-size: 8pt;
+      color: #666;
+    }
+  }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div style="max-width:860px;">
 

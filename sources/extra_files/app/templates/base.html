@@ -458,6 +458,7 @@
     .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
     .empty-state p { font-size: 14px; }
   </style>
+  {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if request.cookies.get('sidebar_collapsed') == '1' %}sidebar-collapsed{% endif %}">
 
