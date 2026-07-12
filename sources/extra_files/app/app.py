@@ -7691,7 +7691,7 @@ def suivi_amblyopie_compte_rendu(suivi_id):
     prat_rpps = getattr(pc, 'rpps', '') or getattr(praticien, 'rpps', '') or ''
     prat_adeli= getattr(pc, 'adeli', '') or getattr(praticien, 'adeli', '') or ''
     cab_nom   = cabinet.nom if cabinet else ''
-    cab_addr  = cabinet.adresse if cabinet else ''
+    cab_addr  = cabinet.adresse_complete if cabinet else ''
     cab_tel   = cabinet.telephone if cabinet else ''
 
     doc_xml = doc_xml.replace('Praticien : </w:t>', f'{esc(prat_nom)}</w:t>')
