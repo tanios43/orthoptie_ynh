@@ -1825,12 +1825,16 @@ def suivi_amblyopie_detail(suivi_id):
             seance.praticien_id = int(prat_id) if prat_id else None
         # Ajouter une séance
         if action == 'ajouter_seance':
-            next_num = max((se.numero for se in s.seances), default=0) + 1
             cab = get_current_cabinet()
+            if not cab:
+                flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
+                return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
+            next_num = max((se.numero for se in s.seances), default=0) + 1
             db.session.add(SeanceAmblyopie(
                 suivi_id=s.id, numero=next_num,
                 praticien_id=current_user.id,
-                cabinet_id=cab.id if cab else None
+                cabinet_id=cab.id,
+                date_seance=datetime.utcnow().date()
             ))
         db.session.commit()
         flash('Suivi enregistré.', 'success')
