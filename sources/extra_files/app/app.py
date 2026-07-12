@@ -1723,11 +1723,16 @@ def suivi_amblyopie_nouveau(patient_id):
         )
         db.session.add(s)
         db.session.flush()
-        # Créer 1 seule séance initiale
+        # Vérifier qu'un cabinet est sélectionné
+        if not cabinet:
+            flash('⚠️ Veuillez sélectionner un cabinet avant de créer un suivi.', 'warning')
+            return redirect(url_for('patient_detail', patient_id=patient_id))
+        # Créer 1 seule séance initiale avec date du jour
         db.session.add(SeanceAmblyopie(
             suivi_id=s.id, numero=1,
             praticien_id=current_user.id,
-            cabinet_id=cabinet.id if cabinet else None
+            cabinet_id=cabinet.id,
+            date_seance=datetime.utcnow().date()
         ))
         db.session.commit()
         log_acces('creation_suivi_amblyopie', patient_id=patient_id)
