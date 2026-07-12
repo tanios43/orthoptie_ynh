@@ -859,9 +859,16 @@ class SeanceAmblyopie(db.Model):
     av_od       = db.Column(db.String(20), default='')
     av_og       = db.Column(db.String(20), default='')
     av_notes    = db.Column(db.Text, default='')
-    ese         = db.Column(db.String(50), default='')
+    ese         = db.Column(db.String(50), default='')   # ancien champ VB (migré vers vb_libre)
     notes       = db.Column(db.Text, default='')
-    doc_ordo    = db.Column(db.Text, default='')  # JSON liste des tokens d'ordonnances
+    doc_ordo    = db.Column(db.Text, default='')
+    # Nouveaux champs VB structurés
+    vb_ese_vl   = db.Column(db.Text, default='')   # E.S.E — VL
+    vb_ese_vp   = db.Column(db.Text, default='')   # E.S.E — VP
+    vb_motilite = db.Column(db.Text, default='')   # Motilité
+    vb_ppc      = db.Column(db.Text, default='')   # PPC
+    vb_stereo   = db.Column(db.Text, default='')   # Vision stéréoscopique
+    vb_libre    = db.Column(db.Text, default='')   # Champ libre (ancien ese migré ici)
 
     praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
 
@@ -1802,6 +1809,12 @@ def suivi_amblyopie_detail(suivi_id):
             seance.av_og        = request.form.get(pfx+'av_og','').strip()
             seance.av_notes     = request.form.get(pfx+'av_notes','').strip()
             seance.ese          = request.form.get(pfx+'ese','').strip()
+            seance.vb_ese_vl    = request.form.get(pfx+'vb_ese_vl','').strip()
+            seance.vb_ese_vp    = request.form.get(pfx+'vb_ese_vp','').strip()
+            seance.vb_motilite  = request.form.get(pfx+'vb_motilite','').strip()
+            seance.vb_ppc       = request.form.get(pfx+'vb_ppc','').strip()
+            seance.vb_stereo    = request.form.get(pfx+'vb_stereo','').strip()
+            seance.vb_libre     = request.form.get(pfx+'vb_libre','').strip()
             seance.notes        = request.form.get(pfx+'notes','').strip()
             prat_id = request.form.get(pfx+'praticien_id','').strip()
             seance.praticien_id = int(prat_id) if prat_id else None
@@ -2020,20 +2033,31 @@ def suivi_amblyopie_generer(suivi_id):
         tbl_cell('Occlusion', bold=True, bg=HDR_BG, w=col_w[2]),
         tbl_cell('AV OD', bold=True, bg=HDR_BG, w=col_w[3]),
         tbl_cell('AV OG', bold=True, bg=HDR_BG, w=col_w[4]),
-        tbl_cell('ESE', bold=True, bg=HDR_BG, w=col_w[5]),
+        tbl_cell('VB', bold=True, bg=HDR_BG, w=col_w[5]),
         tbl_cell('Notes', bold=True, bg=HDR_BG, w=col_w[6]),
     ])
     rows = f'<w:tr>{"".join(hdr_cells)}</w:tr>'
     for seance in s.seances:
         date_str = seance.date_seance.strftime('%d/%m/%Y') if seance.date_seance else ''
         row_bg = 'F4F8FD' if seance.numero % 2 == 0 else None
+        # Construire le contenu VB structuré
+        vb_parts = []
+        if seance.vb_ese_vl: vb_parts.append(f'E.S.E VL : {seance.vb_ese_vl}')
+        if seance.vb_ese_vp: vb_parts.append(f'E.S.E VP : {seance.vb_ese_vp}')
+        if seance.vb_motilite: vb_parts.append(f'Motilité : {seance.vb_motilite}')
+        if seance.vb_ppc: vb_parts.append(f'PPC : {seance.vb_ppc}')
+        if seance.vb_stereo: vb_parts.append(f'Stéréo : {seance.vb_stereo}')
+        if seance.vb_libre: vb_parts.append(seance.vb_libre)
+        # Fallback sur ancien champ ese
+        if not vb_parts and seance.ese: vb_parts.append(seance.ese)
+        vb_str = '\n'.join(vb_parts)
         cells = ''.join([
             tbl_cell(str(seance.numero), bold=True, bg=row_bg, w=col_w[0]),
             tbl_cell(date_str, bg=row_bg, w=col_w[1]),
             tbl_cell(seance.occlusion or '', bg=row_bg, w=col_w[2]),
             tbl_cell(seance.av_od or '', bg=row_bg, w=col_w[3]),
             tbl_cell(seance.av_og or '', bg=row_bg, w=col_w[4]),
-            tbl_cell(seance.ese or '', bg=row_bg, w=col_w[5]),
+            tbl_cell(vb_str, bg=row_bg, w=col_w[5]),
             tbl_cell(seance.notes or '', bg=row_bg, w=col_w[6]),
         ])
         rows += f'<w:tr>{cells}</w:tr>'

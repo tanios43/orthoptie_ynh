@@ -286,6 +286,14 @@ _pre_migrations = [
         "ALTER TABLE document_modele ADD COLUMN praticien_id INTEGER REFERENCES praticien(id) DEFAULT NULL",
         "ALTER TABLE consultation ADD COLUMN type_classe_profession TEXT DEFAULT 'Classe'",
         "ALTER TABLE seance_amblyopie ADD COLUMN doc_ordo TEXT DEFAULT ''",
+        "ALTER TABLE seance_amblyopie ADD COLUMN vb_ese_vl TEXT DEFAULT ''",
+        "ALTER TABLE seance_amblyopie ADD COLUMN vb_ese_vp TEXT DEFAULT ''",
+        "ALTER TABLE seance_amblyopie ADD COLUMN vb_motilite TEXT DEFAULT ''",
+        "ALTER TABLE seance_amblyopie ADD COLUMN vb_ppc TEXT DEFAULT ''",
+        "ALTER TABLE seance_amblyopie ADD COLUMN vb_stereo TEXT DEFAULT ''",
+        "ALTER TABLE seance_amblyopie ADD COLUMN vb_libre TEXT DEFAULT ''",
+        # Migration des données: copier ese vers vb_libre
+        "UPDATE seance_amblyopie SET vb_libre = ese WHERE ese IS NOT NULL AND ese != ''",
         """CREATE TABLE IF NOT EXISTS favori (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             praticien_id INTEGER NOT NULL REFERENCES praticien(id),
