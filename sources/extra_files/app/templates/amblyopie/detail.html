@@ -247,7 +247,7 @@
                             padding:3px 9px;border-radius:6px 0 0 6px;
                             background:#EEEDFE;color:#3C3489;text-decoration:none;
                             border:0.5px solid #AFA9EC;">
-                    📋 {{ '🩹 Occlusion' if ordo.type == 'occlusion' else '🔵 Ryser' }}
+                    📋 {{ '🩹 Occlusion' if ordo.type == 'occlusion' else ('🔵 Ryser' if ordo.type == 'ryser' else '📝 Compte rendu') }}
                   </a>
                   <button type="button"
                           onclick="supprimerOrdo('{{ ordo.token }}', this)"
@@ -274,6 +274,10 @@
     <button type="submit" name="action" value="ajouter_seance" class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
     <button type="button" class="btn btn-secondary"
+            onclick="ouvrirPopupOrdo('compte_rendu')">
+      📝 Compte rendu
+    </button>
+    <button type="button" class="btn btn-secondary"
             onclick="ouvrirPopupOrdo('occlusion')">
       🩹 Ordonnance occlusion
     </button>
@@ -288,6 +292,26 @@
       <button type="submit" class="btn btn-secondary"
               style="color:#e53e3e;border-color:#e53e3e;">🗑 Supprimer</button>
     </form>
+  </div>
+
+  {# Modal compte rendu #}
+  <div id="modal-compte_rendu" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+       z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border-radius:12px;padding:24px;width:360px;
+                box-shadow:0 8px 32px rgba(0,0,0,.2);">
+      <h3 style="margin-bottom:16px;">📝 Compte rendu de séance</h3>
+      <div class="field-group" style="margin-bottom:16px;">
+        <label class="field-label">Rattacher à la séance</label>
+        <select id="cr-seance">
+          <option value="">— Aucune séance —</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('modal-compte_rendu').style.display='none'">Annuler</button>
+        <button type="button" class="btn btn-primary" onclick="genOrdo('compte_rendu')">Générer</button>
+      </div>
+    </div>
   </div>
 
   {# Modal ordonnance occlusion #}
@@ -395,14 +419,12 @@ function supprimerOrdo(token, btn) {
 }
 
 function ouvrirPopupOrdo(type) {
-  // Construire la liste des séances depuis les inputs du tableau
   const seanceInputs = Array.from(document.querySelectorAll('input[name^="seance_"][name$="_date"]'))
     .filter(input => input.value);
 
   const options = '<option value="">— Aucune séance —</option>' +
     seanceInputs.map(input => {
-      const name = input.name;
-      const id = name.split('_')[1];
+      const id = input.name.split('_')[1];
       const date = input.value;
       const num = input.closest('tr')?.querySelector('td:first-child')?.textContent?.trim() || '';
       return `<option value="${id}">Séance ${num} — ${date.split('-').reverse().join('/')}</option>`;
@@ -410,20 +432,22 @@ function ouvrirPopupOrdo(type) {
 
   document.getElementById('occ-seance').innerHTML = options;
   document.getElementById('ryser-seance').innerHTML = options;
+  document.getElementById('cr-seance').innerHTML = options;
 
-  // Sélectionner automatiquement la dernière séance
   if (seanceInputs.length > 0) {
     const lastId = seanceInputs[seanceInputs.length - 1].name.split('_')[1];
     document.getElementById('occ-seance').value = lastId;
     document.getElementById('ryser-seance').value = lastId;
+    document.getElementById('cr-seance').value = lastId;
   }
 
-  const modal = type === 'occlusion' ? 'modal-occlusion' : 'modal-ryser';
+  const modal = type === 'occlusion' ? 'modal-occlusion'
+              : type === 'ryser'     ? 'modal-ryser'
+              : 'modal-compte_rendu';
   document.getElementById(modal).style.display = 'flex';
 }
 
 function genOrdo(type) {
-  // Stocker les paramètres pour après la sauvegarde
   sessionStorage.setItem('pendingOrdo', JSON.stringify({type,
     oeil: document.getElementById('occ-oeil')?.value || '',
     heures: document.getElementById('occ-heures')?.value || '',
@@ -435,15 +459,15 @@ function genOrdo(type) {
     og_num: document.getElementById('ryser-og-num')?.value || '',
     og_av: document.getElementById('ryser-og-av')?.value || '',
     ryser_seance: document.getElementById('ryser-seance')?.value || '',
+    cr_seance: document.getElementById('cr-seance')?.value || '',
   }));
   document.getElementById('modal-occlusion').style.display = 'none';
   document.getElementById('modal-ryser').style.display = 'none';
-  // Synchroniser les champs WYSIWYG (contenteditable → hidden inputs)
+  document.getElementById('modal-compte_rendu').style.display = 'none';
   document.querySelectorAll('[contenteditable="true"]').forEach(div => {
     const hidden = document.getElementById(div.id + '_hidden');
     if (hidden) hidden.value = div.innerText;
   });
-  // Petit délai pour laisser le temps à la synchro
   setTimeout(() => {
     document.querySelector('button[name="action"][value="save"]').click();
   }, 100);
@@ -461,8 +485,7 @@ function _ouvrir_ordo(type) {
         + `?oeil=${encodeURIComponent(oeil)}&heures=${encodeURIComponent(heures)}`
         + `&duree=${encodeURIComponent(duree)}&notes=${encodeURIComponent(notes)}`
         + (seance ? `&seance_id=${seance}` : '');
-    document.getElementById('modal-occlusion').style.display = 'none';
-  } else {
+  } else if (type === 'ryser') {
     const od_num = document.getElementById('ryser-od-num')?.value || '';
     const od_av  = document.getElementById('ryser-od-av')?.value || '';
     const og_num = document.getElementById('ryser-og-num')?.value || '';
@@ -472,7 +495,10 @@ function _ouvrir_ordo(type) {
         + `?od_num=${encodeURIComponent(od_num)}&od_av=${encodeURIComponent(od_av)}`
         + `&og_num=${encodeURIComponent(og_num)}&og_av=${encodeURIComponent(og_av)}`
         + (seance ? `&seance_id=${seance}` : '');
-    document.getElementById('modal-ryser').style.display = 'none';
+  } else {
+    const seance = document.getElementById('cr-seance')?.value || '';
+    url = `{{ url_for('suivi_amblyopie_compte_rendu', suivi_id=suivi.id) }}`
+        + (seance ? `?seance_id=${seance}` : '');
   }
   window.location.href = url;
 }
@@ -489,12 +515,14 @@ document.addEventListener('DOMContentLoaded', function() {
       if (document.getElementById('occ-duree')) document.getElementById('occ-duree').value = d.duree;
       if (document.getElementById('occ-notes')) document.getElementById('occ-notes').value = d.notes;
       if (document.getElementById('occ-seance')) document.getElementById('occ-seance').value = d.occ_seance || '';
-    } else {
+    } else if (d.type === 'ryser') {
       if (document.getElementById('ryser-od-num')) document.getElementById('ryser-od-num').value = d.od_num;
       if (document.getElementById('ryser-od-av')) document.getElementById('ryser-od-av').value = d.od_av;
       if (document.getElementById('ryser-og-num')) document.getElementById('ryser-og-num').value = d.og_num;
       if (document.getElementById('ryser-og-av')) document.getElementById('ryser-og-av').value = d.og_av;
       if (document.getElementById('ryser-seance')) document.getElementById('ryser-seance').value = d.ryser_seance || '';
+    } else {
+      if (document.getElementById('cr-seance')) document.getElementById('cr-seance').value = d.cr_seance || '';
     }
     _ouvrir_ordo(d.type);
   }

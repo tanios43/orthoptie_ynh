@@ -7626,6 +7626,179 @@ def _get_collabora_url(filename):
     return f"{get_collabora_url()}/browser/dist/cool.html?"
 
 
+@app.route('/suivi-amblyopie/<int:suivi_id>/compte-rendu')
+@login_required
+def suivi_amblyopie_compte_rendu(suivi_id):
+    """Génère un compte rendu de la dernière séance du suivi amblyopie."""
+    import os, shutil, uuid, urllib.parse, json
+    from docx import Document
+    from docx.shared import Pt, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    s = SuiviAmblyopie.query.get_or_404(suivi_id)
+    seance_id = request.args.get('seance_id', type=int)
+    p = s.patient
+
+    # Séance rattachée
+    seance = SeanceAmblyopie.query.get(seance_id) if seance_id else None
+    if seance and seance.suivi_id == suivi_id:
+        praticien = seance.praticien or s.praticien
+        cabinet   = seance.cabinet_seance or s.cabinet
+        date_ref  = seance.date_seance or s.derniere_seance_date
+    else:
+        praticien = s.praticien
+        cabinet   = s.cabinet
+        date_ref  = s.derniere_seance_date
+
+    pc = None
+    if cabinet:
+        pc = PraticienCabinet.query.filter_by(
+            praticien_id=praticien.id, cabinet_id=cabinet.id).first()
+
+    # Civilité selon le sexe
+    sexe = getattr(p, 'sexe', '') or ''
+    ne_e = 'née' if sexe.lower() in ('f', 'femme', 'féminin') else 'né'
+    date_naissance = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
+
+    # Générer le docx depuis l'entête
+    import zipfile, tempfile, re as _re
+    install_dir = os.path.dirname(__file__)
+    entete_path = os.path.join(install_dir, 'entete.docx')
+    tmpdir = tempfile.mkdtemp()
+
+    with zipfile.ZipFile(entete_path, 'r') as z:
+        z.extractall(tmpdir)
+
+    doc_xml_path = os.path.join(tmpdir, 'word', 'document.xml')
+    with open(doc_xml_path, 'r', encoding='utf-8') as f:
+        doc_xml = f.read()
+
+    esc = lambda x: (x or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    # Remplir l'entête comme pour un courrier
+    patient_nom  = f'{p.nom} {p.prenom}'
+    date_str     = date_ref.strftime('%d/%m/%Y') if date_ref else ''
+    medecin_str  = s.ophthalmo or ''
+    age_str      = age_a_la_date(p.date_naissance, date_ref) if p.date_naissance and date_ref else ''
+
+    doc_xml = doc_xml.replace('Patient : </w:t>', f'Patient : {esc(patient_nom)}</w:t>')
+    doc_xml = doc_xml.replace('Patient : </w:t></w:r></w:p>', f'Patient : {esc(patient_nom)}</w:t></w:r></w:p>')
+    doc_xml = doc_xml.replace('Médecin prescripteur : Dr </w:t>', f'Médecin prescripteur : {esc(medecin_str)}</w:t>')
+    doc_xml = doc_xml.replace('Né(e) le : </w:t>', f'Né(e) le : {esc(p.date_naissance.strftime("%d/%m/%Y") if p.date_naissance else "")}</w:t>')
+    doc_xml = doc_xml.replace('Né(e) le : </w:t></w:r></w:p>', f'Né(e) le : {esc(p.date_naissance.strftime("%d/%m/%Y") if p.date_naissance else "")}</w:t></w:r></w:p>')
+    doc_xml = doc_xml.replace('Âge : </w:t><w:tab/><w:tab/>', f'Âge : {esc(age_str)}</w:t><w:tab/><w:tab/>')
+    doc_xml = doc_xml.replace('<w:tab/><w:tab/><w:t xml:space="preserve">Classe : </w:t>', '<w:t xml:space="preserve"></w:t>')
+
+    # Praticien
+    prat_nom  = f'{praticien.titre} {praticien.prenom} {praticien.nom}' if praticien else ''
+    prat_rpps = getattr(pc, 'rpps', '') or getattr(praticien, 'rpps', '') or ''
+    prat_adeli= getattr(pc, 'adeli', '') or getattr(praticien, 'adeli', '') or ''
+    cab_nom   = cabinet.nom if cabinet else ''
+    cab_addr  = cabinet.adresse if cabinet else ''
+    cab_tel   = cabinet.telephone if cabinet else ''
+
+    doc_xml = doc_xml.replace('Praticien : </w:t>', f'{esc(prat_nom)}</w:t>')
+    doc_xml = doc_xml.replace('RPPS : </w:t>', f'RPPS : {esc(prat_rpps)}</w:t>')
+    doc_xml = doc_xml.replace('ADELI : </w:t>', f'ADELI : {esc(prat_adeli)}</w:t>')
+    doc_xml = doc_xml.replace('Cabinet : </w:t>', f'{esc(cab_nom)}</w:t>')
+    doc_xml = doc_xml.replace('Adresse : </w:t>', f'{esc(cab_addr)}</w:t>')
+    doc_xml = doc_xml.replace('Tél : </w:t>', f'Tél : {esc(cab_tel)}</w:t>')
+    doc_xml = doc_xml.replace('A </w:t><w:tab/><w:t xml:space="preserve">, le </w:t>',
+                               f'A </w:t><w:tab/><w:t xml:space="preserve">{esc(cab_nom)}, le {esc(date_str)}</w:t>')
+
+    # Corps du document — phrase d'introduction + tableau séance
+    def make_para(text, bold=False, size=20):
+        b_open  = '<w:b/>' if bold else ''
+        return (f'<w:p><w:pPr><w:pStyle w:val="NoSpacing"/></w:pPr>'
+                f'<w:r><w:rPr>{b_open}<w:sz w:val="{size}"/></w:rPr>'
+                f'<w:t xml:space="preserve">{esc(text)}</w:t></w:r></w:p>')
+
+    intro = (f'Voici des nouvelles du suivi de traitement d\'amblyopie de '
+             f'{p.nom} {p.prenom}, {ne_e} le {date_naissance}.')
+
+    # Données de la séance
+    body_parts = [make_para(''), make_para(intro), make_para('')]
+
+    if seance:
+        if seance.occlusion:
+            body_parts.append(make_para(f'Entretien : {seance.occlusion}'))
+
+        # Acuité visuelle
+        av_lines = []
+        if seance.av_od: av_lines.append(f'OD : {seance.av_od}')
+        if seance.av_og: av_lines.append(f'OG : {seance.av_og}')
+        if seance.av_notes: av_lines.append(seance.av_notes)
+        if av_lines:
+            body_parts.append(make_para('Acuité visuelle :', bold=True))
+            for line in av_lines:
+                body_parts.append(make_para(f'    {line}'))
+
+        # VB
+        vb_lines = []
+        if seance.vb_ese_vl:   vb_lines.append(f'E.S.E VL : {seance.vb_ese_vl}')
+        if seance.vb_ese_vp:   vb_lines.append(f'E.S.E VP : {seance.vb_ese_vp}')
+        if seance.vb_motilite: vb_lines.append(f'Motilité : {seance.vb_motilite}')
+        if seance.vb_ppc:      vb_lines.append(f'PPC : {seance.vb_ppc}')
+        if seance.vb_stereo:   vb_lines.append(f'Stéréo : {seance.vb_stereo}')
+        if seance.vb_libre:    vb_lines.append(seance.vb_libre)
+        if vb_lines:
+            body_parts.append(make_para('Vision binoculaire :', bold=True))
+            for line in vb_lines:
+                body_parts.append(make_para(f'    {line}'))
+
+        # Notes
+        if seance.notes:
+            body_parts.append(make_para('Notes :', bold=True))
+            body_parts.append(make_para(seance.notes))
+
+    body_parts.append(make_para(''))
+
+    # Insérer le corps avant </w:body>
+    body_xml = ''.join(body_parts)
+    doc_xml = doc_xml.replace('</w:body>', body_xml + '</w:body>')
+
+    with open(doc_xml_path, 'w', encoding='utf-8') as f:
+        f.write(doc_xml)
+
+    # Rezipper
+    nom_doc = f'{p.nom}_{p.prenom}_{date_ref.strftime("%Y%m%d") if date_ref else "CR"}_CompteRendu_Amblyopie.docx'
+    final_path = os.path.join(tmpdir, 'final_cr.docx')
+    with zipfile.ZipFile(final_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for root, dirs, files in os.walk(tmpdir):
+            for file in files:
+                if file == 'final_cr.docx': continue
+                full = os.path.join(root, file)
+                arcname = os.path.relpath(full, tmpdir)
+                zout.write(full, arcname)
+
+    wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
+    os.makedirs(wopi_dir, exist_ok=True)
+    permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
+    shutil.copy2(final_path, permanent_path)
+    shutil.rmtree(tmpdir)
+
+    token = _wopi_token_for(0, 'compte_rendu', permanent_path, nom_doc, section_ordre=0)
+
+    # Rattacher à la séance
+    if seance:
+        existing = json.loads(seance.doc_ordo or '[]')
+        existing.append({'token': token, 'nom': nom_doc, 'type': 'compte_rendu'})
+        seance.doc_ordo = json.dumps(existing)
+        db.session.commit()
+
+    wopi_src = f"{get_wopi_base_url()}/wopi/files/{token}"
+    collabora_action_url = _get_collabora_url(nom_doc)
+    editor_url = (f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}"
+                  f"&access_token={token}&darkTheme=false&ignoreSysTheme=1")
+    editor_url = editor_url.replace('?&', '?').replace('&&', '&')
+
+    return render_template('consultations/collabora_editor.html',
+                           consultation=None, editor_url=editor_url,
+                           nom_fichier=nom_doc, token=token,
+                           section_type='compte_rendu',
+                           collabora_url=get_collabora_url())
+
+
 @app.route('/ordo/supprimer/<token>', methods=['POST'])
 @login_required
 def ordo_supprimer(token):
