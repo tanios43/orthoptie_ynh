@@ -7631,9 +7631,6 @@ def _get_collabora_url(filename):
 def suivi_amblyopie_compte_rendu(suivi_id):
     """Génère un compte rendu de la dernière séance du suivi amblyopie."""
     import os, shutil, uuid, urllib.parse, json
-    from docx import Document
-    from docx.shared import Pt, Cm
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
 
     s = SuiviAmblyopie.query.get_or_404(suivi_id)
     seance_id = request.args.get('seance_id', type=int)
