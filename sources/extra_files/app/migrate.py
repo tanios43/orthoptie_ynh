@@ -294,6 +294,7 @@ _pre_migrations = [
         "ALTER TABLE seance_amblyopie ADD COLUMN vb_libre TEXT DEFAULT ''",
         # Migration des données: copier ese vers vb_libre
         "UPDATE seance_amblyopie SET vb_libre = ese WHERE ese IS NOT NULL AND ese != ''",
+        "ALTER TABLE seance_amblyopie ADD COLUMN cabinet_id INTEGER REFERENCES cabinet(id) DEFAULT NULL",
         """CREATE TABLE IF NOT EXISTS favori (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             praticien_id INTEGER NOT NULL REFERENCES praticien(id),

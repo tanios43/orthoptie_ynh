@@ -869,8 +869,10 @@ class SeanceAmblyopie(db.Model):
     vb_ppc      = db.Column(db.Text, default='')   # PPC
     vb_stereo   = db.Column(db.Text, default='')   # Vision stéréoscopique
     vb_libre    = db.Column(db.Text, default='')   # Champ libre (ancien ese migré ici)
+    cabinet_id  = db.Column(db.Integer, db.ForeignKey('cabinet.id'), nullable=True)
 
     praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+    cabinet_seance = db.relationship('Cabinet', foreign_keys=[cabinet_id])
 
 
 class Conversation(db.Model):
@@ -1721,9 +1723,12 @@ def suivi_amblyopie_nouveau(patient_id):
         )
         db.session.add(s)
         db.session.flush()
-        # Créer 10 séances vides
-        for i in range(1, 11):
-            db.session.add(SeanceAmblyopie(suivi_id=s.id, numero=i))
+        # Créer 1 seule séance initiale
+        db.session.add(SeanceAmblyopie(
+            suivi_id=s.id, numero=1,
+            praticien_id=current_user.id,
+            cabinet_id=cabinet.id if cabinet else None
+        ))
         db.session.commit()
         log_acces('creation_suivi_amblyopie', patient_id=patient_id)
         flash('Suivi amblyopie créé.', 'success')
@@ -1821,7 +1826,12 @@ def suivi_amblyopie_detail(suivi_id):
         # Ajouter une séance
         if action == 'ajouter_seance':
             next_num = max((se.numero for se in s.seances), default=0) + 1
-            db.session.add(SeanceAmblyopie(suivi_id=s.id, numero=next_num))
+            cab = get_current_cabinet()
+            db.session.add(SeanceAmblyopie(
+                suivi_id=s.id, numero=next_num,
+                praticien_id=current_user.id,
+                cabinet_id=cab.id if cab else None
+            ))
         db.session.commit()
         flash('Suivi enregistré.', 'success')
         if action == 'generer':

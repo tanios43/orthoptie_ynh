@@ -138,9 +138,32 @@
                      value="{{ seance.date_seance.strftime('%Y-%m-%d') if seance.date_seance else '' }}"
                      style="font-size:13px;padding:4px 6px;width:100%;">
             </td>
-            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+            <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;min-width:120px;">
+              {# Badge praticien #}
+              {% set prat = seance.praticien or current_user %}
+              {% set coul = prat.couleur or '#2E7D6B' %}
+              <span style="display:inline-flex;align-items:center;gap:4px;
+                           padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;
+                           background:{{ coul }}20;color:{{ coul }};
+                           border:1px solid {{ coul }}40;white-space:nowrap;">
+                <span style="width:6px;height:6px;border-radius:50%;background:{{ coul }};flex-shrink:0;"></span>
+                {{ prat.prenom[0] }}. {{ prat.nom }}
+              </span>
+              {# Badge cabinet #}
+              {% set cab_s = seance.cabinet_seance %}
+              {% if cab_s %}
+              {% set cc = cab_s.couleur or '#1C2B3A' %}
+              <span style="display:inline-flex;align-items:center;gap:3px;margin-top:3px;
+                           padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;
+                           background:{{ cc }}20;color:{{ cc }};
+                           border:1px solid {{ cc }}40;white-space:nowrap;">
+                🏥 {{ cab_s.nom | truncate(12, True, '…') }}
+              </span>
+              {% endif %}
+              {# Select caché pour modification #}
               <select name="seance_{{ seance.id }}_praticien_id"
-                      style="font-size:12px;padding:4px 6px;width:100%;border-radius:5px;border:1px solid var(--border);">
+                      style="font-size:11px;margin-top:4px;width:100%;border-radius:5px;
+                             border:1px solid var(--border);padding:2px 4px;">
                 <option value="">—</option>
                 {% for p in praticiens %}
                 <option value="{{ p.id }}"
