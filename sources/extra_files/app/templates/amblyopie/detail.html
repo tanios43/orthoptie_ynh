@@ -473,30 +473,31 @@ function genOrdo(type) {
   }, 100);
 }
 
-function _ouvrir_ordo(type) {
+function _ouvrir_ordo(type, data) {
+  data = data || {};
   let url;
   if (type === 'occlusion') {
-    const oeil    = document.getElementById('occ-oeil')?.value || '';
-    const heures  = document.getElementById('occ-heures')?.value || '';
-    const duree   = document.getElementById('occ-duree')?.value || '';
-    const notes   = document.getElementById('occ-notes')?.value || '';
-    const seance  = document.getElementById('occ-seance')?.value || '';
+    const oeil    = data.oeil   || document.getElementById('occ-oeil')?.value || '';
+    const heures  = data.heures || document.getElementById('occ-heures')?.value || '';
+    const duree   = data.duree  || document.getElementById('occ-duree')?.value || '';
+    const notes   = data.notes  || document.getElementById('occ-notes')?.value || '';
+    const seance  = data.occ_seance || document.getElementById('occ-seance')?.value || '';
     url = `{{ url_for('suivi_amblyopie_ordonnance', suivi_id=suivi.id, type_ordo='occlusion') }}`
         + `?oeil=${encodeURIComponent(oeil)}&heures=${encodeURIComponent(heures)}`
         + `&duree=${encodeURIComponent(duree)}&notes=${encodeURIComponent(notes)}`
         + (seance ? `&seance_id=${seance}` : '');
   } else if (type === 'ryser') {
-    const od_num = document.getElementById('ryser-od-num')?.value || '';
-    const od_av  = document.getElementById('ryser-od-av')?.value || '';
-    const og_num = document.getElementById('ryser-og-num')?.value || '';
-    const og_av  = document.getElementById('ryser-og-av')?.value || '';
-    const seance = document.getElementById('ryser-seance')?.value || '';
+    const od_num = data.od_num || document.getElementById('ryser-od-num')?.value || '';
+    const od_av  = data.od_av  || document.getElementById('ryser-od-av')?.value || '';
+    const og_num = data.og_num || document.getElementById('ryser-og-num')?.value || '';
+    const og_av  = data.og_av  || document.getElementById('ryser-og-av')?.value || '';
+    const seance = data.ryser_seance || document.getElementById('ryser-seance')?.value || '';
     url = `{{ url_for('suivi_amblyopie_ordonnance', suivi_id=suivi.id, type_ordo='ryser') }}`
         + `?od_num=${encodeURIComponent(od_num)}&od_av=${encodeURIComponent(od_av)}`
         + `&og_num=${encodeURIComponent(og_num)}&og_av=${encodeURIComponent(og_av)}`
         + (seance ? `&seance_id=${seance}` : '');
   } else {
-    const seance = document.getElementById('cr-seance')?.value || '';
+    const seance = data.cr_seance || document.getElementById('cr-seance')?.value || '';
     url = `{{ url_for('suivi_amblyopie_compte_rendu', suivi_id=suivi.id) }}`
         + (seance ? `?seance_id=${seance}` : '');
   }
@@ -524,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       if (document.getElementById('cr-seance')) document.getElementById('cr-seance').value = d.cr_seance || '';
     }
-    _ouvrir_ordo(d.type);
+    _ouvrir_ordo(d.type, d);
   }
 });
 
