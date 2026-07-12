@@ -7629,7 +7629,7 @@ def _get_collabora_url(filename):
 @app.route('/suivi-amblyopie/<int:suivi_id>/compte-rendu')
 @login_required
 def suivi_amblyopie_compte_rendu(suivi_id):
-    """Génère un compte rendu de la dernière séance du suivi amblyopie."""
+    """Génère un compte rendu de séance du suivi amblyopie."""
     import os, shutil, uuid, urllib.parse, json
 
     s = SuiviAmblyopie.query.get_or_404(suivi_id)
@@ -7657,78 +7657,27 @@ def suivi_amblyopie_compte_rendu(suivi_id):
     ne_e = 'née' if sexe.lower() in ('f', 'femme', 'féminin') else 'né'
     date_naissance = p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else ''
 
-    # Générer le docx depuis l'entête
-    import zipfile, tempfile, re as _re
-    install_dir = os.path.dirname(__file__)
-    entete_path = os.path.join(install_dir, 'entete.docx')
-    tmpdir = tempfile.mkdtemp()
-
-    with zipfile.ZipFile(entete_path, 'r') as z:
-        z.extractall(tmpdir)
-
-    doc_xml_path = os.path.join(tmpdir, 'word', 'document.xml')
-    with open(doc_xml_path, 'r', encoding='utf-8') as f:
-        doc_xml = f.read()
-
-    esc = lambda x: (x or '').replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
-
-    # Remplir l'entête comme pour un courrier
-    patient_nom  = f'{p.nom} {p.prenom}'
-    date_str     = date_ref.strftime('%d/%m/%Y') if date_ref else ''
-    medecin_str  = s.ophthalmo or ''
-    age_str      = age_a_la_date(p.date_naissance, date_ref) if p.date_naissance and date_ref else ''
-
-    doc_xml = doc_xml.replace('Patient : </w:t>', f'Patient : {esc(patient_nom)}</w:t>')
-    doc_xml = doc_xml.replace('Patient : </w:t></w:r></w:p>', f'Patient : {esc(patient_nom)}</w:t></w:r></w:p>')
-    doc_xml = doc_xml.replace('Médecin prescripteur : Dr </w:t>', f'Médecin prescripteur : {esc(medecin_str)}</w:t>')
-    doc_xml = doc_xml.replace('Né(e) le : </w:t>', f'Né(e) le : {esc(p.date_naissance.strftime("%d/%m/%Y") if p.date_naissance else "")}</w:t>')
-    doc_xml = doc_xml.replace('Né(e) le : </w:t></w:r></w:p>', f'Né(e) le : {esc(p.date_naissance.strftime("%d/%m/%Y") if p.date_naissance else "")}</w:t></w:r></w:p>')
-    doc_xml = doc_xml.replace('Âge : </w:t><w:tab/><w:tab/>', f'Âge : {esc(age_str)}</w:t><w:tab/><w:tab/>')
-    doc_xml = doc_xml.replace('<w:tab/><w:tab/><w:t xml:space="preserve">Classe : </w:t>', '<w:t xml:space="preserve"></w:t>')
-
-    # Praticien
-    prat_nom  = f'{praticien.titre} {praticien.prenom} {praticien.nom}' if praticien else ''
-    prat_rpps = getattr(pc, 'rpps', '') or getattr(praticien, 'rpps', '') or ''
-    prat_adeli= getattr(pc, 'adeli', '') or getattr(praticien, 'adeli', '') or ''
-    cab_nom   = cabinet.nom if cabinet else ''
-    cab_addr  = cabinet.adresse_complete if cabinet else ''
-    cab_tel   = cabinet.telephone if cabinet else ''
-
-    doc_xml = doc_xml.replace('Praticien : </w:t>', f'{esc(prat_nom)}</w:t>')
-    doc_xml = doc_xml.replace('RPPS : </w:t>', f'RPPS : {esc(prat_rpps)}</w:t>')
-    doc_xml = doc_xml.replace('ADELI : </w:t>', f'ADELI : {esc(prat_adeli)}</w:t>')
-    doc_xml = doc_xml.replace('Cabinet : </w:t>', f'{esc(cab_nom)}</w:t>')
-    doc_xml = doc_xml.replace('Adresse : </w:t>', f'{esc(cab_addr)}</w:t>')
-    doc_xml = doc_xml.replace('Tél : </w:t>', f'Tél : {esc(cab_tel)}</w:t>')
-    doc_xml = doc_xml.replace('A </w:t><w:tab/><w:t xml:space="preserve">, le </w:t>',
-                               f'A </w:t><w:tab/><w:t xml:space="preserve">{esc(cab_nom)}, le {esc(date_str)}</w:t>')
-
-    # Corps du document — phrase d'introduction + tableau séance
-    def make_para(text, bold=False, size=20):
-        b_open  = '<w:b/>' if bold else ''
-        return (f'<w:p><w:pPr><w:pStyle w:val="NoSpacing"/></w:pPr>'
-                f'<w:r><w:rPr>{b_open}<w:sz w:val="{size}"/></w:rPr>'
-                f'<w:t xml:space="preserve">{esc(text)}</w:t></w:r></w:p>')
-
+    # Phrase d'introduction
     intro = (f'Voici des nouvelles du suivi de traitement d\'amblyopie de '
-             f'{p.nom} {p.prenom}, {ne_e} le {date_naissance}.')
+             f'{p.prenom} {p.nom}, {ne_e} le {date_naissance}.')
 
-    # Données de la séance
-    body_parts = [make_para(''), make_para(intro), make_para('')]
+    # Corps du document
+    lignes = ['', intro, '']
 
     if seance:
         if seance.occlusion:
-            body_parts.append(make_para(f'Entretien : {seance.occlusion}'))
+            lignes.append(f'Entretien : {seance.occlusion}')
+            lignes.append('')
 
         # Acuité visuelle
         av_lines = []
-        if seance.av_od: av_lines.append(f'OD : {seance.av_od}')
-        if seance.av_og: av_lines.append(f'OG : {seance.av_og}')
+        if seance.av_od:    av_lines.append(f'OD : {seance.av_od}')
+        if seance.av_og:    av_lines.append(f'OG : {seance.av_og}')
         if seance.av_notes: av_lines.append(seance.av_notes)
         if av_lines:
-            body_parts.append(make_para('Acuité visuelle :', bold=True))
-            for line in av_lines:
-                body_parts.append(make_para(f'    {line}'))
+            lignes.append('Acuité visuelle :')
+            lignes.extend([f'    {l}' for l in av_lines])
+            lignes.append('')
 
         # VB
         vb_lines = []
@@ -7739,40 +7688,35 @@ def suivi_amblyopie_compte_rendu(suivi_id):
         if seance.vb_stereo:   vb_lines.append(f'Stéréo : {seance.vb_stereo}')
         if seance.vb_libre:    vb_lines.append(seance.vb_libre)
         if vb_lines:
-            body_parts.append(make_para('Vision binoculaire :', bold=True))
-            for line in vb_lines:
-                body_parts.append(make_para(f'    {line}'))
+            lignes.append('Vision binoculaire :')
+            lignes.extend([f'    {l}' for l in vb_lines])
+            lignes.append('')
 
         # Notes
         if seance.notes:
-            body_parts.append(make_para('Notes :', bold=True))
-            body_parts.append(make_para(seance.notes))
+            lignes.append('Notes :')
+            lignes.append(seance.notes)
 
-    body_parts.append(make_para(''))
+    # Créer un objet consultation factice pour _generer_ordonnance_docx
+    _cabinet  = cabinet
+    _praticien = praticien
 
-    # Insérer le corps avant </w:body>
-    body_xml = ''.join(body_parts)
-    doc_xml = doc_xml.replace('</w:body>', body_xml + '</w:body>')
+    class _FakeConsult:
+        patient = p
+        date_consult = date_ref
+        medecin_prescripteur = s.ophthalmo or ''
+        classe_profession = None
+        type_classe_profession = None
+        cabinet = _cabinet
 
-    with open(doc_xml_path, 'w', encoding='utf-8') as f:
-        f.write(doc_xml)
-
-    # Rezipper
-    nom_doc = f'{p.nom}_{p.prenom}_{date_ref.strftime("%Y%m%d") if date_ref else "CR"}_CompteRendu_Amblyopie.docx'
-    final_path = os.path.join(tmpdir, 'final_cr.docx')
-    with zipfile.ZipFile(final_path, 'w', zipfile.ZIP_DEFLATED) as zout:
-        for root, dirs, files in os.walk(tmpdir):
-            for file in files:
-                if file == 'final_cr.docx': continue
-                full = os.path.join(root, file)
-                arcname = os.path.relpath(full, tmpdir)
-                zout.write(full, arcname)
+    docx_path = _generer_ordonnance_docx(_FakeConsult(), _praticien, _cabinet, pc,
+                                          'SUIVI D\'AMBLYOPIE', lignes)
 
     wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
     os.makedirs(wopi_dir, exist_ok=True)
+    nom_doc = f'{p.nom}_{p.prenom}_{date_ref.strftime("%Y%m%d") if date_ref else "CR"}_CompteRendu_Amblyopie.docx'
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
-    shutil.copy2(final_path, permanent_path)
-    shutil.rmtree(tmpdir)
+    shutil.copy2(docx_path, permanent_path)
 
     token = _wopi_token_for(0, 'compte_rendu', permanent_path, nom_doc, section_ordre=0)
 
