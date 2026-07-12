@@ -7661,19 +7661,33 @@ def suivi_amblyopie_compte_rendu(suivi_id):
     intro = (f'Voici des nouvelles du suivi de traitement d\'amblyopie de '
              f'{p.prenom} {p.nom}, {ne_e} le {date_naissance}.')
 
+    def ajouter_lignes(lignes, titre, valeur):
+        """Ajoute un titre et les lignes d'une valeur multi-ligne."""
+        if not valeur or not valeur.strip():
+            return
+        lignes.append(titre)
+        for l in valeur.replace('\r\n', '\n').replace('\r', '\n').split('\n'):
+            if l.strip():
+                lignes.append(f'    {l.strip()}')
+        lignes.append('')
+
     # Corps du document
     lignes = ['', intro, '']
 
     if seance:
-        if seance.occlusion:
-            lignes.append(f'Entretien : {seance.occlusion}')
+        if seance.occlusion and seance.occlusion.strip():
+            lignes.append('Entretien :')
+            for l in seance.occlusion.replace('\r\n', '\n').replace('\r', '\n').split('\n'):
+                if l.strip(): lignes.append(f'    {l.strip()}')
             lignes.append('')
 
         # Acuité visuelle
         av_lines = []
         if seance.av_od:    av_lines.append(f'OD : {seance.av_od}')
         if seance.av_og:    av_lines.append(f'OG : {seance.av_og}')
-        if seance.av_notes: av_lines.append(seance.av_notes)
+        if seance.av_notes and seance.av_notes.strip():
+            for l in seance.av_notes.replace('\r\n', '\n').split('\n'):
+                if l.strip(): av_lines.append(l.strip())
         if av_lines:
             lignes.append('Acuité visuelle :')
             lignes.extend([f'    {l}' for l in av_lines])
@@ -7686,16 +7700,20 @@ def suivi_amblyopie_compte_rendu(suivi_id):
         if seance.vb_motilite: vb_lines.append(f'Motilité : {seance.vb_motilite}')
         if seance.vb_ppc:      vb_lines.append(f'PPC : {seance.vb_ppc}')
         if seance.vb_stereo:   vb_lines.append(f'Stéréo : {seance.vb_stereo}')
-        if seance.vb_libre:    vb_lines.append(seance.vb_libre)
+        if seance.vb_libre and seance.vb_libre.strip():
+            for l in seance.vb_libre.replace('\r\n', '\n').split('\n'):
+                if l.strip(): vb_lines.append(l.strip())
         if vb_lines:
             lignes.append('Vision binoculaire :')
             lignes.extend([f'    {l}' for l in vb_lines])
             lignes.append('')
 
         # Notes
-        if seance.notes:
+        if seance.notes and seance.notes.strip():
             lignes.append('Notes :')
-            lignes.append(seance.notes)
+            for l in seance.notes.replace('\r\n', '\n').replace('\r', '\n').split('\n'):
+                if l.strip(): lignes.append(f'    {l.strip()}')
+            lignes.append('')
 
     # Créer un objet consultation factice pour _generer_ordonnance_docx
     _cabinet  = cabinet
