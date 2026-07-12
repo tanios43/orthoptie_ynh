@@ -703,6 +703,7 @@ class SeanceBV(db.Model):
     numero       = db.Column(db.Integer, nullable=False)
     date_seance  = db.Column(db.Date, nullable=True)
     praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    cabinet_id   = db.Column(db.Integer, db.ForeignKey('cabinet.id'), nullable=True)
     acuite       = db.Column(db.Text, default='')
     av_od        = db.Column(db.String(20), default='')
     av_og        = db.Column(db.String(20), default='')
@@ -710,7 +711,8 @@ class SeanceBV(db.Model):
     exercices    = db.Column(db.Text, default='')
     notes        = db.Column(db.Text, default='')
 
-    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+    praticien      = db.relationship('Praticien', foreign_keys=[praticien_id])
+    cabinet_seance = db.relationship('Cabinet',   foreign_keys=[cabinet_id])
 
 
 class SuiviNV(db.Model):
@@ -750,11 +752,13 @@ class SeanceNV(db.Model):
     numero       = db.Column(db.Integer, nullable=False)
     date_seance  = db.Column(db.Date, nullable=True)
     praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    cabinet_id   = db.Column(db.Integer, db.ForeignKey('cabinet.id'), nullable=True)
     vb_acco_omot = db.Column(db.Text, default='')
     neurovisuel  = db.Column(db.Text, default='')
     notes        = db.Column(db.Text, default='')
 
-    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+    praticien      = db.relationship('Praticien', foreign_keys=[praticien_id])
+    cabinet_seance = db.relationship('Cabinet',   foreign_keys=[cabinet_id])
 
 
 class SuiviVB(db.Model):
@@ -794,12 +798,14 @@ class SeanceVB(db.Model):
     numero       = db.Column(db.Integer, nullable=False)
     date_seance  = db.Column(db.Date, nullable=True)
     praticien_id = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    cabinet_id   = db.Column(db.Integer, db.ForeignKey('cabinet.id'), nullable=True)
     fusion       = db.Column(db.Text, default='')
     accommodation= db.Column(db.Text, default='')
     stereogrammes= db.Column(db.Text, default='')
     notes        = db.Column(db.Text, default='')
 
-    praticien = db.relationship('Praticien', foreign_keys=[praticien_id])
+    praticien      = db.relationship('Praticien', foreign_keys=[praticien_id])
+    cabinet_seance = db.relationship('Cabinet',   foreign_keys=[cabinet_id])
 
 
 class SuiviAmblyopie(db.Model):
@@ -2140,7 +2146,12 @@ def suivi_bv_nouveau(patient_id):
             notes       = request.form.get('notes','').strip(),
         )
         db.session.add(s); db.session.flush()
-        db.session.add(SeanceBV(suivi_id=s.id, numero=1))
+        if not cabinet:
+            flash('⚠️ Veuillez sélectionner un cabinet avant de créer un suivi.', 'warning')
+            return redirect(url_for('patient_detail', patient_id=patient_id))
+        db.session.add(SeanceBV(suivi_id=s.id, numero=1,
+            praticien_id=current_user.id, cabinet_id=cabinet.id,
+            date_seance=datetime.utcnow().date()))
         db.session.commit()
         flash('Suivi basse vision créé.', 'success')
         return redirect(url_for('suivi_bv_detail', suivi_id=s.id))
@@ -2172,8 +2183,14 @@ def suivi_bv_detail(suivi_id):
             prat_id = request.form.get(pfx+'praticien_id','').strip()
             seance.praticien_id = int(prat_id) if prat_id else None
         if action == 'ajouter_seance':
+            cab = get_current_cabinet()
+            if not cab:
+                flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
+                return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id))
             next_num = max((se.numero for se in s.seances), default=0) + 1
-            db.session.add(SeanceBV(suivi_id=s.id, numero=next_num))
+            db.session.add(SeanceBV(suivi_id=s.id, numero=next_num,
+                praticien_id=current_user.id, cabinet_id=cab.id,
+                date_seance=datetime.utcnow().date()))
         db.session.commit()
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
@@ -2333,7 +2350,12 @@ def suivi_nv_nouveau(patient_id):
             notes       = request.form.get('notes','').strip(),
         )
         db.session.add(s); db.session.flush()
-        db.session.add(SeanceNV(suivi_id=s.id, numero=1))
+        if not cabinet:
+            flash('⚠️ Veuillez sélectionner un cabinet avant de créer un suivi.', 'warning')
+            return redirect(url_for('patient_detail', patient_id=patient_id))
+        db.session.add(SeanceNV(suivi_id=s.id, numero=1,
+            praticien_id=current_user.id, cabinet_id=cabinet.id,
+            date_seance=datetime.utcnow().date()))
         db.session.commit()
         flash('Suivi neurovisuel créé.', 'success')
         return redirect(url_for('suivi_nv_detail', suivi_id=s.id))
@@ -2364,8 +2386,14 @@ def suivi_nv_detail(suivi_id):
             prat_id = request.form.get(pfx+'praticien_id','').strip()
             seance.praticien_id = int(prat_id) if prat_id else None
         if action == 'ajouter_seance':
+            cab = get_current_cabinet()
+            if not cab:
+                flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
+                return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id))
             next_num = max((se.numero for se in s.seances), default=0) + 1
-            db.session.add(SeanceNV(suivi_id=s.id, numero=next_num))
+            db.session.add(SeanceNV(suivi_id=s.id, numero=next_num,
+                praticien_id=current_user.id, cabinet_id=cab.id,
+                date_seance=datetime.utcnow().date()))
         db.session.commit()
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
@@ -2544,7 +2572,12 @@ def suivi_vb_nouveau(patient_id):
             notes       = request.form.get('notes','').strip(),
         )
         db.session.add(s); db.session.flush()
-        db.session.add(SeanceVB(suivi_id=s.id, numero=1))
+        if not cabinet:
+            flash('⚠️ Veuillez sélectionner un cabinet avant de créer un suivi.', 'warning')
+            return redirect(url_for('patient_detail', patient_id=patient_id))
+        db.session.add(SeanceVB(suivi_id=s.id, numero=1,
+            praticien_id=current_user.id, cabinet_id=cabinet.id,
+            date_seance=datetime.utcnow().date()))
         db.session.commit()
         flash('Suivi VB créé.', 'success')
         return redirect(url_for('suivi_vb_detail', suivi_id=s.id))
@@ -2577,8 +2610,14 @@ def suivi_vb_detail(suivi_id):
             prat_id = request.form.get(pfx+'praticien_id','').strip()
             seance.praticien_id  = int(prat_id) if prat_id else None
         if action == 'ajouter_seance':
+            cab = get_current_cabinet()
+            if not cab:
+                flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
+                return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id))
             next_num = max((se.numero for se in s.seances), default=0) + 1
-            db.session.add(SeanceVB(suivi_id=s.id, numero=next_num))
+            db.session.add(SeanceVB(suivi_id=s.id, numero=next_num,
+                praticien_id=current_user.id, cabinet_id=cab.id,
+                date_seance=datetime.utcnow().date()))
         db.session.commit()
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
