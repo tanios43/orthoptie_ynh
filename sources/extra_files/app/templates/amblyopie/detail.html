@@ -160,18 +160,9 @@
                 🏥 {{ cab_s.nom | truncate(12, True, '…') }}
               </span>
               {% endif %}
-              {# Select caché pour modification #}
-              <select name="seance_{{ seance.id }}_praticien_id"
-                      style="font-size:11px;margin-top:4px;width:100%;border-radius:5px;
-                             border:1px solid var(--border);padding:2px 4px;">
-                <option value="">—</option>
-                {% for p in praticiens %}
-                <option value="{{ p.id }}"
-                  {{ 'selected' if seance.praticien_id == p.id or (not seance.praticien_id and p.id == current_user.id) }}>
-                  {{ p.prenom }} {{ p.nom }}
-                </option>
-                {% endfor %}
-              </select>
+              {# Champ caché pour conserver le praticien_id #}
+              <input type="hidden" name="seance_{{ seance.id }}_praticien_id"
+                     value="{{ seance.praticien_id or current_user.id }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
               <div id="wy-amb-{{seance.id}}-occlusion"
