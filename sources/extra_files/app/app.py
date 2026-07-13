@@ -1956,6 +1956,69 @@ def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
                            collabora_url=get_collabora_url())
 
 
+def _supprimer_docs_seance(doc_ordo_json):
+    """Supprime les fichiers WOPI rattachés à une séance."""
+    import json, os
+    if not doc_ordo_json:
+        return
+    try:
+        ordos = json.loads(doc_ordo_json)
+    except Exception:
+        return
+    for ordo in ordos:
+        token = ordo.get('token', '')
+        sess = WopiSession.query.filter_by(token=token).first()
+        if sess:
+            if sess.chemin_fichier and os.path.exists(sess.chemin_fichier):
+                os.remove(sess.chemin_fichier)
+            db.session.delete(sess)
+
+
+@app.route('/suivi-amblyopie/seance/<int:seance_id>/supprimer', methods=['POST'])
+@login_required
+def seance_amblyopie_supprimer(seance_id):
+    seance = SeanceAmblyopie.query.get_or_404(seance_id)
+    suivi_id = seance.suivi_id
+    _supprimer_docs_seance(seance.doc_ordo)
+    db.session.delete(seance)
+    db.session.commit()
+    flash('Séance supprimée.', 'success')
+    return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
+
+
+@app.route('/suivi-bv/seance/<int:seance_id>/supprimer', methods=['POST'])
+@login_required
+def seance_bv_supprimer(seance_id):
+    seance = SeanceBV.query.get_or_404(seance_id)
+    suivi_id = seance.suivi_id
+    db.session.delete(seance)
+    db.session.commit()
+    flash('Séance supprimée.', 'success')
+    return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id))
+
+
+@app.route('/suivi-nv/seance/<int:seance_id>/supprimer', methods=['POST'])
+@login_required
+def seance_nv_supprimer(seance_id):
+    seance = SeanceNV.query.get_or_404(seance_id)
+    suivi_id = seance.suivi_id
+    db.session.delete(seance)
+    db.session.commit()
+    flash('Séance supprimée.', 'success')
+    return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id))
+
+
+@app.route('/suivi-vb/seance/<int:seance_id>/supprimer', methods=['POST'])
+@login_required
+def seance_vb_supprimer(seance_id):
+    seance = SeanceVB.query.get_or_404(seance_id)
+    suivi_id = seance.suivi_id
+    db.session.delete(seance)
+    db.session.commit()
+    flash('Séance supprimée.', 'success')
+    return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id))
+
+
 @app.route('/suivi-amblyopie/<int:suivi_id>/supprimer', methods=['POST'])
 @login_required
 def suivi_amblyopie_supprimer(suivi_id):
