@@ -257,15 +257,14 @@
                      value="{{ seance.date_seance.strftime('%Y-%m-%d') if seance.date_seance else '' }}"
                      style="font-size:13px;padding:4px 6px;width:100%;">
               {% if loop.last %}
-              <form method="POST"
+              <form id="del-seance-{{ seance.id }}" method="POST"
                     action="{{ url_for('seance_nv_supprimer', seance_id=seance.id) }}"
-                    onsubmit="return confirm('Supprimer cette séance ?')"
-                    style="margin-top:4px;">
-                <button type="submit"
-                        style="font-size:10px;padding:2px 6px;border-radius:4px;
-                               background:none;border:1px solid #FFAAAA;color:#C53030;
-                               cursor:pointer;width:100%;">🗑 Supprimer</button>
+                    onsubmit="return confirm('Supprimer cette séance ?')">
               </form>
+              <button type="submit" form="del-seance-{{ seance.id }}"
+                      style="font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;
+                             background:none;border:1px solid #FFAAAA;color:#C53030;
+                             cursor:pointer;width:100%;">🗑 Supprimer</button>
               {% endif %}
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;min-width:120px;">
