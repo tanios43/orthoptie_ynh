@@ -257,11 +257,8 @@
                      value="{{ seance.date_seance.strftime('%Y-%m-%d') if seance.date_seance else '' }}"
                      style="font-size:13px;padding:4px 6px;width:100%;">
               {% if loop.last %}
-              <form id="del-seance-{{ seance.id }}" method="POST"
-                    action="{{ url_for('seance_nv_supprimer', seance_id=seance.id) }}"
-                    onsubmit="return confirm('Supprimer cette séance ?')">
-              </form>
-              <button type="submit" form="del-seance-{{ seance.id }}"
+              <button type="button"
+                      onclick="supprimerSeance('{{ url_for('seance_nv_supprimer', seance_id=seance.id) }}', 'Supprimer cette séance ?')"
                       style="font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;
                              background:none;border:1px solid #FFAAAA;color:#C53030;
                              cursor:pointer;width:100%;">🗑 Supprimer</button>
@@ -345,6 +342,16 @@
 </form>
 
 <script>
+
+function supprimerSeance(url, msg) {
+  if (!confirm(msg)) return;
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  document.body.appendChild(form);
+  form.submit();
+}
+
 function autoResize(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 document.querySelectorAll('.auto-resize').forEach(el => {
   autoResize(el);
