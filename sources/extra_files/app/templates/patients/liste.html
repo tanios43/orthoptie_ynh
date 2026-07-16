@@ -9,14 +9,28 @@
 
 {% block content %}
 <div class="card">
-  <div class="card-header">
+  <div class="card-header" style="flex-wrap:wrap;gap:8px;">
     <h2>Patients suivis</h2>
-    <span class="badge badge-gray">{{ patients|length }} patient{{ 's' if patients|length != 1 }}</span>
-    <a href="{{ url_for('recherche') }}" class="btn btn-secondary btn-sm" style="margin-left:auto">⌕ Rechercher</a>
+    <span class="badge badge-gray" id="patient-count">{{ patients|length }} patient{{ 's' if patients|length != 1 }}</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <div style="position:relative;">
+        <input type="text" id="search-patients"
+               placeholder="Rechercher un patient…"
+               autofocus
+               style="padding:6px 32px 6px 12px;border-radius:8px;
+                      border:1px solid var(--border);font-size:13px;width:260px;">
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                     color:var(--muted);font-size:14px;pointer-events:none;">⌕</span>
+      </div>
+      <button type="button" id="search-clear"
+              onclick="document.getElementById('search-patients').value='';filterPatients()"
+              style="display:none;background:none;border:none;color:var(--muted);
+                     cursor:pointer;font-size:16px;">✕</button>
+    </div>
   </div>
 
   {% if patients %}
-  <table class="data-table">
+  <table class="data-table" id="patients-table">
     <thead>
       <tr>
         <th>Nom / Prénom</th>
@@ -29,9 +43,9 @@
         <th></th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="patients-tbody">
       {% for p in patients %}
-      <tr>
+      <tr data-search="{{ p.nom|lower }} {{ p.prenom|lower }} {{ p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '' }} {{ p.commune|lower if p.commune else '' }} {{ p.telephone or '' }} {{ p.medecin_referent|lower if p.medecin_referent else '' }}">
         <td>
           <a href="{{ url_for('patient_detail', patient_id=p.id) }}">
             {{ p.nom }} {{ p.prenom }}
@@ -73,4 +87,48 @@
   </div>
   {% endif %}
 </div>
+
+<script>
+function filterPatients() {
+  const q = document.getElementById('search-patients').value.toLowerCase().trim();
+  const rows = document.querySelectorAll('#patients-tbody tr');
+  const clearBtn = document.getElementById('search-clear');
+  let visible = 0;
+
+  rows.forEach(row => {
+    const data = (row.dataset.search || '').toLowerCase();
+    const match = !q || data.includes(q);
+    row.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+
+  // Mettre à jour le compteur
+  const total = rows.length;
+  const countEl = document.getElementById('patient-count');
+  if (countEl) {
+    countEl.textContent = q
+      ? `${visible} / ${total} patient${total > 1 ? 's' : ''}`
+      : `${total} patient${total > 1 ? 's' : ''}`;
+  }
+
+  // Afficher/masquer le bouton effacer
+  if (clearBtn) clearBtn.style.display = q ? 'inline' : 'none';
+
+  // Message si aucun résultat
+  let emptyRow = document.getElementById('search-empty-row');
+  if (visible === 0 && q) {
+    if (!emptyRow) {
+      emptyRow = document.createElement('tr');
+      emptyRow.id = 'search-empty-row';
+      emptyRow.innerHTML = `<td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">
+        Aucun patient ne correspond à "<strong>${q}</strong>"</td>`;
+      document.getElementById('patients-tbody').appendChild(emptyRow);
+    }
+  } else if (emptyRow) {
+    emptyRow.remove();
+  }
+}
+
+document.getElementById('search-patients')?.addEventListener('input', filterPatients);
+</script>
 {% endblock %}
