@@ -3,30 +3,29 @@
 {% block title %}Mes patients{% endblock %}
 {% block page_title %}Mes patients{% endblock %}
 
-{% block topbar_actions %}
-  <a href="{{ url_for('patient_nouveau') }}" class="btn btn-primary btn-sm">+ Nouveau patient</a>
-{% endblock %}
+{% block topbar_actions %}{% endblock %}
 
 {% block content %}
 <div class="card">
   <div class="card-header" style="flex-wrap:wrap;gap:8px;">
     <h2>Patients suivis</h2>
     <span class="badge badge-gray" id="patient-count">{{ patients|length }} patient{{ 's' if patients|length != 1 }}</span>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-      <div style="position:relative;">
+    <div style="flex:1;display:flex;justify-content:center;align-items:center;gap:8px;">
+      <div style="position:relative;width:100%;max-width:480px;">
         <input type="text" id="search-patients"
                placeholder="Rechercher un patient…"
                autofocus
-               style="padding:6px 32px 6px 12px;border-radius:8px;
-                      border:1px solid var(--border);font-size:13px;width:260px;">
-        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
-                     color:var(--muted);font-size:14px;pointer-events:none;">⌕</span>
+               style="padding:8px 36px 8px 14px;border-radius:8px;
+                      border:1px solid var(--border);font-size:14px;width:100%;">
+        <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+                     color:var(--muted);font-size:16px;pointer-events:none;">⌕</span>
       </div>
       <button type="button" id="search-clear"
               onclick="document.getElementById('search-patients').value='';filterPatients()"
               style="display:none;background:none;border:none;color:var(--muted);
-                     cursor:pointer;font-size:16px;">✕</button>
+                     cursor:pointer;font-size:18px;">✕</button>
     </div>
+    <a href="{{ url_for('patient_nouveau') }}" class="btn btn-primary btn-sm">+ Nouveau</a>
   </div>
 
   {% if patients %}
