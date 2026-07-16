@@ -144,6 +144,13 @@
                              background:none;border:1px solid #FFAAAA;color:#C53030;
                              cursor:pointer;width:100%;">🗑 Supprimer</button>
               {% endif %}
+              {% if loop.last and not loop.first %}
+              <button type="button"
+                      onclick="copierSeancePrecedente({{ seance.id }}, {{ loop.previtem.id }})"
+                      style="font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;
+                             background:none;border:1px solid var(--accent);color:var(--accent);
+                             cursor:pointer;width:100%;">⎘ Copier précédente</button>
+              {% endif %}
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;min-width:120px;">
               {# Badge praticien #}
@@ -414,6 +421,47 @@
 </form>
 
 <script>
+
+// Données des séances pour la copie
+const SEANCES_DATA = {
+  {% for seance in suivi.seances %}
+  {{ seance.id }}: {
+    occlusion: {{ seance.occlusion | tojson }},
+    av_od: {{ seance.av_od | tojson }},
+    av_og: {{ seance.av_og | tojson }},
+    av_notes: {{ seance.av_notes | tojson }},
+    vb_ese_vl: {{ seance.vb_ese_vl | tojson }},
+    vb_ese_vp: {{ seance.vb_ese_vp | tojson }},
+    vb_motilite: {{ seance.vb_motilite | tojson }},
+    vb_ppc: {{ seance.vb_ppc | tojson }},
+    vb_stereo: {{ seance.vb_stereo | tojson }},
+    vb_libre: {{ seance.vb_libre | tojson }},
+    notes: {{ seance.notes | tojson }},
+  },
+  {% endfor %}
+};
+
+function copierSeancePrecedente(idCible, idSource) {
+  const src = SEANCES_DATA[idSource];
+  if (!src) return;
+  if (!confirm('Copier les données de la séance précédente dans cette séance ?')) return;
+
+  const fields = ['occlusion', 'av_od', 'av_og', 'av_notes',
+                  'vb_ese_vl', 'vb_ese_vp', 'vb_motilite', 'vb_ppc', 'vb_stereo', 'vb_libre', 'notes'];
+
+  fields.forEach(field => {
+    const val = src[field] || '';
+    // Champ hidden (WYSIWYG)
+    const hidden = document.getElementById(`wy-amb-${idCible}-${field}_hidden`);
+    if (hidden) hidden.value = val;
+    // Div contenteditable
+    const div = document.getElementById(`wy-amb-${idCible}-${field}`);
+    if (div) div.innerText = val;
+    // Input simple (av_od, av_og)
+    const input = document.querySelector(`input[name="seance_${idCible}_${field}"]`);
+    if (input && input.type !== 'hidden') input.value = val;
+  });
+}
 
 function supprimerSeance(url, msg) {
   if (!confirm(msg)) return;
