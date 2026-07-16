@@ -7,25 +7,24 @@
 
 {% block content %}
 <div class="card">
-  <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+  <div class="card-header">
     <h2>Patients suivis</h2>
     <span class="badge badge-gray" id="patient-count">{{ patients|length }} patient{{ 's' if patients|length != 1 }}</span>
-    <div style="flex:1;display:flex;justify-content:center;align-items:center;gap:8px;">
-      <div style="position:relative;width:100%;max-width:480px;">
-        <input type="text" id="search-patients"
-               placeholder="Rechercher un patient…"
-               autofocus
-               style="padding:8px 36px 8px 14px;border-radius:8px;
-                      border:1px solid var(--border);font-size:14px;width:100%;">
-        <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
-                     color:var(--muted);font-size:16px;pointer-events:none;">⌕</span>
-      </div>
+    <a href="{{ url_for('patient_nouveau') }}" class="btn btn-primary btn-sm" style="margin-left:auto;">+ Nouveau patient</a>
+  </div>
+  <div style="padding:12px 16px;border-bottom:1px solid var(--border);
+              display:flex;justify-content:center;align-items:center;gap:8px;">
+    <div style="position:relative;width:100%;max-width:520px;">
+      <input type="text" id="search-patients"
+             placeholder="🔍 Rechercher un patient (nom, prénom, date de naissance, commune…)"
+             autofocus
+             style="padding:9px 36px 9px 14px;border-radius:8px;
+                    border:1px solid var(--border);font-size:14px;width:100%;">
       <button type="button" id="search-clear"
               onclick="document.getElementById('search-patients').value='';filterPatients()"
-              style="display:none;background:none;border:none;color:var(--muted);
-                     cursor:pointer;font-size:18px;">✕</button>
+              style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                     background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">✕</button>
     </div>
-    <a href="{{ url_for('patient_nouveau') }}" class="btn btn-primary btn-sm">+ Nouveau</a>
   </div>
 
   {% if patients %}
