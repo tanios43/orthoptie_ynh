@@ -209,6 +209,7 @@
        value="{{ seance.av_notes or '' }}">
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
               {% for vb_field, vb_label in [
                 ('vb_ese_vl', 'E.S.E VL'),
                 ('vb_ese_vp', 'E.S.E VP'),
@@ -217,24 +218,24 @@
                 ('vb_stereo', 'Stéréo'),
                 ('vb_libre', 'Divers'),
               ] %}
-              {% if vb_label %}
-              <div style="font-size:10px;font-weight:600;color:var(--muted);
-                          text-transform:uppercase;letter-spacing:.04em;
-                          margin-top:{% if not loop.first %}6px{% else %}0{% endif %};
-                          margin-bottom:2px;">{{ vb_label }}</div>
-              {% endif %}
-              <div id="wy-amb-{{seance.id}}-{{ vb_field }}"
-                   contenteditable="true"
-                   class="table-wysiwyg"
-                   style="font-size:13px;padding:4px 6px;width:100%;min-height:24px;
-                          border:1px solid var(--border);border-radius:5px;
-                          white-space:pre-wrap;word-break:break-word;">
-                {{- (seance[vb_field] or "") | mdhtml | safe -}}
+              <div>
+                <div style="font-size:10px;font-weight:600;color:var(--muted);
+                            text-transform:uppercase;letter-spacing:.04em;
+                            margin-bottom:2px;">{{ vb_label }}</div>
+                <div id="wy-amb-{{seance.id}}-{{ vb_field }}"
+                     contenteditable="true"
+                     class="table-wysiwyg"
+                     style="font-size:13px;padding:4px 6px;width:100%;min-height:24px;
+                            border:1px solid var(--border);border-radius:5px;
+                            white-space:pre-wrap;word-break:break-word;">
+                  {{- (seance[vb_field] or "") | mdhtml | safe -}}
+                </div>
+                <input type="hidden" name="seance_{{seance.id}}_{{ vb_field }}"
+                       id="wy-amb-{{seance.id}}-{{ vb_field }}_hidden" form="form-suivi"
+                       value="{{ seance[vb_field] or '' }}">
               </div>
-              <input type="hidden" name="seance_{{seance.id}}_{{ vb_field }}"
-                     id="wy-amb-{{seance.id}}-{{ vb_field }}_hidden" form="form-suivi"
-                     value="{{ seance[vb_field] or '' }}">
               {% endfor %}
+              </div>
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
               <div id="wy-amb-{{seance.id}}-notes"
