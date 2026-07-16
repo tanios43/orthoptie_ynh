@@ -16,7 +16,7 @@
               display:flex;justify-content:center;align-items:center;gap:8px;">
     <div style="position:relative;width:100%;max-width:520px;">
       <input type="text" id="search-patients"
-             placeholder="🔍 Rechercher un patient (nom, prénom, date de naissance, commune…)"
+             placeholder="🔍 Rechercher un patient (nom, prénom, date de naissance…)"
              autofocus
              style="padding:9px 36px 9px 14px;border-radius:8px;
                     border:1px solid var(--border);font-size:14px;width:100%;">
@@ -43,7 +43,7 @@
     </thead>
     <tbody id="patients-tbody">
       {% for p in patients %}
-      <tr data-search="{{ p.nom|lower }} {{ p.prenom|lower }} {{ p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '' }} {{ p.commune|lower if p.commune else '' }} {{ p.telephone or '' }} {{ p.medecin_referent|lower if p.medecin_referent else '' }}">
+      <tr data-search="{{ p.nom|lower }} {{ p.prenom|lower }} {{ p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '' }} {{ p.telephone or '' }} {{ p.medecin_referent|lower if p.medecin_referent else '' }}">
         <td>
           <a href="{{ url_for('patient_detail', patient_id=p.id) }}">
             {{ p.nom }} {{ p.prenom }}
