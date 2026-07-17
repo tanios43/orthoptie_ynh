@@ -287,7 +287,9 @@
   <div id="bottom"></div>
   <div class="bottom-bar">
     <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button>
-    <button type="submit" name="action" value="ajouter_seance" class="btn btn-secondary">+ Ajouter une séance</button>
+    <button type="submit" name="action" value="ajouter_seance"
+            onclick="sessionStorage.setItem('scrollBottom','1')"
+            class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
     <button type="button" class="btn btn-secondary"
             onclick="ouvrirPopupOrdo('compte_rendu')">
@@ -473,14 +475,15 @@ function copierSeancePrecedente(idCible, idSource) {
 }
 
 
-// Scroll vers le bas si ancre #bottom
-if (window.location.hash === '#bottom') {
-  window.addEventListener('load', function() {
+// Scroll vers le bas après ajout séance
+document.addEventListener('DOMContentLoaded', function() {
+  if (sessionStorage.getItem('scrollBottom')) {
+    sessionStorage.removeItem('scrollBottom');
     setTimeout(function() {
       window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
-    }, 100);
-  });
-}
+    }, 150);
+  }
+});
 
 function supprimerSeance(url, msg) {
   if (!confirm(msg)) return;

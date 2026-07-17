@@ -396,14 +396,25 @@ function copierSeancePrecedente_vb(idCible, idSource) {
 }
 
 
-// Scroll vers le bas si ancre #bottom
-if (window.location.hash === '#bottom') {
-  window.addEventListener('load', function() {
+// Scroll vers le bas après ajout séance
+document.addEventListener('DOMContentLoaded', function() {
+  if (sessionStorage.getItem('scrollBottom')) {
+    sessionStorage.removeItem('scrollBottom');
     setTimeout(function() {
       window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
-    }, 100);
+    }, 150);
+  }
+});
+
+
+// Setter sessionStorage avant soumission "ajouter séance"
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('button[name="action"][value="ajouter_seance"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      sessionStorage.setItem('scrollBottom', '1');
+    });
   });
-}
+});
 
 function supprimerSeance(url, msg) {
   if (!confirm(msg)) return;
