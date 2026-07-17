@@ -452,15 +452,22 @@ function copierSeancePrecedente(idCible, idSource) {
 
   fields.forEach(field => {
     const val = src[field] || '';
-    // Champ hidden (WYSIWYG)
-    const hidden = document.getElementById(`wy-amb-${idCible}-${field}_hidden`);
-    if (hidden) hidden.value = val;
-    // Div contenteditable
-    const div = document.getElementById(`wy-amb-${idCible}-${field}`);
-    if (div) div.innerText = val;
-    // Input simple (av_od, av_og)
-    const input = document.querySelector(`input[name="seance_${idCible}_${field}"]`);
-    if (input && input.type !== 'hidden') input.value = val;
+
+    // Input simple (av_od, av_og) — texte brut
+    const input = document.querySelector(`input[name="seance_${idCible}_${field}"]:not([type="hidden"])`);
+    if (input) { input.value = val; return; }
+
+    // Champ WYSIWYG — copier le HTML du div source + la valeur markdown du hidden source
+    const srcDiv    = document.getElementById(`wy-amb-${idSource}-${field}`);
+    const cibleDiv  = document.getElementById(`wy-amb-${idCible}-${field}`);
+    const cibleHidden = document.getElementById(`wy-amb-${idCible}-${field}_hidden`);
+
+    if (cibleDiv && srcDiv) {
+      cibleDiv.innerHTML = srcDiv.innerHTML;
+    }
+    if (cibleHidden) {
+      cibleHidden.value = val;
+    }
   });
 }
 
