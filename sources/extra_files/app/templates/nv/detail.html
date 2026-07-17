@@ -383,6 +383,16 @@ function copierSeancePrecedente_nv(idCible, idSource) {
   });
 }
 
+
+// Scroll vers le bas si ancre #bottom
+if (window.location.hash === '#bottom') {
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+    }, 100);
+  });
+}
+
 function supprimerSeance(url, msg) {
   if (!confirm(msg)) return;
   const form = document.createElement('form');
