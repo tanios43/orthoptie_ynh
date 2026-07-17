@@ -1839,7 +1839,7 @@ def suivi_amblyopie_detail(suivi_id):
             cab = get_current_cabinet()
             if not cab:
                 flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
-                return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
+                return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id) + '#bottom')
             next_num = max((se.numero for se in s.seances), default=0) + 1
             db.session.add(SeanceAmblyopie(
                 suivi_id=s.id, numero=next_num,
@@ -2249,7 +2249,7 @@ def suivi_bv_detail(suivi_id):
             cab = get_current_cabinet()
             if not cab:
                 flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
-                return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id))
+                return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id) + '#bottom')
             next_num = max((se.numero for se in s.seances), default=0) + 1
             db.session.add(SeanceBV(suivi_id=s.id, numero=next_num,
                 praticien_id=current_user.id, cabinet_id=cab.id,
@@ -2452,7 +2452,7 @@ def suivi_nv_detail(suivi_id):
             cab = get_current_cabinet()
             if not cab:
                 flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
-                return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id))
+                return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id) + '#bottom')
             next_num = max((se.numero for se in s.seances), default=0) + 1
             db.session.add(SeanceNV(suivi_id=s.id, numero=next_num,
                 praticien_id=current_user.id, cabinet_id=cab.id,
@@ -2676,7 +2676,7 @@ def suivi_vb_detail(suivi_id):
             cab = get_current_cabinet()
             if not cab:
                 flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
-                return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id))
+                return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id) + '#bottom')
             next_num = max((se.numero for se in s.seances), default=0) + 1
             db.session.add(SeanceVB(suivi_id=s.id, numero=next_num,
                 praticien_id=current_user.id, cabinet_id=cab.id,
