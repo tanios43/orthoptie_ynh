@@ -363,16 +363,16 @@
 
 
 // Données séances pour copie vb
-const SEANCES_DATA_VB = {{
+const SEANCES_DATA_VB = {
   {% for seance in suivi.seances %}
-  {{ seance.id }}: {{
+  {{ seance.id }}: {
     fusion: {{ seance.fusion | tojson }},
     accommodation: {{ seance.accommodation | tojson }},
     stereogrammes: {{ seance.stereogrammes | tojson }},
     notes: {{ seance.notes | tojson }},
-  }},
+  },
   {% endfor %}
-}};
+};
 
 function copierSeancePrecedente_vb(idCible, idSource) {
   const src = SEANCES_DATA_VB[idSource];
@@ -383,12 +383,12 @@ function copierSeancePrecedente_vb(idCible, idSource) {
   fields.forEach(field => {
     const val = src[field] || '';
     if (simpleFields.includes(field)) {
-      const input = document.querySelector(`input[name="seance_${{idCible}}_${{field}}"]:not([type="hidden"])`);
+      const input = document.querySelector(`input[name="seance_${idCible}_${field}"]:not([type="hidden"])`);
       if (input) { input.value = val; return; }
     }
-    const srcDiv = document.getElementById(`wy-vb-${{idSource}}-${{field}}`);
-    const cibleDiv = document.getElementById(`wy-vb-${{idCible}}-${{field}}`);
-    const cibleHidden = document.getElementById(`wy-vb-${{idCible}}-${{field}}_hidden`);
+    const srcDiv = document.getElementById(`wy-vb-${idSource}-${field}`);
+    const cibleDiv = document.getElementById(`wy-vb-${idCible}-${field}`);
+    const cibleHidden = document.getElementById(`wy-vb-${idCible}-${field}_hidden`);
     if (cibleDiv && srcDiv) cibleDiv.innerHTML = srcDiv.innerHTML;
     if (cibleHidden) cibleHidden.value = val;
   });

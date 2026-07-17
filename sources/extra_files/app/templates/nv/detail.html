@@ -352,15 +352,15 @@
 
 
 // Données séances pour copie nv
-const SEANCES_DATA_NV = {{
+const SEANCES_DATA_NV = {
   {% for seance in suivi.seances %}
-  {{ seance.id }}: {{
+  {{ seance.id }}: {
     vb_acco_omot: {{ seance.vb_acco_omot | tojson }},
     neurovisuel: {{ seance.neurovisuel | tojson }},
     notes: {{ seance.notes | tojson }},
-  }},
+  },
   {% endfor %}
-}};
+};
 
 function copierSeancePrecedente_nv(idCible, idSource) {
   const src = SEANCES_DATA_NV[idSource];
@@ -371,12 +371,12 @@ function copierSeancePrecedente_nv(idCible, idSource) {
   fields.forEach(field => {
     const val = src[field] || '';
     if (simpleFields.includes(field)) {
-      const input = document.querySelector(`input[name="seance_${{idCible}}_${{field}}"]:not([type="hidden"])`);
+      const input = document.querySelector(`input[name="seance_${idCible}_${field}"]:not([type="hidden"])`);
       if (input) { input.value = val; return; }
     }
-    const srcDiv = document.getElementById(`wy-nv-${{idSource}}-${{field}}`);
-    const cibleDiv = document.getElementById(`wy-nv-${{idCible}}-${{field}}`);
-    const cibleHidden = document.getElementById(`wy-nv-${{idCible}}-${{field}}_hidden`);
+    const srcDiv = document.getElementById(`wy-nv-${idSource}-${field}`);
+    const cibleDiv = document.getElementById(`wy-nv-${idCible}-${field}`);
+    const cibleHidden = document.getElementById(`wy-nv-${idCible}-${field}_hidden`);
     if (cibleDiv && srcDiv) cibleDiv.innerHTML = srcDiv.innerHTML;
     if (cibleHidden) cibleHidden.value = val;
   });
