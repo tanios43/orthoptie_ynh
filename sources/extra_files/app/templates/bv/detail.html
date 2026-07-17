@@ -270,6 +270,13 @@
                              background:none;border:1px solid #FFAAAA;color:#C53030;
                              cursor:pointer;width:100%;">🗑 Supprimer</button>
               {% endif %}
+              {% if loop.last and not loop.first %}
+              <button type="button"
+                      onclick="copierSeancePrecedente_bv({{ seance.id }}, {{ loop.previtem.id }})"
+                      style="font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;
+                             background:none;border:1px solid var(--accent);color:var(--accent);
+                             cursor:pointer;width:100%;">⎘ Copier précédente</button>
+              {% endif %}
             </td>
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;min-width:120px;">
               {% set prat = seance.praticien or current_user %}
@@ -359,6 +366,41 @@
 </form>
 
 <script>
+
+
+// Données séances pour copie bv
+const SEANCES_DATA_BV = {{
+  {% for seance in suivi.seances %}
+  {{ seance.id }}: {{
+    acuite: {{ seance.acuite | tojson }},
+    av_od: {{ seance.av_od | tojson }},
+    av_og: {{ seance.av_og | tojson }},
+    av_notes: {{ seance.av_notes | tojson }},
+    exercices: {{ seance.exercices | tojson }},
+    notes: {{ seance.notes | tojson }},
+  }},
+  {% endfor %}
+}};
+
+function copierSeancePrecedente_bv(idCible, idSource) {
+  const src = SEANCES_DATA_BV[idSource];
+  if (!src) return;
+  if (!confirm('Copier les données de la séance précédente dans cette séance ?')) return;
+  const fields = ['acuite', 'av_od', 'av_og', 'av_notes', 'exercices', 'notes'];
+  const simpleFields = ['av_od', 'av_og'];
+  fields.forEach(field => {
+    const val = src[field] || '';
+    if (simpleFields.includes(field)) {
+      const input = document.querySelector(`input[name="seance_${{idCible}}_${{field}}"]:not([type="hidden"])`);
+      if (input) { input.value = val; return; }
+    }
+    const srcDiv = document.getElementById(`wy-bv-${{idSource}}-${{field}}`);
+    const cibleDiv = document.getElementById(`wy-bv-${{idCible}}-${{field}}`);
+    const cibleHidden = document.getElementById(`wy-bv-${{idCible}}-${{field}}_hidden`);
+    if (cibleDiv && srcDiv) cibleDiv.innerHTML = srcDiv.innerHTML;
+    if (cibleHidden) cibleHidden.value = val;
+  });
+}
 
 function supprimerSeance(url, msg) {
   if (!confirm(msg)) return;
