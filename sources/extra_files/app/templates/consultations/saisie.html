@@ -2632,7 +2632,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('form-bilan').addEventListener('focusin', e => {
     const el = e.target;
-    if (!['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) return;
+    const isField = ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)
+                 || el.getAttribute('contenteditable') === 'true';
+    if (!isField) return;
     if (!lastInteractionWasKeyboard) return;
     setTimeout(() => {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
