@@ -336,7 +336,7 @@
   <div id="bottom"></div>
   <div class="bottom-bar">
     <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button>
-    <button type="submit" name="action" value="ajouter_seance" class="btn btn-secondary">+ Ajouter une séance</button>
+    <button type="submit" name="action" value="ajouter_seance" onclick="return verifierCabinetEtAjouter(this)" class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
     <a href="{{ url_for('patient_detail', patient_id=suivi.patient_id) }}"
        class="btn btn-secondary" style="margin-left:auto;">← Retour patient</a>
