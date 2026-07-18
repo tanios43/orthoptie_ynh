@@ -288,7 +288,7 @@
   <div class="bottom-bar">
     <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button>
     <button type="submit" name="action" value="ajouter_seance"
-            onclick="sessionStorage.setItem('scrollBottom','1')"
+            onclick="return verifierCabinetEtAjouter(this)"
             class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
     <button type="button" class="btn btn-secondary"
@@ -474,6 +474,17 @@ function copierSeancePrecedente(idCible, idSource) {
   });
 }
 
+
+const CABINET_SELECTIONNE = {{ (current_cabinet is not none) | tojson }};
+
+function verifierCabinetEtAjouter(btn) {
+  if (!CABINET_SELECTIONNE) {
+    alert('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.');
+    return false;
+  }
+  sessionStorage.setItem('scrollBottom', '1');
+  return true;
+}
 
 // Scroll vers le bas après ajout séance
 document.addEventListener('DOMContentLoaded', function() {

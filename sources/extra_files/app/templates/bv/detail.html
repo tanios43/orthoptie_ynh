@@ -415,6 +415,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+const CABINET_SELECTIONNE = {{ (current_cabinet is not none) | tojson }};
+
+function verifierCabinetEtAjouter(btn) {
+  if (!CABINET_SELECTIONNE) {
+    alert('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.');
+    return false;
+  }
+  sessionStorage.setItem('scrollBottom', '1');
+  return true;
+}
+
 // Setter sessionStorage avant soumission "ajouter séance"
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('button[name="action"][value="ajouter_seance"]').forEach(btn => {

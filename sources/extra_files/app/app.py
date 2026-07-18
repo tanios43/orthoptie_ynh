@@ -1854,7 +1854,7 @@ def suivi_amblyopie_detail(suivi_id):
         return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
     log_acces('lecture_suivi_amblyopie', patient_id=s.patient_id)
     praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
-    return render_template('amblyopie/detail.html', suivi=s, praticiens=praticiens)
+    return render_template('amblyopie/detail.html', suivi=s, praticiens=praticiens, current_cabinet=get_current_cabinet())
 
 
 @app.route('/suivi-amblyopie/<int:suivi_id>/ordonnance/<type_ordo>')
@@ -2264,7 +2264,7 @@ def suivi_bv_detail(suivi_id):
     dernier_bilan = Consultation.query.filter_by(patient_id=s.patient_id)\
         .order_by(Consultation.date_consult.desc()).first()
     sections, _ = get_sections()
-    return render_template('bv/detail.html', suivi=s, praticiens=praticiens,
+    return render_template('bv/detail.html', suivi=s, praticiens=praticiens, current_cabinet=get_current_cabinet(),
                            dernier_bilan=dernier_bilan, sections_def=sections)
 
 
@@ -2468,7 +2468,7 @@ def suivi_nv_detail(suivi_id):
         .filter_by(patient_id=s.patient_id)\
         .order_by(Consultation.date_consult.desc()).first()
     sections, _ = get_sections()
-    return render_template('nv/detail.html', suivi=s, praticiens=praticiens,
+    return render_template('nv/detail.html', suivi=s, praticiens=praticiens, current_cabinet=get_current_cabinet(),
                            dernier_bilan=dernier_bilan, sections_def=sections)
 
 
@@ -2692,7 +2692,7 @@ def suivi_vb_detail(suivi_id):
         .filter_by(patient_id=s.patient_id)\
         .order_by(Consultation.date_consult.desc()).first()
     sections, _ = get_sections()
-    return render_template('vb/detail.html', suivi=s, praticiens=praticiens,
+    return render_template('vb/detail.html', suivi=s, praticiens=praticiens, current_cabinet=get_current_cabinet(),
                            dernier_bilan=dernier_bilan, sections_def=sections)
 
 
