@@ -1381,10 +1381,47 @@ def login():
                 flash('🔒 Votre mot de passe ne respecte pas la politique de sécurité. '
                       'Veuillez le modifier avant de continuer.', 'warning')
                 return redirect(url_for('profil'))
+            # Rediriger vers le choix de cabinet si pas encore sélectionné
+            cabinets = [pc.cabinet for pc in p.cabinets]
+            if cabinets and not session.get('cabinet_id'):
+                session['must_choose_cabinet'] = True
+                return redirect(url_for('choisir_cabinet'))
             return redirect(url_for('index'))
         _record_attempt(ip)
         flash('Identifiants ou mot de passe incorrects.', 'danger')
     return render_template('login.html')
+
+
+@app.route('/choisir-cabinet', methods=['GET', 'POST'])
+@login_required
+def choisir_cabinet():
+    """Page de sélection de cabinet après connexion."""
+    cabinets = [pc.cabinet for pc in current_user.cabinets]
+    if request.method == 'POST':
+        cab_id = request.form.get('cabinet_id', type=int)
+        if cab_id:
+            session['cabinet_id'] = cab_id
+            session.pop('must_choose_cabinet', None)
+        return redirect(url_for('index'))
+    # Si un seul cabinet, le sélectionner automatiquement
+    if len(cabinets) == 1:
+        session['cabinet_id'] = cabinets[0].id
+        session.pop('must_choose_cabinet', None)
+        return redirect(url_for('index'))
+    return render_template('choisir_cabinet.html', cabinets=cabinets)
+
+
+@app.before_request
+def check_cabinet_choice():
+    """Bloque la navigation si le cabinet n'a pas encore été choisi."""
+    if not current_user.is_authenticated:
+        return
+    if not session.get('must_choose_cabinet'):
+        return
+    allowed = {'choisir_cabinet', 'logout', 'static'}
+    if request.endpoint in allowed:
+        return
+    return redirect(url_for('choisir_cabinet'))
 
 
 @app.before_request
