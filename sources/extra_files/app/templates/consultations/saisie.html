@@ -592,7 +592,7 @@
         <input type="file" id="fichiers-input" name="fichiers[]"
                multiple accept="image/*,.pdf,.doc,.docx"
                style="display:none"
-               onchange="ajouterFichiersAInput(this.files);this.value=''">
+               onchange="previewFichiers(this.files)">
 
         {# Prévisualisation avant envoi #}
         <div id="preview-zone" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;"></div>
@@ -1855,23 +1855,40 @@ function dropFichierSection(event, idx, champName) {
   }
   const files = event.dataTransfer.files;
   if (!files || !files.length) return;
-  // Trouver l'input file correspondant et lui affecter les fichiers via DataTransfer
   const input = drop ? drop.querySelector('input[type="file"]') : null;
   if (!input) return;
-  // Créer un nouveau DataTransfer pour assigner les fichiers à l'input
   const dt = new DataTransfer();
-  // Ajouter les fichiers déjà dans l'input
-  if (input.files) {
+  if (input._allFiles) {
+    input._allFiles.forEach(f => dt.items.add(f));
+  } else if (input.files) {
     Array.from(input.files).forEach(f => dt.items.add(f));
   }
-  // Ajouter les nouveaux fichiers droppés
-  Array.from(files).forEach(f => dt.items.add(f));
+  Array.from(files).forEach(f => {
+    if (!Array.from(dt.files).some(e => e.name === f.name && e.size === f.size)) {
+      dt.items.add(f);
+    }
+  });
   input.files = dt.files;
-  // Déclencher la preview
+  input._allFiles = Array.from(dt.files);
   previewFichierSection(input, idx, champName);
 }
 
 function previewFichierSection(input, idx, champName) {
+  // Accumuler les fichiers (ne pas remplacer les existants)
+  const dt = new DataTransfer();
+  // Récupérer les fichiers déjà dans cet input via data attribute
+  if (input._allFiles) {
+    input._allFiles.forEach(f => dt.items.add(f));
+  }
+  Array.from(input.files).forEach(f => {
+    // Éviter les doublons par nom
+    if (!Array.from(dt.files).some(e => e.name === f.name && e.size === f.size)) {
+      dt.items.add(f);
+    }
+  });
+  input.files = dt.files;
+  input._allFiles = Array.from(dt.files);
+
   const zone = document.getElementById('pj-sec-preview-' + idx + '-' + champName);
   if (!zone) return;
   zone.querySelectorAll('[data-temp]').forEach(el => el.remove());
@@ -2396,8 +2413,7 @@ function previewFichiers(files) {
   const zone = document.getElementById('preview-zone');
   if (!zone) return;
   zone.innerHTML = '';
-  const input = document.getElementById('fichiers-input');
-  Array.from(input.files).forEach(file => {
+  Array.from(files).forEach(file => {
     const objUrl = URL.createObjectURL(file);
     const wrap = document.createElement('a');
     wrap.href   = objUrl;
@@ -2415,20 +2431,19 @@ function previewFichiers(files) {
       wrap.style.cssText += 'display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:120px;height:90px;';
       wrap.innerHTML = '<span style="font-size:28px;">' + (isWord ? '📝' : '📄') + '</span>';
     }
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.name = 'fichiers_titres[]';
-    inp.placeholder = file.name;
-    inp.title = 'Titre du fichier (optionnel)';
-    inp.style.cssText = 'width:120px;font-size:10px;padding:3px 6px;border:none;border-top:1px solid var(--border);background:var(--surface);color:var(--text);outline:none;display:block;box-sizing:border-box;';
-    inp.addEventListener('click', e => e.preventDefault());
-    wrap.appendChild(inp);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.name = 'fichiers_titres[]';
+    input.placeholder = file.name;
+    input.title = 'Titre du fichier (optionnel)';
+    input.style.cssText = 'width:120px;font-size:10px;padding:3px 6px;border:none;border-top:1px solid var(--border);background:var(--surface);color:var(--text);outline:none;display:block;box-sizing:border-box;';
+    input.addEventListener('click', e => e.preventDefault());
+    wrap.appendChild(input);
     zone.appendChild(wrap);
   });
 }
 
 function ajouterFichiersAInput(nouvellesFichiers) {
-  // Accumule les nouveaux fichiers avec les existants
   const input = document.getElementById('fichiers-input');
   const dt = new DataTransfer();
   Array.from(input.files).forEach(f => dt.items.add(f));
@@ -2441,7 +2456,12 @@ function handleDrop(e) {
   e.preventDefault();
   const dz = document.getElementById('drop-zone');
   if (dz) { dz.style.borderColor = 'var(--border)'; dz.style.background = ''; }
-  ajouterFichiersAInput(e.dataTransfer.files);
+  const input = document.getElementById('fichiers-input');
+  if (!input) return;
+  const transfer = new DataTransfer();
+  Array.from(e.dataTransfer.files).forEach(f => transfer.items.add(f));
+  input.files = transfer.files;
+  previewFichiers(input.files);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
