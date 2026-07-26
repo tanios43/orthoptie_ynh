@@ -592,7 +592,7 @@
         <input type="file" id="fichiers-input" name="fichiers[]"
                multiple accept="image/*,.pdf,.doc,.docx"
                style="display:none"
-               onchange="previewFichiers(this.files)">
+               onchange="ajouterFichiersAInput(this.files);this.value=''">
 
         {# Prévisualisation avant envoi #}
         <div id="preview-zone" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;"></div>
@@ -2396,7 +2396,8 @@ function previewFichiers(files) {
   const zone = document.getElementById('preview-zone');
   if (!zone) return;
   zone.innerHTML = '';
-  Array.from(files).forEach(file => {
+  const input = document.getElementById('fichiers-input');
+  Array.from(input.files).forEach(file => {
     const objUrl = URL.createObjectURL(file);
     const wrap = document.createElement('a');
     wrap.href   = objUrl;
@@ -2414,29 +2415,33 @@ function previewFichiers(files) {
       wrap.style.cssText += 'display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:120px;height:90px;';
       wrap.innerHTML = '<span style="font-size:28px;">' + (isWord ? '📝' : '📄') + '</span>';
     }
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.name = 'fichiers_titres[]';
-    input.placeholder = file.name;
-    input.title = 'Titre du fichier (optionnel)';
-    input.style.cssText = 'width:120px;font-size:10px;padding:3px 6px;border:none;border-top:1px solid var(--border);background:var(--surface);color:var(--text);outline:none;display:block;box-sizing:border-box;';
-    // Empêcher le clic sur le champ titre d'ouvrir le fichier
-    input.addEventListener('click', e => e.preventDefault());
-    wrap.appendChild(input);
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.name = 'fichiers_titres[]';
+    inp.placeholder = file.name;
+    inp.title = 'Titre du fichier (optionnel)';
+    inp.style.cssText = 'width:120px;font-size:10px;padding:3px 6px;border:none;border-top:1px solid var(--border);background:var(--surface);color:var(--text);outline:none;display:block;box-sizing:border-box;';
+    inp.addEventListener('click', e => e.preventDefault());
+    wrap.appendChild(inp);
     zone.appendChild(wrap);
   });
+}
+
+function ajouterFichiersAInput(nouvellesFichiers) {
+  // Accumule les nouveaux fichiers avec les existants
+  const input = document.getElementById('fichiers-input');
+  const dt = new DataTransfer();
+  Array.from(input.files).forEach(f => dt.items.add(f));
+  Array.from(nouvellesFichiers).forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  previewFichiers(input.files);
 }
 
 function handleDrop(e) {
   e.preventDefault();
   const dz = document.getElementById('drop-zone');
   if (dz) { dz.style.borderColor = 'var(--border)'; dz.style.background = ''; }
-  const input = document.getElementById('fichiers-input');
-  if (!input) return;
-  const transfer = new DataTransfer();
-  Array.from(e.dataTransfer.files).forEach(f => transfer.items.add(f));
-  input.files = transfer.files;
-  previewFichiers(input.files);
+  ajouterFichiersAInput(e.dataTransfer.files);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
