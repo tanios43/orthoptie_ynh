@@ -87,14 +87,18 @@
 </div>
 
 <script>
+function normalize(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 function filterPatients() {
-  const q = document.getElementById('search-patients').value.toLowerCase().trim();
+  const q = normalize(document.getElementById('search-patients').value.trim());
   const rows = document.querySelectorAll('#patients-tbody tr');
   const clearBtn = document.getElementById('search-clear');
   let visible = 0;
 
   rows.forEach(row => {
-    const data = (row.dataset.search || '').toLowerCase();
+    const data = normalize(row.dataset.search || '');
     const match = !q || data.includes(q);
     row.style.display = match ? '' : 'none';
     if (match) visible++;
