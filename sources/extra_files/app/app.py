@@ -1053,17 +1053,6 @@ class CategorieSection(db.Model):
     ordre  = db.Column(db.Integer, default=99)
 
 
-class JournalAcces(db.Model):
-    __tablename__ = 'journal_acces'
-    id              = db.Column(db.Integer, primary_key=True)
-    praticien_id    = db.Column(db.Integer, db.ForeignKey('praticien.id'))
-    patient_id      = db.Column(db.Integer, db.ForeignKey('patient.id'))
-    consultation_id = db.Column(db.Integer, db.ForeignKey('consultation.id'))
-    action          = db.Column(db.String(50), nullable=False)
-    ip_address      = db.Column(db.String(45))
-    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
-
-
 class Cabinet(db.Model):
     """Cabinet médical — coordonnées."""
     __tablename__ = 'cabinet'
