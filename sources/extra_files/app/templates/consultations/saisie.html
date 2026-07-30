@@ -606,17 +606,10 @@
 
 {# Barre de sauvegarde fixe en bas — toujours visible quelle que soit la hauteur du contenu #}
 <div id="bottom-bar" class="bottom-bar with-col">
-  {% if consultation %}
   <button type="button" id="btn-save" onclick="sauvegarderSansRecharger()"
           class="btn btn-primary" style="flex-shrink:0;">
     Enregistrer
   </button>
-  {% else %}
-  <button form="form-bilan" type="submit" name="stay" value="1"
-          class="btn btn-primary" style="flex-shrink:0;">
-    Enregistrer
-  </button>
-  {% endif %}
   <button form="form-bilan" type="submit" name="stay" value="0"
           class="btn btn-secondary" style="flex-shrink:0;">
     Enregistrer et quitter
@@ -635,12 +628,46 @@ const CAT_COLORS = {{ get_categories() | tojson }};
 const SECTIONS_ORDRE = {{ sections_ordre | tojson }};
 const MODELES = {{ modeles_json | tojson }};
 const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
+const PATIENT_ID = {{ patient.id }};
+const CREER_AJAX_URL = "{{ url_for('consultation_creer_ajax', patient_id=patient.id) }}";
 
 // ── Sauvegarde automatique ──────────────────────────────────────
 {% if consultation %}
+let _consultationId = {{ consultation.id }};
+let _autosaveUrl = "{{ url_for('consultation_autosave', consultation_id=consultation.id) }}";
+{% else %}
+let _consultationId = null;
+let _autosaveUrl = null;
+{% endif %}
 let _autosaveTimer = null;
 let _autosaveDirty = false;
-const AUTOSAVE_URL = "{{ url_for('consultation_autosave', consultation_id=consultation.id) }}";
+
+// Création silencieuse du bilan au premier ajout de section
+async function _ensureConsultationExists() {
+  if (_consultationId) return true;
+  try {
+    const r = await fetch(CREER_AJAX_URL, { method: 'POST' });
+    const j = await r.json();
+    if (j.ok) {
+      _consultationId = j.consultation_id;
+      _autosaveUrl = j.autosave_url;
+      // Mettre à jour le bouton Enregistrer pour utiliser AJAX
+      const btnSave = document.getElementById('btn-save');
+      if (btnSave) {
+        btnSave.type = 'button';
+        btnSave.onclick = sauvegarderSansRecharger;
+        btnSave.form = null;
+      }
+      // Mettre à jour les champs cachés du formulaire
+      const form = document.getElementById('form-bilan');
+      if (form) form.action = j.autosave_url.replace('/autosave', '/modifier');
+      return true;
+    }
+  } catch(e) { console.error('Erreur création bilan:', e); }
+  return false;
+}
+
+const AUTOSAVE_URL = _autosaveUrl;
 const _hint = document.getElementById('save-hint');
 
 function _setHint(msg, color) {
@@ -656,6 +683,8 @@ function _syncWysiwyg() {
 }
 
 async function sauvegarderSansRecharger() {
+  const ok = await _ensureConsultationExists();
+  if (!ok) { alert('Erreur lors de la création du bilan.'); return; }
   _autosaveDirty = true;
   const btn = document.getElementById('btn-save');
   if (btn) { btn.disabled = true; btn.textContent = '💾 Enregistrement…'; }
@@ -665,14 +694,14 @@ async function sauvegarderSansRecharger() {
 
 async function doAutosave() {
   if (!_autosaveDirty) return;
+  if (!_autosaveUrl) return;
   _setHint('💾 Sauvegarde…', 'var(--accent)');
   _syncWysiwyg();
-  // Attendre que les listeners WYSIWYG aient mis à jour les hidden inputs
   await new Promise(r => setTimeout(r, 100));
   const form = document.getElementById('form-bilan');
   const data = new FormData(form);
   try {
-    const r = await fetch(AUTOSAVE_URL, { method: 'POST', body: data });
+    const r = await fetch(_autosaveUrl, { method: 'POST', body: data });
     const j = await r.json();
     if (j.ok) {
       _autosaveDirty = false;
@@ -698,7 +727,6 @@ document.getElementById('form-bilan').addEventListener('change', _scheduleSave);
 
 // Sauvegarde toutes les 2 minutes quoi qu'il arrive
 setInterval(() => { if (_autosaveDirty) doAutosave(); }, 120000);
-{% endif %}
 
 // ── Compteur global d'index de section ──
 let sectionIndex = 0;
@@ -1412,7 +1440,8 @@ function refractionHTML(idx, type, donnees) {
 // ── Ajouter une section (depuis le panneau) ──
 // Les sections respectent toujours l'ordre canonique de SECTIONS_ORDRE,
 // quelle que soit l'ordre d'ajout.
-function ajouterSection(type, label) {
+async function ajouterSection(type, label) {
+  await _ensureConsultationExists();
   const hint = document.getElementById('empty-hint');
   if (hint) hint.remove();
 
@@ -1846,7 +1875,8 @@ function filtrerSections(q) {
 }
 
 // ── Modèles de bilan ──────────────────────────────────────────────────
-function appliquerModele(modeleId) {
+async function appliquerModele(modeleId) {
+  await _ensureConsultationExists();
   // Mettre à jour le style des boutons
   document.querySelectorAll('[id^="btn-modele-"]').forEach(btn => {
     btn.style.border = '1px solid var(--border)';

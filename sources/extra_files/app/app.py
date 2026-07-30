@@ -4393,6 +4393,21 @@ def recherche():
 # CONSULTATIONS
 # ============================================================
 
+@app.route('/patient/<int:patient_id>/consultation/creer-ajax', methods=['POST'])
+@login_required
+def consultation_creer_ajax(patient_id):
+    """Crée un bilan vide en AJAX et retourne son ID."""
+    from flask import jsonify
+    cab = get_current_cabinet()
+    c = Consultation(patient_id=patient_id, praticien_id=current_user.id,
+                     date_consult=date.today(),
+                     cabinet_id=cab.id if cab else None)
+    db.session.add(c); db.session.commit()
+    log_action('creation_consultation', patient_id=patient_id, consultation_id=c.id)
+    autosave_url = url_for('consultation_autosave', consultation_id=c.id)
+    return jsonify({'ok': True, 'consultation_id': c.id, 'autosave_url': autosave_url})
+
+
 @app.route('/patient/<int:patient_id>/consultation/nouvelle', methods=['GET', 'POST'])
 @login_required
 def consultation_nouvelle(patient_id):
