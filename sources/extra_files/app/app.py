@@ -4421,6 +4421,8 @@ def consultation_nouvelle(patient_id):
                 return redirect(url_for('consultation_modifier', consultation_id=c.id) +
                                 redirect_after.replace('modifier', ''))
             return redirect(redirect_after)
+        if request.form.get('stay') == '1':
+            return redirect(url_for('consultation_modifier', consultation_id=c.id))
         return redirect(url_for('consultation_detail', consultation_id=c.id))
     autres = Consultation.query.filter(Consultation.patient_id == patient_id)\
                                .order_by(Consultation.date_consult.asc()).all()
@@ -4530,6 +4532,8 @@ def consultation_modifier(consultation_id):
         redirect_after = request.form.get('redirect_after', '').strip()
         if redirect_after:
             return redirect(redirect_after)
+        if request.form.get('stay') == '1':
+            return redirect(url_for('consultation_modifier', consultation_id=c.id))
         return redirect(url_for('consultation_detail', consultation_id=c.id))
     autres = Consultation.query.filter(Consultation.patient_id == c.patient_id,
                                        Consultation.id != c.id)\
