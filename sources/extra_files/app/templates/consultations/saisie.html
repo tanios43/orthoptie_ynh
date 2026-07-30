@@ -606,7 +606,7 @@
 
 {# Barre de sauvegarde fixe en bas — toujours visible quelle que soit la hauteur du contenu #}
 <div id="bottom-bar" class="bottom-bar with-col">
-  <button {% if consultation %}type="button" id="btn-save" onclick="sauvegarderSansRecharger()"{% else %}form="form-bilan" type="submit" name="stay" value="1"{% endif %}
+  <button type="button" id="btn-save" onclick="sauvegarderSansRecharger()"
           class="btn btn-primary" style="flex-shrink:0;">
     Enregistrer
   </button>
@@ -630,7 +630,6 @@ const MODELES = {{ modeles_json | tojson }};
 const CONSULTATION_ID = {{ consultation.id if consultation else 'null' }};
 
 // ── Sauvegarde automatique ──────────────────────────────────────
-{% if consultation %}
 let _autosaveTimer = null;
 let _autosaveDirty = false;
 const AUTOSAVE_URL = "{{ url_for('consultation_autosave', consultation_id=consultation.id) }}";
@@ -691,7 +690,6 @@ document.getElementById('form-bilan').addEventListener('change', _scheduleSave);
 
 // Sauvegarde toutes les 2 minutes quoi qu'il arrive
 setInterval(() => { if (_autosaveDirty) doAutosave(); }, 120000);
-{% endif %}
 
 // ── Compteur global d'index de section ──
 let sectionIndex = 0;

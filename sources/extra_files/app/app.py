@@ -4399,6 +4399,20 @@ def consultation_nouvelle(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     sections_all, _ = get_sections()
     sections_filtrees, ordre_filtres = get_sections(current_user.id)
+    cab = get_current_cabinet()
+
+    if request.method == 'GET':
+        # Créer immédiatement un bilan vide pour obtenir un consultation_id
+        if not cab:
+            flash('⚠️ Veuillez sélectionner un cabinet avant de créer un bilan.', 'warning')
+            return redirect(url_for('patient_detail', patient_id=patient_id))
+        c = Consultation(patient_id=patient_id, praticien_id=current_user.id,
+                         date_consult=date.today(),
+                         cabinet_id=cab.id if cab else None)
+        db.session.add(c); db.session.commit()
+        log_action('creation_consultation', patient_id=patient_id, consultation_id=c.id)
+        return redirect(url_for('consultation_modifier', consultation_id=c.id))
+
     if request.method == 'POST':
         cab = get_current_cabinet()
         c = Consultation(patient_id=patient_id, praticien_id=current_user.id,
@@ -4416,7 +4430,6 @@ def consultation_nouvelle(patient_id):
         flash('Bilan enregistré.', 'success')
         redirect_after = request.form.get('redirect_after', '').strip()
         if redirect_after:
-            # redirect_after peut être relatif ex: 'modifier#section-courrier'
             if redirect_after.startswith('modifier'):
                 return redirect(url_for('consultation_modifier', consultation_id=c.id) +
                                 redirect_after.replace('modifier', ''))
@@ -4424,23 +4437,6 @@ def consultation_nouvelle(patient_id):
         if request.form.get('stay') == '1':
             return redirect(url_for('consultation_modifier', consultation_id=c.id))
         return redirect(url_for('consultation_detail', consultation_id=c.id))
-    autres = Consultation.query.filter(Consultation.patient_id == patient_id)\
-                               .order_by(Consultation.date_consult.asc()).all()
-    modeles = ModeleBilan.query.filter(
-        db.or_(ModeleBilan.praticien_id == None,
-               ModeleBilan.praticien_id == current_user.id),
-        ModeleBilan.actif == True
-    ).order_by(ModeleBilan.nom).all()
-    if not get_current_cabinet():
-        flash('⚠️ Veuillez sélectionner un cabinet avant de créer un bilan.', 'warning')
-        return redirect(url_for('patient_detail', patient_id=patient_id))
-    return render_template('consultations/saisie.html', patient=patient, consultation=None,
-                           sections_dispo=sections_filtrees, sections_ordre=ordre_filtres,
-                           autres_consultations=autres, sections_def=sections_all,
-                           sections_all=sections_all,
-                           modeles=modeles, modeles_json=[m.to_dict() for m in modeles])
-
-
 @app.route('/consultation/<int:consultation_id>')
 @login_required
 def consultation_detail(consultation_id):
