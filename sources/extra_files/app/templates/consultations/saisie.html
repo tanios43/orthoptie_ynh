@@ -606,7 +606,7 @@
 
 {# Barre de sauvegarde fixe en bas — toujours visible quelle que soit la hauteur du contenu #}
 <div id="bottom-bar" class="bottom-bar with-col">
-  <button form="form-bilan" type="submit" name="stay" value="1"
+  <button {% if consultation %}type="button" id="btn-save" onclick="sauvegarderSansRecharger()"{% else %}form="form-bilan" type="submit" name="stay" value="1"{% endif %}
           class="btn btn-primary" style="flex-shrink:0;">
     Enregistrer
   </button>
@@ -646,6 +646,14 @@ function _syncWysiwyg() {
     div.dispatchEvent(new Event('input', { bubbles: true }));
   });
   // Petit délai pour laisser le temps aux listeners de s'exécuter
+}
+
+async function sauvegarderSansRecharger() {
+  _autosaveDirty = true;
+  const btn = document.getElementById('btn-save');
+  if (btn) { btn.disabled = true; btn.textContent = '💾 Enregistrement…'; }
+  await doAutosave();
+  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; }
 }
 
 async function doAutosave() {
