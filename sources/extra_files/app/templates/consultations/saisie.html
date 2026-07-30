@@ -636,16 +636,19 @@ function _setHint(msg, color) {
 }
 
 function _syncWysiwyg() {
+  // Déclenche le listener input existant qui fait html→markdown dans le hidden
   document.querySelectorAll('[contenteditable="true"]').forEach(div => {
-    const hidden = document.getElementById(div.id + '_hidden');
-    if (hidden) hidden.value = div.innerText;
+    div.dispatchEvent(new Event('input', { bubbles: true }));
   });
+  // Petit délai pour laisser le temps aux listeners de s'exécuter
 }
 
 async function doAutosave() {
   if (!_autosaveDirty) return;
   _setHint('💾 Sauvegarde…', 'var(--accent)');
   _syncWysiwyg();
+  // Attendre que les listeners WYSIWYG aient mis à jour les hidden inputs
+  await new Promise(r => setTimeout(r, 100));
   const form = document.getElementById('form-bilan');
   const data = new FormData(form);
   try {
