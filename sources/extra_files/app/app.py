@@ -4462,6 +4462,30 @@ def consultation_detail(consultation_id):
                            num_bilan=num_bilan, total_bilans=total_bilans)
 
 
+@app.route('/consultation/<int:consultation_id>/autosave', methods=['POST'])
+@login_required
+def consultation_autosave(consultation_id):
+    """Sauvegarde automatique silencieuse du bilan (AJAX, sans redirect)."""
+    from flask import jsonify
+    c = Consultation.query.get_or_404(consultation_id)
+    sections_all, _ = get_sections()
+    try:
+        c.date_consult = _parse_date(request.form.get('date_consult')) or c.date_consult
+        c.motif = request.form.get('motif')
+        c.medecin_prescripteur = request.form.get('medecin_prescripteur','').strip() or None
+        c.classe_profession     = request.form.get('classe_profession','').strip() or None
+        c.type_classe_profession = request.form.get('type_classe_profession','Classe') if request.form.get('classe_profession','').strip() else None
+        for s in list(c.sections): db.session.delete(s)
+        db.session.flush()
+        _save_sections(c.id, request.form, sections_all, request.files)
+        db.session.commit()
+        from datetime import datetime
+        return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 @app.route('/consultation/<int:consultation_id>/modifier', methods=['GET', 'POST'])
 @login_required
 def consultation_modifier(consultation_id):
