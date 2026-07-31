@@ -1876,8 +1876,8 @@ def suivi_amblyopie_detail(suivi_id):
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
             return redirect(url_for('suivi_amblyopie_generer', suivi_id=suivi_id))
-        if request.form.get('stay') == '1':
-            return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
+        if request.form.get('quit') == '1':
+            return redirect(url_for('patient_detail', patient_id=s.patient_id))
         if action == 'ajouter_seance':
             return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id) + '#bottom')
         return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
@@ -2380,8 +2380,8 @@ def suivi_bv_detail(suivi_id):
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
             return redirect(url_for('suivi_bv_generer', suivi_id=suivi_id))
-        if request.form.get('stay') == '1':
-            return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id))
+        if request.form.get('quit') == '1':
+            return redirect(url_for('patient_detail', patient_id=s.patient_id))
         if action == 'ajouter_seance':
             return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id) + '#bottom')
         return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id))
@@ -2577,8 +2577,8 @@ def suivi_nv_detail(suivi_id):
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
             return redirect(url_for('suivi_nv_generer', suivi_id=suivi_id))
-        if request.form.get('stay') == '1':
-            return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id))
+        if request.form.get('quit') == '1':
+            return redirect(url_for('patient_detail', patient_id=s.patient_id))
         if action == 'ajouter_seance':
             return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id) + '#bottom')
         return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id))
@@ -2794,8 +2794,8 @@ def suivi_vb_detail(suivi_id):
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
             return redirect(url_for('suivi_vb_generer', suivi_id=suivi_id))
-        if request.form.get('stay') == '1':
-            return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id))
+        if request.form.get('quit') == '1':
+            return redirect(url_for('patient_detail', patient_id=s.patient_id))
         if action == 'ajouter_seance':
             return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id) + '#bottom')
         return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id))

@@ -336,10 +336,8 @@
   <div id="bottom"></div>
   <div class="bottom-bar">
     <button type="button" id="btn-save-suivi" onclick="sauvegarderSuiviAjax()" class="btn btn-primary">Enregistrer</button>
-    <button type="submit" name="action" value="save" name2="stay" form="form-suivi-nv"
-            onclick="document.getElementById('input-stay').value='0'"
+    <button type="submit" name="quit" value="1" form="form-suivi-nv"
             class="btn btn-primary" style="background:#534AB7;">Enregistrer et quitter</button>
-    <input type="hidden" id="input-stay" name="stay" value="1" form="form-suivi-nv">
     <span id="save-hint-suivi" style="font-size:12px;color:var(--muted);margin-left:4px;"></span>
     <button type="submit" name="action" value="ajouter_seance" onclick="return verifierCabinetEtAjouter(this)" class="btn btn-secondary">+ Ajouter une séance</button>
     <button type="submit" name="action" value="generer" class="btn btn-secondary">📄 Générer Word</button>
