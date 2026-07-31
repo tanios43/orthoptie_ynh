@@ -1821,62 +1821,65 @@ def suivi_amblyopie_nouveau(patient_id):
                            prefill=prefill, dernier_bilan=dernier_bilan)
 
 
+def _save_suivi_amblyopie_data(s, form):
+    """Sauvegarde les données d'un suivi amblyopie depuis un form."""
+    s.date_bilan   = _parse_date(form.get('date_bilan')) or s.date_bilan
+    s.lunettes_od  = form.get('lunettes_od','').strip()
+    s.lunettes_og  = form.get('lunettes_og','').strip()
+    s.av_od_init   = form.get('av_od_init','').strip()
+    s.av_og_init   = form.get('av_og_init','').strip()
+    s.ophthalmo    = form.get('ophthalmo','').strip()
+    s.stereo       = form.get('stereo','').strip()
+    s.ese          = form.get('ese','').strip()
+    s.versions     = form.get('versions','').strip()
+    s.date_cs      = _parse_date(form.get('date_cs'))
+    s.traitement   = form.get('traitement','').strip()
+    s.prochain_rdv = form.get('prochain_rdv','').strip()
+    s.notes        = form.get('notes','').strip()
+    s.updated_at   = datetime.utcnow()
+    for seance in s.seances:
+        pfx = f'seance_{seance.id}_'
+        seance.date_seance  = _parse_date(form.get(pfx+'date'))
+        seance.occlusion    = form.get(pfx+'occlusion','').strip()
+        seance.av_od        = form.get(pfx+'av_od','').strip()
+        seance.av_og        = form.get(pfx+'av_og','').strip()
+        seance.av_notes     = form.get(pfx+'av_notes','').strip()
+        seance.ese          = form.get(pfx+'ese','').strip()
+        seance.vb_ese_vl    = form.get(pfx+'vb_ese_vl','').strip()
+        seance.vb_ese_vp    = form.get(pfx+'vb_ese_vp','').strip()
+        seance.vb_motilite  = form.get(pfx+'vb_motilite','').strip()
+        seance.vb_ppc       = form.get(pfx+'vb_ppc','').strip()
+        seance.vb_stereo    = form.get(pfx+'vb_stereo','').strip()
+        seance.vb_libre     = form.get(pfx+'vb_libre','').strip()
+        seance.notes        = form.get(pfx+'notes','').strip()
+        prat_id = form.get(pfx+'praticien_id','').strip()
+        seance.praticien_id = int(prat_id) if prat_id else seance.praticien_id
+
+
 @app.route('/suivi-amblyopie/<int:suivi_id>', methods=['GET', 'POST'])
 @login_required
 def suivi_amblyopie_detail(suivi_id):
     s = SuiviAmblyopie.query.get_or_404(suivi_id)
     if request.method == 'POST':
         action = request.form.get('action', 'save')
-        # Mise à jour en-tête
-        s.date_bilan   = _parse_date(request.form.get('date_bilan')) or s.date_bilan
-        s.lunettes_od  = request.form.get('lunettes_od','').strip()
-        s.lunettes_og  = request.form.get('lunettes_og','').strip()
-        s.av_od_init   = request.form.get('av_od_init','').strip()
-        s.av_og_init   = request.form.get('av_og_init','').strip()
-        s.ophthalmo    = request.form.get('ophthalmo','').strip()
-        s.stereo       = request.form.get('stereo','').strip()
-        s.ese          = request.form.get('ese','').strip()
-        s.versions     = request.form.get('versions','').strip()
-        s.date_cs      = _parse_date(request.form.get('date_cs'))
-        s.traitement   = request.form.get('traitement','').strip()
-        s.prochain_rdv = request.form.get('prochain_rdv','').strip()
-        s.notes        = request.form.get('notes','').strip()
-        s.updated_at   = datetime.utcnow()
-        # Mise à jour séances
-        for seance in s.seances:
-            pfx = f'seance_{seance.id}_'
-            seance.date_seance  = _parse_date(request.form.get(pfx+'date'))
-            seance.occlusion    = request.form.get(pfx+'occlusion','').strip()
-            seance.av_od        = request.form.get(pfx+'av_od','').strip()
-            seance.av_og        = request.form.get(pfx+'av_og','').strip()
-            seance.av_notes     = request.form.get(pfx+'av_notes','').strip()
-            seance.ese          = request.form.get(pfx+'ese','').strip()
-            seance.vb_ese_vl    = request.form.get(pfx+'vb_ese_vl','').strip()
-            seance.vb_ese_vp    = request.form.get(pfx+'vb_ese_vp','').strip()
-            seance.vb_motilite  = request.form.get(pfx+'vb_motilite','').strip()
-            seance.vb_ppc       = request.form.get(pfx+'vb_ppc','').strip()
-            seance.vb_stereo    = request.form.get(pfx+'vb_stereo','').strip()
-            seance.vb_libre     = request.form.get(pfx+'vb_libre','').strip()
-            seance.notes        = request.form.get(pfx+'notes','').strip()
-            prat_id = request.form.get(pfx+'praticien_id','').strip()
-            seance.praticien_id = int(prat_id) if prat_id else None
-        # Ajouter une séance
+        _save_suivi_amblyopie_data(s, request.form)
         if action == 'ajouter_seance':
             cab = get_current_cabinet()
             if not cab:
                 flash('⚠️ Veuillez sélectionner un cabinet avant d\'ajouter une séance.', 'warning')
                 return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id) + '#bottom')
             next_num = max((se.numero for se in s.seances), default=0) + 1
-            db.session.add(SeanceAmblyopie(
-                suivi_id=s.id, numero=next_num,
-                praticien_id=current_user.id,
-                cabinet_id=cab.id,
-                date_seance=datetime.utcnow().date()
-            ))
+            db.session.add(SeanceAmblyopie(suivi_id=s.id, numero=next_num,
+                praticien_id=current_user.id, cabinet_id=cab.id,
+                date_seance=datetime.utcnow().date()))
         db.session.commit()
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
             return redirect(url_for('suivi_amblyopie_generer', suivi_id=suivi_id))
+        if request.form.get('stay') == '1':
+            return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
+        if action == 'ajouter_seance':
+            return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id) + '#bottom')
         return redirect(url_for('suivi_amblyopie_detail', suivi_id=suivi_id))
     log_acces('lecture_suivi_amblyopie', patient_id=s.patient_id)
     praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
@@ -2043,6 +2046,66 @@ def seance_vb_supprimer(seance_id):
     db.session.commit()
     flash('Séance supprimée.', 'success')
     return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id))
+
+
+@app.route('/suivi-amblyopie/<int:suivi_id>/autosave', methods=['POST'])
+@login_required
+def suivi_amblyopie_autosave(suivi_id):
+    from flask import jsonify
+    s = SuiviAmblyopie.query.get_or_404(suivi_id)
+    try:
+        _save_suivi_amblyopie_data(s, request.form)
+        db.session.commit()
+        from datetime import datetime
+        return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/suivi-bv/<int:suivi_id>/autosave', methods=['POST'])
+@login_required
+def suivi_bv_autosave(suivi_id):
+    from flask import jsonify
+    s = SuiviBV.query.get_or_404(suivi_id)
+    try:
+        _save_suivi_bv_data(s, request.form)
+        db.session.commit()
+        from datetime import datetime
+        return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/suivi-nv/<int:suivi_id>/autosave', methods=['POST'])
+@login_required
+def suivi_nv_autosave(suivi_id):
+    from flask import jsonify
+    s = SuiviNV.query.get_or_404(suivi_id)
+    try:
+        _save_suivi_nv_data(s, request.form)
+        db.session.commit()
+        from datetime import datetime
+        return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/suivi-vb/<int:suivi_id>/autosave', methods=['POST'])
+@login_required
+def suivi_vb_autosave(suivi_id):
+    from flask import jsonify
+    s = SuiviVB.query.get_or_404(suivi_id)
+    try:
+        _save_suivi_vb_data(s, request.form)
+        db.session.commit()
+        from datetime import datetime
+        return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 
 @app.route('/suivi-amblyopie/<int:suivi_id>/supprimer', methods=['POST'])
@@ -2252,25 +2315,58 @@ def suivi_bv_nouveau(patient_id):
                            dernier_bilan=dernier_bilan, sections_def=sections)
 
 
+def _save_suivi_bv_data(s, form):
+    s.date_debut = _parse_date(form.get('date_debut')) or s.date_debut
+    s.notes      = form.get('notes','').strip()
+    s.updated_at = datetime.utcnow()
+    for seance in s.seances:
+        pfx = f'seance_{seance.id}_'
+        seance.date_seance  = _parse_date(form.get(pfx+'date'))
+        seance.av_od        = form.get(pfx+'av_od','').strip()
+        seance.av_og        = form.get(pfx+'av_og','').strip()
+        seance.av_notes     = form.get(pfx+'av_notes','').strip()
+        seance.exercices    = form.get(pfx+'exercices','').strip()
+        seance.notes        = form.get(pfx+'notes','').strip()
+        prat_id = form.get(pfx+'praticien_id','').strip()
+        seance.praticien_id = int(prat_id) if prat_id else seance.praticien_id
+
+
+def _save_suivi_nv_data(s, form):
+    s.date_debut = _parse_date(form.get('date_debut')) or s.date_debut
+    s.notes      = form.get('notes','').strip()
+    s.updated_at = datetime.utcnow()
+    for seance in s.seances:
+        pfx = f'seance_{seance.id}_'
+        seance.date_seance  = _parse_date(form.get(pfx+'date'))
+        seance.vb_acco_omot = form.get(pfx+'vb_acco_omot','').strip()
+        seance.neurovisuel  = form.get(pfx+'neurovisuel','').strip()
+        seance.notes        = form.get(pfx+'notes','').strip()
+        prat_id = form.get(pfx+'praticien_id','').strip()
+        seance.praticien_id = int(prat_id) if prat_id else seance.praticien_id
+
+
+def _save_suivi_vb_data(s, form):
+    s.date_debut = _parse_date(form.get('date_debut')) or s.date_debut
+    s.notes      = form.get('notes','').strip()
+    s.updated_at = datetime.utcnow()
+    for seance in s.seances:
+        pfx = f'seance_{seance.id}_'
+        seance.date_seance   = _parse_date(form.get(pfx+'date'))
+        seance.fusion        = form.get(pfx+'fusion','').strip()
+        seance.accommodation = form.get(pfx+'accommodation','').strip()
+        seance.stereogrammes = form.get(pfx+'stereogrammes','').strip()
+        seance.notes         = form.get(pfx+'notes','').strip()
+        prat_id = form.get(pfx+'praticien_id','').strip()
+        seance.praticien_id  = int(prat_id) if prat_id else seance.praticien_id
+
+
 @app.route('/suivi-bv/<int:suivi_id>', methods=['GET', 'POST'])
 @login_required
 def suivi_bv_detail(suivi_id):
     s = SuiviBV.query.get_or_404(suivi_id)
     if request.method == 'POST':
         action = request.form.get('action', 'save')
-        s.date_debut = _parse_date(request.form.get('date_debut')) or s.date_debut
-        s.notes      = request.form.get('notes','').strip()
-        s.updated_at = datetime.utcnow()
-        for seance in s.seances:
-            pfx = f'seance_{seance.id}_'
-            seance.date_seance  = _parse_date(request.form.get(pfx+'date'))
-            seance.av_od        = request.form.get(pfx+'av_od','').strip()
-            seance.av_og        = request.form.get(pfx+'av_og','').strip()
-            seance.av_notes     = request.form.get(pfx+'av_notes','').strip()
-            seance.exercices    = request.form.get(pfx+'exercices','').strip()
-            seance.notes        = request.form.get(pfx+'notes','').strip()
-            prat_id = request.form.get(pfx+'praticien_id','').strip()
-            seance.praticien_id = int(prat_id) if prat_id else None
+        _save_suivi_bv_data(s, request.form)
         if action == 'ajouter_seance':
             cab = get_current_cabinet()
             if not cab:
@@ -2284,6 +2380,10 @@ def suivi_bv_detail(suivi_id):
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
             return redirect(url_for('suivi_bv_generer', suivi_id=suivi_id))
+        if request.form.get('stay') == '1':
+            return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id))
+        if action == 'ajouter_seance':
+            return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id) + '#bottom')
         return redirect(url_for('suivi_bv_detail', suivi_id=suivi_id))
     log_acces('lecture_suivi_bv', patient_id=s.patient_id)
     praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
@@ -2463,17 +2563,7 @@ def suivi_nv_detail(suivi_id):
     s = SuiviNV.query.get_or_404(suivi_id)
     if request.method == 'POST':
         action = request.form.get('action', 'save')
-        s.date_debut = _parse_date(request.form.get('date_debut')) or s.date_debut
-        s.notes      = request.form.get('notes','').strip()
-        s.updated_at = datetime.utcnow()
-        for seance in s.seances:
-            pfx = f'seance_{seance.id}_'
-            seance.date_seance  = _parse_date(request.form.get(pfx+'date'))
-            seance.vb_acco_omot = request.form.get(pfx+'vb_acco_omot','').strip()
-            seance.neurovisuel  = request.form.get(pfx+'neurovisuel','').strip()
-            seance.notes        = request.form.get(pfx+'notes','').strip()
-            prat_id = request.form.get(pfx+'praticien_id','').strip()
-            seance.praticien_id = int(prat_id) if prat_id else None
+        _save_suivi_nv_data(s, request.form)
         if action == 'ajouter_seance':
             cab = get_current_cabinet()
             if not cab:
@@ -2487,6 +2577,10 @@ def suivi_nv_detail(suivi_id):
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
             return redirect(url_for('suivi_nv_generer', suivi_id=suivi_id))
+        if request.form.get('stay') == '1':
+            return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id))
+        if action == 'ajouter_seance':
+            return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id) + '#bottom')
         return redirect(url_for('suivi_nv_detail', suivi_id=suivi_id))
     log_acces('lecture_suivi_nv', patient_id=s.patient_id)
     praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
@@ -2686,18 +2780,7 @@ def suivi_vb_detail(suivi_id):
     s = SuiviVB.query.get_or_404(suivi_id)
     if request.method == 'POST':
         action = request.form.get('action', 'save')
-        s.date_debut = _parse_date(request.form.get('date_debut')) or s.date_debut
-        s.notes      = request.form.get('notes','').strip()
-        s.updated_at = datetime.utcnow()
-        for seance in s.seances:
-            pfx = f'seance_{seance.id}_'
-            seance.date_seance   = _parse_date(request.form.get(pfx+'date'))
-            seance.fusion        = request.form.get(pfx+'fusion','').strip()
-            seance.accommodation = request.form.get(pfx+'accommodation','').strip()
-            seance.stereogrammes = request.form.get(pfx+'stereogrammes','').strip()
-            seance.notes         = request.form.get(pfx+'notes','').strip()
-            prat_id = request.form.get(pfx+'praticien_id','').strip()
-            seance.praticien_id  = int(prat_id) if prat_id else None
+        _save_suivi_vb_data(s, request.form)
         if action == 'ajouter_seance':
             cab = get_current_cabinet()
             if not cab:
@@ -2711,6 +2794,10 @@ def suivi_vb_detail(suivi_id):
         flash('Suivi enregistré.', 'success')
         if action == 'generer':
             return redirect(url_for('suivi_vb_generer', suivi_id=suivi_id))
+        if request.form.get('stay') == '1':
+            return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id))
+        if action == 'ajouter_seance':
+            return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id) + '#bottom')
         return redirect(url_for('suivi_vb_detail', suivi_id=suivi_id))
     log_acces('lecture_suivi_vb', patient_id=s.patient_id)
     praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()

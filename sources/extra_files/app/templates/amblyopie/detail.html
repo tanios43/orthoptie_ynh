@@ -286,7 +286,10 @@
   {# Barre d'actions fixe en bas #}
   <div id="bottom"></div>
   <div class="bottom-bar">
-    <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button>
+    <button type="button" id="btn-save-suivi" onclick="sauvegarderSuiviAjax()" class="btn btn-primary">Enregistrer</button>
+    <button type="submit" name="action" value="save" form="form-suivi"
+            class="btn btn-primary" style="background:#534AB7;">Enregistrer et quitter</button>
+    <span id="save-hint-suivi" style="font-size:12px;color:var(--muted);margin-left:4px;"></span>
     <button type="submit" name="action" value="ajouter_seance"
             onclick="return verifierCabinetEtAjouter(this)"
             class="btn btn-secondary">+ Ajouter une séance</button>
@@ -652,5 +655,48 @@ document.getElementById('form-suivi')?.addEventListener('submit', function() {
     if (hidden) hidden.value = htmlToMd(div.innerHTML);
   });
 });
+
+// ── Sauvegarde automatique suivi ─────────────────────────────────
+const SUIVI_AUTOSAVE_URL = "{{ url_for('suivi_amblyopie_autosave', suivi_id=suivi.id) }}";
+let _suiviSaveDirty = false;
+let _suiviSaveTimer = null;
+
+function _setSuiviHint(msg, color) {
+  const h = document.getElementById('save-hint-suivi');
+  if (h) { h.textContent = msg; h.style.color = color || 'var(--muted)'; }
+}
+
+async function sauvegarderSuiviAjax() {
+  _suiviSaveDirty = true;
+  const btn = document.getElementById('btn-save-suivi');
+  if (btn) { btn.disabled = true; btn.textContent = '💾 Enregistrement…'; }
+  _setSuiviHint('💾 Sauvegarde…', 'var(--accent)');
+  const form = document.getElementById('form-suivi');
+  const data = new FormData(form);
+  try {
+    const r = await fetch(SUIVI_AUTOSAVE_URL, { method: 'POST', body: data });
+    const j = await r.json();
+    if (j.ok) {
+      _suiviSaveDirty = false;
+      _setSuiviHint('✓ Sauvegardé à ' + j.at, '#0F6E56');
+      setTimeout(() => _setSuiviHint(''), 4000);
+    } else {
+      _setSuiviHint('⚠ Échec', '#C53030');
+    }
+  } catch(e) {
+    _setSuiviHint('⚠ Échec', '#C53030');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; }
+}
+
+function _scheduleSuiviSave() {
+  _suiviSaveDirty = true;
+  clearTimeout(_suiviSaveTimer);
+  _suiviSaveTimer = setTimeout(() => { if (_suiviSaveDirty) sauvegarderSuiviAjax(); }, 30000);
+}
+
+document.getElementById('form-suivi').addEventListener('input', _scheduleSuiviSave);
+document.getElementById('form-suivi').addEventListener('change', _scheduleSuiviSave);
+setInterval(() => { if (_suiviSaveDirty) sauvegarderSuiviAjax(); }, 120000);
 </script>
 {% endblock %}
