@@ -548,7 +548,7 @@ function ouvrirPopupOrdo(type) {
   document.getElementById(modal).style.display = 'flex';
 }
 
-function genOrdo(type) {
+async function genOrdo(type) {
   sessionStorage.setItem('pendingOrdo', JSON.stringify({type,
     oeil: document.getElementById('occ-oeil')?.value || '',
     heures: document.getElementById('occ-heures')?.value || '',
@@ -565,13 +565,14 @@ function genOrdo(type) {
   document.getElementById('modal-occlusion').style.display = 'none';
   document.getElementById('modal-ryser').style.display = 'none';
   document.getElementById('modal-compte_rendu').style.display = 'none';
-  document.querySelectorAll('[contenteditable="true"]').forEach(div => {
-    const hidden = document.getElementById(div.id + '_hidden');
-    if (hidden) hidden.value = div.innerText;
-  });
-  setTimeout(() => {
-    document.querySelector('button[name="action"][value="save"]').click();
-  }, 100);
+  // Sauvegarder d'abord via AJAX, puis ouvrir l'ordonnance
+  await sauvegarderSuiviAjax();
+  const pending = sessionStorage.getItem('pendingOrdo');
+  if (pending) {
+    sessionStorage.removeItem('pendingOrdo');
+    const d = JSON.parse(pending);
+    _ouvrir_ordo(d.type, d);
+  }
 }
 
 function _ouvrir_ordo(type, data) {
@@ -604,31 +605,6 @@ function _ouvrir_ordo(type, data) {
   }
   window.location.href = url;
 }
-
-// Après rechargement, relancer l'ordo si en attente
-document.addEventListener('DOMContentLoaded', function() {
-  const pending = sessionStorage.getItem('pendingOrdo');
-  if (pending) {
-    sessionStorage.removeItem('pendingOrdo');
-    const d = JSON.parse(pending);
-    if (d.type === 'occlusion') {
-      if (document.getElementById('occ-oeil')) document.getElementById('occ-oeil').value = d.oeil;
-      if (document.getElementById('occ-heures')) document.getElementById('occ-heures').value = d.heures;
-      if (document.getElementById('occ-duree')) document.getElementById('occ-duree').value = d.duree;
-      if (document.getElementById('occ-notes')) document.getElementById('occ-notes').value = d.notes;
-      if (document.getElementById('occ-seance')) document.getElementById('occ-seance').value = d.occ_seance || '';
-    } else if (d.type === 'ryser') {
-      if (document.getElementById('ryser-od-num')) document.getElementById('ryser-od-num').value = d.od_num;
-      if (document.getElementById('ryser-od-av')) document.getElementById('ryser-od-av').value = d.od_av;
-      if (document.getElementById('ryser-og-num')) document.getElementById('ryser-og-num').value = d.og_num;
-      if (document.getElementById('ryser-og-av')) document.getElementById('ryser-og-av').value = d.og_av;
-      if (document.getElementById('ryser-seance')) document.getElementById('ryser-seance').value = d.ryser_seance || '';
-    } else {
-      if (document.getElementById('cr-seance')) document.getElementById('cr-seance').value = d.cr_seance || '';
-    }
-    _ouvrir_ordo(d.type, d);
-  }
-});
 
 function toggle(id) {
   const body = document.getElementById('sec-' + id);
