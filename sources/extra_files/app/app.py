@@ -1826,7 +1826,17 @@ def suivi_amblyopie_nouveau(patient_id):
 def _generer_hess_weiss_png(og_json, od_json, taille=300):
     """Génère deux images PNG séparées OG et OD du schéma Hess-Weiss avec PIL."""
     import json, io
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw, ImageFont
+    import os as _os
+
+    # Charger une police TTF disponible
+    _FONT_PATH = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
+    try:
+        font_title = ImageFont.truetype(_FONT_PATH, 28)
+        font_label = ImageFont.truetype(_FONT_PATH, 22)
+    except:
+        font_title = ImageFont.load_default()
+        font_label = ImageFont.load_default()
 
     # Supersampling x3 pour antialiasing
     SCALE = 3
@@ -1867,7 +1877,7 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
         img = Image.new('RGB', (W, W + PAD), 'white')
         draw = ImageDraw.Draw(img)
 
-        draw.text((W//2 - 12*SCALE, 2*SCALE), title, fill='#333333')
+        draw.text((W//2 - 20*SCALE, 4*SCALE), title, fill='#333333', font=font_title)
 
         ox, oy = 0, PAD
 
@@ -1890,7 +1900,7 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
         for i, (rx, ry) in enumerate(REF):
             r = 4*SCALE
             draw.ellipse([(ox+rx-r, oy+ry-r),(ox+rx+r, oy+ry+r)], outline='#C05020', fill='white', width=LWR)
-            draw.text((ox+rx+LOFF[i][0]*SCALE, oy+ry+LOFF[i][1]*SCALE), str(LABELS[i]), fill='#C05020')
+            draw.text((ox+rx+LOFF[i][0]*SCALE, oy+ry+LOFF[i][1]*SCALE), str(LABELS[i]), fill='#C05020', font=font_label)
 
         # Tracé mobile
         ep = [edge(p) for p in pts]
