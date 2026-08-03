@@ -58,38 +58,68 @@
 {% block extra_head %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const W=300, CELLS=24, CS=W/CELLS, BIG=4;
-  const FRACS=[[12/24,12/24],[12/24,4/24],[20/24,4/24],[20/24,12/24],[20/24,20/24],[12/24,20/24],[4/24,20/24],[4/24,12/24],[4/24,4/24]];
-  const LABELS=[0,1,2,3,4,5,6,7,8];
-  const LOFF=[{dx:7,dy:4},{dx:4,dy:-9},{dx:10,dy:-9},{dx:10,dy:4},{dx:10,dy:11},{dx:4,dy:13},{dx:-13,dy:11},{dx:-13,dy:4},{dx:-13,dy:-9}];
-  const refPts=()=>FRACS.map(([fx,fy])=>({x:fx*W,y:fy*W}));
+  var W=300, TOTAL=28, CS=W/TOTAL, THRESH=CS*1.2;
+  var COL=[6*CS,14*CS,22*CS], ROW=[6*CS,14*CS,22*CS];
+  var REF=[
+    {x:COL[1],y:ROW[1]},{x:COL[1],y:ROW[0]},{x:COL[2],y:ROW[0]},
+    {x:COL[2],y:ROW[1]},{x:COL[2],y:ROW[2]},{x:COL[1],y:ROW[2]},
+    {x:COL[0],y:ROW[2]},{x:COL[0],y:ROW[1]},{x:COL[0],y:ROW[0]}
+  ];
+  var LBL=[0,1,2,3,4,5,6,7,8];
+  var LOFF=[{dx:6,dy:-8},{dx:4,dy:-10},{dx:8,dy:-10},{dx:8,dy:-8},{dx:8,dy:14},{dx:4,dy:14},{dx:-14,dy:14},{dx:-14,dy:-8},{dx:-14,dy:-10}];
+  var SEGS=[[8,1,'H'],[1,2,'H'],[2,3,'V'],[3,4,'V'],[4,5,'H'],[5,6,'H'],[6,7,'V'],[7,8,'V'],[7,0,'H'],[0,3,'H'],[1,0,'V'],[0,5,'V']];
 
   // Créer grille
-  const gc=document.createElement('canvas'); gc.width=W; gc.height=W;
-  const g=gc.getContext('2d');
-  g.fillStyle='#fff'; g.fillRect(0,0,W,W);
-  g.strokeStyle='#F0A070'; g.lineWidth=0.4;
-  for(let i=0;i<=CELLS;i++){if(i%BIG===0)continue;g.beginPath();g.moveTo(i*CS,0);g.lineTo(i*CS,W);g.stroke();g.beginPath();g.moveTo(0,i*CS);g.lineTo(W,i*CS);g.stroke();}
-  g.strokeStyle='#E07040'; g.lineWidth=1;
-  for(let i=0;i<=CELLS;i+=BIG){g.beginPath();g.moveTo(i*CS,0);g.lineTo(i*CS,W);g.stroke();g.beginPath();g.moveTo(0,i*CS);g.lineTo(W,i*CS);g.stroke();}
+  var gc=document.createElement('canvas');gc.width=W;gc.height=W;
+  var g=gc.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,W,W);
+  g.strokeStyle='#F5B090';g.lineWidth=0.4;
+  for(var i=0;i<=TOTAL;i++){g.beginPath();g.moveTo(i*CS,0);g.lineTo(i*CS,W);g.stroke();g.beginPath();g.moveTo(0,i*CS);g.lineTo(W,i*CS);g.stroke();}
+  var cx=REF[0].x,cy=REF[0].y,inn=4*CS;
+  g.strokeStyle='#C05020';g.lineWidth=1.5;g.setLineDash([]);
+  g.strokeRect(cx-inn,cy-inn,inn*2,inn*2);
+  var cont=[8,1,2,3,4,5,6,7,8];
+  g.beginPath();g.moveTo(REF[cont[0]].x,REF[cont[0]].y);
+  for(var j=1;j<cont.length;j++)g.lineTo(REF[cont[j]].x,REF[cont[j]].y);
+  g.stroke();
+  g.beginPath();g.moveTo(REF[7].x,REF[7].y);g.lineTo(REF[0].x,REF[0].y);g.lineTo(REF[3].x,REF[3].y);g.stroke();
+  g.beginPath();g.moveTo(REF[1].x,REF[1].y);g.lineTo(REF[0].x,REF[0].y);g.lineTo(REF[5].x,REF[5].y);g.stroke();
+  g.strokeStyle='#C05020';g.lineWidth=1.2;
+  REF.forEach(function(p){g.beginPath();g.arc(p.x,p.y,4,0,Math.PI*2);g.fillStyle='#fff';g.fill();g.stroke();});
+  g.fillStyle='#C05020';g.font='10px sans-serif';
+  REF.forEach(function(p,i){g.textAlign='left';g.fillText(LBL[i],p.x+LOFF[i].dx,p.y+LOFF[i].dy);});
 
-  document.querySelectorAll('canvas[data-pts]').forEach(c => {
-    const raw = c.dataset.pts;
-    let pts;
-    try { pts = JSON.parse(raw); if (!pts||pts.length!==9) throw 0; } catch(e) { pts = refPts(); }
-    const ctx = c.getContext('2d');
+  function edge(p){return{L:p.x<=THRESH,R:p.x>=W-THRESH,U:p.y<=THRESH,D:p.y>=W-THRESH};}
+  function vis(p){return{x:Math.max(5,Math.min(W-5,p.x)),y:Math.max(5,Math.min(W-5,p.y))};}
+  function arrow(ctx,x,y,dx,dy){
+    var HW=7,BACK=10,TIP=4,ax=-dy,ay=dx;
+    ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(x-dx*BACK,y-dy*BACK);ctx.lineTo(x+dx*TIP,y+dy*TIP);ctx.stroke();
+    ctx.fillStyle='#111';ctx.beginPath();
+    ctx.moveTo(x+dx*TIP,y+dy*TIP);
+    ctx.lineTo(x+dx*TIP-dx*HW+ax*HW*.65,y+dy*TIP-dy*HW+ay*HW*.65);
+    ctx.lineTo(x+dx*TIP-dx*HW-ax*HW*.65,y+dy*TIP-dy*HW-ay*HW*.65);
+    ctx.closePath();ctx.fill();
+  }
+
+  document.querySelectorAll('canvas[data-pts]').forEach(function(c) {
+    var raw=c.dataset.pts, pts;
+    try{pts=JSON.parse(raw);if(!pts||pts.length!==9)throw 0;}catch(e){pts=REF.map(function(p){return{x:p.x,y:p.y};});}
+    var ctx=c.getContext('2d');
     ctx.drawImage(gc,0,0);
-    ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.setLineDash([]);
-    const cont=[8,1,2,3,4,5,6,7,8];
-    ctx.beginPath(); ctx.moveTo(pts[cont[0]].x,pts[cont[0]].y);
-    for(let i=1;i<cont.length;i++) ctx.lineTo(pts[cont[i]].x,pts[cont[i]].y);
-    ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(pts[1].x,pts[1].y); ctx.lineTo(pts[0].x,pts[0].y); ctx.lineTo(pts[5].x,pts[5].y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(pts[7].x,pts[7].y); ctx.lineTo(pts[0].x,pts[0].y); ctx.lineTo(pts[3].x,pts[3].y); ctx.stroke();
-    pts.forEach((p,i)=>{
-      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(Math.PI/4); ctx.fillStyle='#111'; ctx.fillRect(-3,-3,6,6); ctx.restore();
-      ctx.fillStyle='#111'; ctx.font='bold 9px sans-serif'; ctx.textAlign='left';
-      ctx.fillText(LABELS[i],p.x+LOFF[i].dx,p.y+LOFF[i].dy);
+    var ep=pts.map(edge), vp=pts.map(vis);
+    ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.setLineDash([]);
+    SEGS.forEach(function(seg){
+      var a=seg[0],b=seg[1],dir=seg[2],ea=ep[a],eb=ep[b];
+      var sup=(dir==='V'&&((ea.L||ea.R)||(eb.L||eb.R)))||(dir==='H'&&((ea.U||ea.D)||(eb.U||eb.D)));
+      if(sup)return;
+      ctx.beginPath();ctx.moveTo(vp[a].x,vp[a].y);ctx.lineTo(vp[b].x,vp[b].y);ctx.stroke();
+    });
+    pts.forEach(function(p,i){
+      var e=ep[i],v=vp[i],drew=false;
+      if(e.R){arrow(ctx,v.x,v.y,1,0);drew=true;}else if(e.L){arrow(ctx,v.x,v.y,-1,0);drew=true;}
+      if(e.D){arrow(ctx,v.x,v.y,0,1);drew=true;}else if(e.U){arrow(ctx,v.x,v.y,0,-1);drew=true;}
+      if(!drew){ctx.save();ctx.translate(v.x,v.y);ctx.rotate(Math.PI/4);ctx.fillStyle='#111';ctx.fillRect(-3.5,-3.5,7,7);ctx.restore();}
     });
   });
 });
