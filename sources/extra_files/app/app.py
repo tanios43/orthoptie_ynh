@@ -1828,7 +1828,9 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
     import json, io
     from PIL import Image, ImageDraw
 
-    W = taille
+    # Supersampling x3 pour antialiasing
+    SCALE = 3
+    W = taille * SCALE
     TOTAL = 28
     CS = W / TOTAL
     COL = [6*CS, 14*CS, 22*CS]
@@ -1843,12 +1845,14 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
             [6,7,'V'],[7,8,'V'],[7,0,'H'],[0,3,'H'],[1,0,'V'],[0,5,'V']]
     LABELS = [0,1,2,3,4,5,6,7,8]
     LOFF = [(6,-8),(4,-10),(8,-10),(8,-8),(8,10),(4,10),(-12,10),(-12,-8),(-12,-10)]
+    LW = max(1, SCALE)      # épaisseur des traits
+    LWR = max(1, SCALE-1)   # épaisseur traits référence
 
     def parse(j):
         try:
             p = json.loads(j)
             if p and len(p) == 9:
-                return [(float(pt['x']), float(pt['y'])) for pt in p]
+                return [(float(pt['x'])*SCALE, float(pt['y'])*SCALE) for pt in p]
         except: pass
         return [(r[0], r[1]) for r in REF]
 
@@ -1859,14 +1863,13 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
         return (max(5, min(W-5, p[0])), max(5, min(W-5, p[1])))
 
     def make_schema_png(pts, title):
-        PAD = 20  # marge pour le titre
+        PAD = 20 * SCALE
         img = Image.new('RGB', (W, W + PAD), 'white')
         draw = ImageDraw.Draw(img)
 
-        # Titre
-        draw.text((W//2 - 12, 2), title, fill='#333333')
+        draw.text((W//2 - 12*SCALE, 2*SCALE), title, fill='#333333')
 
-        ox, oy = 0, PAD  # offset
+        ox, oy = 0, PAD
 
         # Grille fine
         for i in range(TOTAL+1):
@@ -1875,19 +1878,19 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
 
         # Carré intérieur
         cx, cy = REF[0]; inn = 4*CS
-        draw.rectangle([(ox+cx-inn, oy+cy-inn),(ox+cx+inn, oy+cy+inn)], outline='#C05020', width=2)
+        draw.rectangle([(ox+cx-inn, oy+cy-inn),(ox+cx+inn, oy+cy+inn)], outline='#C05020', width=LW*2)
 
         # Structure de référence
         cont = [8,1,2,3,4,5,6,7,8]
-        draw.line([(ox+REF[i][0], oy+REF[i][1]) for i in cont], fill='#C05020', width=2)
-        draw.line([(ox+REF[7][0],oy+REF[7][1]),(ox+REF[0][0],oy+REF[0][1]),(ox+REF[3][0],oy+REF[3][1])], fill='#C05020', width=2)
-        draw.line([(ox+REF[1][0],oy+REF[1][1]),(ox+REF[0][0],oy+REF[0][1]),(ox+REF[5][0],oy+REF[5][1])], fill='#C05020', width=2)
+        draw.line([(ox+REF[i][0], oy+REF[i][1]) for i in cont], fill='#C05020', width=LW*2)
+        draw.line([(ox+REF[7][0],oy+REF[7][1]),(ox+REF[0][0],oy+REF[0][1]),(ox+REF[3][0],oy+REF[3][1])], fill='#C05020', width=LW*2)
+        draw.line([(ox+REF[1][0],oy+REF[1][1]),(ox+REF[0][0],oy+REF[0][1]),(ox+REF[5][0],oy+REF[5][1])], fill='#C05020', width=LW*2)
 
         # Ronds de référence + labels
         for i, (rx, ry) in enumerate(REF):
-            r = 4
-            draw.ellipse([(ox+rx-r, oy+ry-r),(ox+rx+r, oy+ry+r)], outline='#C05020', fill='white', width=1)
-            draw.text((ox+rx+LOFF[i][0], oy+ry+LOFF[i][1]), str(LABELS[i]), fill='#C05020')
+            r = 4*SCALE
+            draw.ellipse([(ox+rx-r, oy+ry-r),(ox+rx+r, oy+ry+r)], outline='#C05020', fill='white', width=LWR)
+            draw.text((ox+rx+LOFF[i][0]*SCALE, oy+ry+LOFF[i][1]*SCALE), str(LABELS[i]), fill='#C05020')
 
         # Tracé mobile
         ep = [edge(p) for p in pts]
@@ -1897,37 +1900,39 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
             eL,eR,eU,eD = ep[a]; efL,efR,efU,efD = ep[b]
             sup = (d=='V' and ((eL or eR) or (efL or efR))) or (d=='H' and ((eU or eD) or (efU or efD)))
             if sup: continue
-            draw.line([(ox+vp[a][0], oy+vp[a][1]),(ox+vp[b][0], oy+vp[b][1])], fill='#111111', width=2)
+            draw.line([(ox+vp[a][0], oy+vp[a][1]),(ox+vp[b][0], oy+vp[b][1])], fill='#111111', width=LW*2)
 
         for i, (p, e, v) in enumerate(zip(pts, ep, vp)):
             eL,eR,eU,eD = e
             vx, vy = ox+v[0], oy+v[1]
+            aw, ab = 12*SCALE, 8*SCALE  # arrow width, back
             if eR:
-                draw.line([(vx-8,vy),(vx+12,vy)], fill='#111111', width=2)
-                draw.polygon([(vx+12,vy),(vx+6,vy-4),(vx+6,vy+4)], fill='#111111')
+                draw.line([(vx-ab,vy),(vx+aw,vy)], fill='#111111', width=LW*2)
+                draw.polygon([(vx+aw,vy),(vx+aw-6*SCALE,vy-4*SCALE),(vx+aw-6*SCALE,vy+4*SCALE)], fill='#111111')
             elif eL:
-                draw.line([(vx+8,vy),(vx-12,vy)], fill='#111111', width=2)
-                draw.polygon([(vx-12,vy),(vx-6,vy-4),(vx-6,vy+4)], fill='#111111')
+                draw.line([(vx+ab,vy),(vx-aw,vy)], fill='#111111', width=LW*2)
+                draw.polygon([(vx-aw,vy),(vx-aw+6*SCALE,vy-4*SCALE),(vx-aw+6*SCALE,vy+4*SCALE)], fill='#111111')
             if eD:
-                draw.line([(vx,vy-8),(vx,vy+12)], fill='#111111', width=2)
-                draw.polygon([(vx,vy+12),(vx-4,vy+6),(vx+4,vy+6)], fill='#111111')
+                draw.line([(vx,vy-ab),(vx,vy+aw)], fill='#111111', width=LW*2)
+                draw.polygon([(vx,vy+aw),(vx-4*SCALE,vy+aw-6*SCALE),(vx+4*SCALE,vy+aw-6*SCALE)], fill='#111111')
             elif eU:
-                draw.line([(vx,vy+8),(vx,vy-12)], fill='#111111', width=2)
-                draw.polygon([(vx,vy-12),(vx-4,vy-6),(vx+4,vy-6)], fill='#111111')
+                draw.line([(vx,vy+ab),(vx,vy-aw)], fill='#111111', width=LW*2)
+                draw.polygon([(vx,vy-aw),(vx-4*SCALE,vy-aw+6*SCALE),(vx+4*SCALE,vy-aw+6*SCALE)], fill='#111111')
             if not (eL or eR or eU or eD):
-                s = 4
+                s = 4*SCALE
                 draw.polygon([(vx,vy-s),(vx+s,vy),(vx,vy+s),(vx-s,vy)], fill='#111111')
 
+        # Redimensionner à la taille finale (downscale = antialiasing)
+        final = img.resize((taille, taille + 20), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format='PNG')
+        final.save(buf, format='PNG', dpi=(300, 300))
         buf.seek(0)
         return buf.read()
 
     og_pts = parse(og_json)
     od_pts = parse(od_json)
-    # Retourner un tuple (og_png, od_png)
     return make_schema_png(og_pts, 'O.G.'), make_schema_png(od_pts, 'O.D.')
-
+    TOTAL = 28
 
 
 
