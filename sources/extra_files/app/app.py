@@ -7604,8 +7604,8 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                         extra_files[f'word/media/{img_name}'] = png_data
                         rel_id = f'rIdHW{img_id}'
                         extra_rels[rel_id] = img_name
-                        img_cx = 8229600
-                        img_cy = 4572000
+                        img_cx = 9017280  # = 9000 dxa, même largeur que les tableaux du courrier
+                        img_cy = 2700000
                         try:
                             from PIL import Image as PILImage
                             import io as _io
