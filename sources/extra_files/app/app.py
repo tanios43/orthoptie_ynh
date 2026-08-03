@@ -7510,12 +7510,8 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                         import uuid as _uuid
                         og_bytes, od_bytes = valeur  # tuple (og_png, od_png)
 
-                        from PIL import Image as _PILImg
-                        import io as _io
-                        sample = _PILImg.open(_io.BytesIO(og_bytes))
-                        sw, sh = sample.size
-                        half_cx = 4000000
-                        half_cy = int(half_cx * sh / sw)
+                        half_cx = 2505456  # 2.74 inches en EMU
+                        half_cy = 2670048  # 2.92 inches en EMU
 
                         def _add_img(side, img_bytes):
                             img_id = str(_uuid.uuid4()).replace('-','')[:8]
