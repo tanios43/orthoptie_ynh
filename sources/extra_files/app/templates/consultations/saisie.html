@@ -729,7 +729,185 @@ document.getElementById('form-bilan').addEventListener('change', _scheduleSave);
 // Sauvegarde toutes les 2 minutes quoi qu'il arrive
 setInterval(() => { if (_autosaveDirty) doAutosave(); }, 120000);
 
-// ── Compteur global d'index de section ──
+// ── Hess-Weiss ──────────────────────────────────────────────────
+const HW_W = 300, HW_ZOOM = 2.5, HW_LW = 80;
+const HW_CELLS = 24, HW_CS = HW_W / HW_CELLS, HW_BIG = 4;
+const HW_FRACS = [
+  [12/24,12/24],[12/24,4/24],[20/24,4/24],[20/24,12/24],[20/24,20/24],
+  [12/24,20/24],[4/24,20/24],[4/24,12/24],[4/24,4/24]
+];
+const HW_LABELS = [0,1,2,3,4,5,6,7,8];
+const HW_LOFF = [
+  {dx:7,dy:4},{dx:4,dy:-9},{dx:10,dy:-9},{dx:10,dy:4},
+  {dx:10,dy:11},{dx:4,dy:13},{dx:-13,dy:11},{dx:-13,dy:4},{dx:-13,dy:-9}
+];
+
+let hwGridCache = null;
+function hwMakeGrid() {
+  if (hwGridCache) return hwGridCache;
+  const gc = document.createElement('canvas');
+  gc.width = HW_W; gc.height = HW_W;
+  const g = gc.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0,0,HW_W,HW_W);
+  g.strokeStyle = '#F0A070'; g.lineWidth = 0.4;
+  for (let i=0;i<=HW_CELLS;i++) {
+    if (i%HW_BIG===0) continue;
+    g.beginPath(); g.moveTo(i*HW_CS,0); g.lineTo(i*HW_CS,HW_W); g.stroke();
+    g.beginPath(); g.moveTo(0,i*HW_CS); g.lineTo(HW_W,i*HW_CS); g.stroke();
+  }
+  g.strokeStyle = '#E07040'; g.lineWidth = 1;
+  for (let i=0;i<=HW_CELLS;i+=HW_BIG) {
+    g.beginPath(); g.moveTo(i*HW_CS,0); g.lineTo(i*HW_CS,HW_W); g.stroke();
+    g.beginPath(); g.moveTo(0,i*HW_CS); g.lineTo(HW_W,i*HW_CS); g.stroke();
+  }
+  hwGridCache = gc;
+  return gc;
+}
+
+const hwStates = {};
+
+function hwRefPts() {
+  return HW_FRACS.map(([fx,fy]) => ({x:fx*HW_W, y:fy*HW_W}));
+}
+
+function hwInit(id, ogJson, odJson) {
+  const parseOrDefault = (json) => {
+    try { const p = JSON.parse(json); if (p && p.length===9) return p; } catch(e) {}
+    return hwRefPts();
+  };
+  hwStates[id] = {og: parseOrDefault(ogJson), od: parseOrDefault(odJson), eye:'og', drag:null};
+  hwDraw(id);
+  hwSetupCanvas(id, 'og');
+  hwSetupCanvas(id, 'od');
+}
+
+function hwSetEye(id, eye) {
+  hwStates[id].eye = eye;
+  const btnOg = document.getElementById(id+'_btn_og');
+  const btnOd = document.getElementById(id+'_btn_od');
+  if (btnOg) btnOg.style.cssText = eye==='og'
+    ? 'padding:3px 12px;border-radius:6px;border:1px solid #378ADD;background:#E6F1FB;color:#185FA5;font-size:12px;cursor:pointer;font-weight:500;'
+    : 'padding:3px 12px;border-radius:6px;border:0.5px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;';
+  if (btnOd) btnOd.style.cssText = eye==='od'
+    ? 'padding:3px 12px;border-radius:6px;border:1px solid #E24B4A;background:#FCEBEB;color:#A32D2D;font-size:12px;cursor:pointer;font-weight:500;'
+    : 'padding:3px 12px;border-radius:6px;border:0.5px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;';
+}
+
+function hwReset(id, all) {
+  const s = hwStates[id];
+  if (!s) return;
+  if (all) { s.og = hwRefPts(); s.od = hwRefPts(); }
+  else s[s.eye] = hwRefPts();
+  hwDraw(id);
+  hwSave(id);
+}
+
+function hwDrawCanvas(id, eye) {
+  const c = document.getElementById(id+'_c_'+eye);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const pts = hwStates[id][eye];
+  ctx.clearRect(0,0,HW_W,HW_W);
+  ctx.drawImage(hwMakeGrid(),0,0);
+  const color = '#111';
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([]);
+  const cont=[8,1,2,3,4,5,6,7,8];
+  ctx.beginPath(); ctx.moveTo(pts[cont[0]].x,pts[cont[0]].y);
+  for(let i=1;i<cont.length;i++) ctx.lineTo(pts[cont[i]].x,pts[cont[i]].y);
+  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pts[1].x,pts[1].y); ctx.lineTo(pts[0].x,pts[0].y); ctx.lineTo(pts[5].x,pts[5].y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pts[7].x,pts[7].y); ctx.lineTo(pts[0].x,pts[0].y); ctx.lineTo(pts[3].x,pts[3].y); ctx.stroke();
+  pts.forEach((p,i)=>{
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(Math.PI/4);
+    ctx.fillStyle=color; ctx.fillRect(-3,-3,6,6); ctx.restore();
+    ctx.fillStyle=color; ctx.font='bold 9px sans-serif'; ctx.textAlign='left';
+    ctx.fillText(HW_LABELS[i],p.x+HW_LOFF[i].dx,p.y+HW_LOFF[i].dy);
+  });
+}
+
+function hwDraw(id) {
+  hwDrawCanvas(id,'og');
+  hwDrawCanvas(id,'od');
+}
+
+function hwSave(id) {
+  const s = hwStates[id];
+  const ogEl = document.getElementById(id+'_val_og');
+  const odEl = document.getElementById(id+'_val_od');
+  if (ogEl) ogEl.value = JSON.stringify(s.og);
+  if (odEl) odEl.value = JSON.stringify(s.od);
+}
+
+function hwUpdateLoupe(id, eye, px, py, show) {
+  const lEl = document.getElementById(id+'_loupe_'+eye);
+  const lc  = document.getElementById(id+'_lc_'+eye);
+  const mainC = document.getElementById(id+'_c_'+eye);
+  if (!lEl || !lc || !mainC) return;
+  if (!show) { lEl.style.display='none'; return; }
+  const cRect = mainC.getBoundingClientRect();
+  const pRect = mainC.parentElement.getBoundingClientRect();
+  const scale = cRect.width / HW_W;
+  const cx = px*scale + (cRect.left-pRect.left);
+  const cy = py*scale + (cRect.top-pRect.top);
+  lEl.style.display='block';
+  lEl.style.left = Math.max(4, Math.min(pRect.width-HW_LW-4, cx-HW_LW/2))+'px';
+  lEl.style.top  = Math.max(4, cy-HW_LW-16)+'px';
+  const ctx = lc.getContext('2d');
+  ctx.clearRect(0,0,HW_LW,HW_LW);
+  ctx.save(); ctx.translate(HW_LW/2,HW_LW/2); ctx.scale(HW_ZOOM,HW_ZOOM); ctx.translate(-px,-py);
+  ctx.drawImage(mainC,0,0); ctx.restore();
+  ctx.strokeStyle='rgba(255,0,0,0.6)'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(HW_LW/2,0); ctx.lineTo(HW_LW/2,HW_LW); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,HW_LW/2); ctx.lineTo(HW_LW,HW_LW/2); ctx.stroke();
+}
+
+function hwGetXY(canvas,e) {
+  const r=canvas.getBoundingClientRect(), sc=canvas.width/canvas.offsetWidth;
+  const src=e.touches?e.touches[0]:e;
+  return {x:(src.clientX-r.left)*sc, y:(src.clientY-r.top)*sc};
+}
+function hwNearest(pts,x,y) {
+  let best=null,bestD=Infinity;
+  pts.forEach((p,i)=>{const d=Math.hypot(p.x-x,p.y-y);if(d<bestD){bestD=d;best=i;}});
+  return bestD<35?best:null;
+}
+
+function hwSetupCanvas(id, eye) {
+  const c = document.getElementById(id+'_c_'+eye);
+  if (!c) return;
+  c.addEventListener('mousedown',e=>{
+    hwSetEye(id,eye);
+    const{x,y}=hwGetXY(c,e);
+    hwStates[id].drag={eye,idx:hwNearest(hwStates[id][eye],x,y)};
+  });
+  c.addEventListener('mousemove',e=>{
+    const s=hwStates[id];
+    if(!s.drag||s.drag.eye!==eye||s.drag.idx===null){hwUpdateLoupe(id,eye,0,0,false);return;}
+    const{x,y}=hwGetXY(c,e);
+    const nx=Math.max(2,Math.min(HW_W-2,x)), ny=Math.max(2,Math.min(HW_W-2,y));
+    s[eye][s.drag.idx]={x:nx,y:ny};
+    hwDraw(id); hwSave(id); hwUpdateLoupe(id,eye,nx,ny,true);
+  });
+  c.addEventListener('mouseup',()=>{hwStates[id].drag=null;hwUpdateLoupe(id,eye,0,0,false);});
+  c.addEventListener('mouseleave',()=>{hwStates[id].drag=null;hwUpdateLoupe(id,eye,0,0,false);});
+  c.addEventListener('touchstart',e=>{
+    e.preventDefault(); hwSetEye(id,eye);
+    const{x,y}=hwGetXY(c,e);
+    hwStates[id].drag={eye,idx:hwNearest(hwStates[id][eye],x,y)};
+    if(hwStates[id].drag.idx!==null) hwUpdateLoupe(id,eye,x,y,true);
+  },{passive:false});
+  c.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    const s=hwStates[id];
+    if(!s.drag||s.drag.eye!==eye||s.drag.idx===null)return;
+    const{x,y}=hwGetXY(c,e);
+    const nx=Math.max(2,Math.min(HW_W-2,x)), ny=Math.max(2,Math.min(HW_W-2,y));
+    s[eye][s.drag.idx]={x:nx,y:ny};
+    hwDraw(id); hwSave(id); hwUpdateLoupe(id,eye,nx,ny,true);
+  },{passive:false});
+  c.addEventListener('touchend',()=>{hwStates[id].drag=null;hwUpdateLoupe(id,eye,0,0,false);});
+}
+// ── fin Hess-Weiss ───────────────────────────────────────────────
 let sectionIndex = 0;
 
 function imprimerFichiersSection(type) {
@@ -916,7 +1094,46 @@ function renderSection(type, label, idx, titre, obs, donnees) {
 
   // Rendu spécial pour la section ordonnance
   let champsHTML = '';
-  if (type === 'ordonnance_lunettes') {
+  if (type === 'hess_weiss') {
+    const hwId = `hw_${idx}`;
+    const ogVal = donnees['hw_og'] || '';
+    const odVal = donnees['hw_od'] || '';
+    champsHTML = `
+    <div style="user-select:none;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <button type="button" id="${hwId}_btn_og" onclick="hwSetEye('${hwId}','og')"
+          style="padding:3px 12px;border-radius:6px;border:1px solid #378ADD;background:#E6F1FB;color:#185FA5;font-size:12px;cursor:pointer;font-weight:500;">O.G.</button>
+        <button type="button" id="${hwId}_btn_od" onclick="hwSetEye('${hwId}','od')"
+          style="padding:3px 12px;border-radius:6px;border:0.5px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;">O.D.</button>
+        <button type="button" onclick="hwReset('${hwId}',false)"
+          style="padding:3px 12px;border-radius:6px;border:0.5px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;margin-left:auto;">Réinitialiser</button>
+        <button type="button" onclick="hwReset('${hwId}',true)"
+          style="padding:3px 12px;border-radius:6px;border:0.5px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;">Tout effacer</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="position:relative;">
+          <div style="font-size:11px;font-weight:600;color:#185FA5;text-align:center;margin-bottom:4px;">O.G.</div>
+          <canvas id="${hwId}_c_og" width="300" height="300" style="width:100%;cursor:crosshair;display:block;"></canvas>
+          <div id="${hwId}_loupe_og" style="position:absolute;width:80px;height:80px;border-radius:50%;border:2px solid #555;overflow:hidden;pointer-events:none;display:none;">
+            <canvas id="${hwId}_lc_og" width="80" height="80"></canvas>
+          </div>
+        </div>
+        <div style="position:relative;">
+          <div style="font-size:11px;font-weight:600;color:#A32D2D;text-align:center;margin-bottom:4px;">O.D.</div>
+          <canvas id="${hwId}_c_od" width="300" height="300" style="width:100%;cursor:crosshair;display:block;"></canvas>
+          <div id="${hwId}_loupe_od" style="position:absolute;width:80px;height:80px;border-radius:50%;border:2px solid #555;overflow:hidden;pointer-events:none;display:none;">
+            <canvas id="${hwId}_lc_od" width="80" height="80"></canvas>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px;">Glisser les points 0–8 pour tracer le schéma</div>
+      <input type="hidden" name="champ__${idx}__hw_og" id="${hwId}_val_og" value="${ogVal.replace(/"/g,'&quot;')}">
+      <input type="hidden" name="champ__${idx}__hw_od" id="${hwId}_val_od" value="${odVal.replace(/"/g,'&quot;')}">
+    </div>`;
+
+    setTimeout(() => hwInit(hwId, ogVal, odVal), 50);
+
+  } else if (type === 'ordonnance_lunettes') {
     const consId = {{ consultation.id if consultation else 0 }};
     const d = donnees;
     const idx2 = idx;

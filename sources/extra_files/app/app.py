@@ -82,6 +82,7 @@ CATEGORIES_BUILTIN = {
     'conclusions': {'label': 'Conclusions',          'bg': '#E1F5EE', 'color': '#085041', 'icon': 'ti-clipboard-text'},
     'ordonnance':  {'label': 'Ordonnance',           'bg': '#FBEAF0', 'color': '#72243E', 'icon': 'ti-prescription'},
     'courrier':    {'label': 'Courrier',             'bg': '#E6F1FB', 'color': '#0C447C', 'icon': 'ti-mail'},
+    'hess_weiss':  {'label': 'Hess-Weiss',           'bg': '#EAF3DE', 'color': '#085041', 'icon': 'ti-vector-triangle'},
     '':            {'label': 'Sans catégorie',       'bg': '#F1EFE8', 'color': '#444441', 'icon': 'ti-layout-grid'},
 }
 
@@ -423,6 +424,7 @@ BUILTIN_CATEGORIES = {
     'stereoscopie': 'stereoscopie',
     'cover': 'motilite', 'motilite': 'motilite', 'ppc': 'motilite',
     'facilites_accom': 'motilite', 'facilites_verg': 'motilite',
+    'hess_weiss': 'hess_weiss',
     'conclusions': 'conclusions',
     'ordonnance': 'ordonnance', 'ordonnance_lunettes': 'ordonnance',
     'courrier': 'courrier',
@@ -5780,6 +5782,10 @@ BUILTIN_SECTIONS = [
     ('stereoscopie','Vision stéréoscopique',[('tno','TNO (norme ≤60")','select',['480"','240"','120"','60"','30"','15"','non réalisable']),('lang','Lang','select',['positif','négatif','non réalisable'])]),
     ('cover','Examen sous écran',[('cover_loin','Cover de loin','select',['orthophorie','ésophorie','exophorie','hypophorie OD','hyperphorie OD','ésotropie','exotropie','hypertropie OD','hypertropie OG']),('cover_pres','Cover de près','select',['orthophorie','ésophorie','exophorie','hypophorie OD','hyperphorie OD','ésotropie','exotropie','hypertropie OD','hypertropie OG']),('dip_mm','DIP (mm)','number',[]),('ac_a','AC/A (norme 4±2)','number',[])]),
     ('motilite','Motilité',[('motilite','Résultat','textarea',[])]),
+    ('hess_weiss','Test de Hess-Weiss',[
+        ('hw_og','O.G. (coordonnées JSON)','hidden',[]),
+        ('hw_od','O.D. (coordonnées JSON)','hidden',[]),
+    ]),
     ('ppc','PPC',[('ppc_cm',"Suit jusqu'à (norme ≤5cm)",'select',['2 cm','3 cm','4 cm','5 cm','6 cm','7 cm','8 cm','10 cm','>10 cm','non réalisé'])]),
     ('maddox','Maddox',[('maddox_loin','De loin','select',['orthophorie','ésophorie','exophorie','hypophorie','hyperphorie','cyclophorie']),('maddox_pres','De près','select',['orthophorie','ésophorie','exophorie','hypophorie','hyperphorie','cyclophorie'])]),
     ('angle','Angle objectif',[('angle_loin','De loin','select',['orthotropie','ésotropie <10Δ','ésotropie 10-20Δ','ésotropie >20Δ','exotropie <10Δ','exotropie 10-20Δ','exotropie >20Δ','hypertropie']),('angle_pres','De près','select',['orthotropie','ésotropie <10Δ','ésotropie 10-20Δ','ésotropie >20Δ','exotropie <10Δ','exotropie 10-20Δ','exotropie >20Δ','hypertropie'])]),

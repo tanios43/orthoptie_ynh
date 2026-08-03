@@ -56,6 +56,44 @@
 {% set c = consultation %}
 
 {% block extra_head %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const W=300, CELLS=24, CS=W/CELLS, BIG=4;
+  const FRACS=[[12/24,12/24],[12/24,4/24],[20/24,4/24],[20/24,12/24],[20/24,20/24],[12/24,20/24],[4/24,20/24],[4/24,12/24],[4/24,4/24]];
+  const LABELS=[0,1,2,3,4,5,6,7,8];
+  const LOFF=[{dx:7,dy:4},{dx:4,dy:-9},{dx:10,dy:-9},{dx:10,dy:4},{dx:10,dy:11},{dx:4,dy:13},{dx:-13,dy:11},{dx:-13,dy:4},{dx:-13,dy:-9}];
+  const refPts=()=>FRACS.map(([fx,fy])=>({x:fx*W,y:fy*W}));
+
+  // Créer grille
+  const gc=document.createElement('canvas'); gc.width=W; gc.height=W;
+  const g=gc.getContext('2d');
+  g.fillStyle='#fff'; g.fillRect(0,0,W,W);
+  g.strokeStyle='#F0A070'; g.lineWidth=0.4;
+  for(let i=0;i<=CELLS;i++){if(i%BIG===0)continue;g.beginPath();g.moveTo(i*CS,0);g.lineTo(i*CS,W);g.stroke();g.beginPath();g.moveTo(0,i*CS);g.lineTo(W,i*CS);g.stroke();}
+  g.strokeStyle='#E07040'; g.lineWidth=1;
+  for(let i=0;i<=CELLS;i+=BIG){g.beginPath();g.moveTo(i*CS,0);g.lineTo(i*CS,W);g.stroke();g.beginPath();g.moveTo(0,i*CS);g.lineTo(W,i*CS);g.stroke();}
+
+  document.querySelectorAll('canvas[data-pts]').forEach(c => {
+    const raw = c.dataset.pts;
+    let pts;
+    try { pts = JSON.parse(raw); if (!pts||pts.length!==9) throw 0; } catch(e) { pts = refPts(); }
+    const ctx = c.getContext('2d');
+    ctx.drawImage(gc,0,0);
+    ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.setLineDash([]);
+    const cont=[8,1,2,3,4,5,6,7,8];
+    ctx.beginPath(); ctx.moveTo(pts[cont[0]].x,pts[cont[0]].y);
+    for(let i=1;i<cont.length;i++) ctx.lineTo(pts[cont[i]].x,pts[cont[i]].y);
+    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pts[1].x,pts[1].y); ctx.lineTo(pts[0].x,pts[0].y); ctx.lineTo(pts[5].x,pts[5].y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pts[7].x,pts[7].y); ctx.lineTo(pts[0].x,pts[0].y); ctx.lineTo(pts[3].x,pts[3].y); ctx.stroke();
+    pts.forEach((p,i)=>{
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(Math.PI/4); ctx.fillStyle='#111'; ctx.fillRect(-3,-3,6,6); ctx.restore();
+      ctx.fillStyle='#111'; ctx.font='bold 9px sans-serif'; ctx.textAlign='left';
+      ctx.fillText(LABELS[i],p.x+LOFF[i].dx,p.y+LOFF[i].dy);
+    });
+  });
+});
+</script>
 <style>
 @media print {
   /* Masquer les éléments de navigation */
@@ -364,6 +402,23 @@
               <td>{{ d.get('swaine_og','—') }}</td>
             </tr></tbody>
           </table>
+
+        {# ── HESS-WEISS ── #}
+        {% elif sec.type == 'hess_weiss' %}
+          {% set og_json = d.get('hw_og', '') %}
+          {% set od_json = d.get('hw_od', '') %}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <div style="font-size:11px;font-weight:600;color:#185FA5;text-align:center;margin-bottom:4px;">O.G.</div>
+              <canvas id="bilan_hw_{{ loop.index }}_og" width="300" height="300"
+                      style="width:100%;display:block;" data-pts="{{ og_json }}"></canvas>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:#A32D2D;text-align:center;margin-bottom:4px;">O.D.</div>
+              <canvas id="bilan_hw_{{ loop.index }}_od" width="300" height="300"
+                      style="width:100%;display:block;" data-pts="{{ od_json }}"></canvas>
+            </div>
+          </div>
 
         {# ── ORDONNANCE DE LUNETTES ── #}
         {% elif sec.type == 'ordonnance_lunettes' %}
