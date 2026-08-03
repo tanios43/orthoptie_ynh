@@ -1823,7 +1823,100 @@ def suivi_amblyopie_nouveau(patient_id):
                            prefill=prefill, dernier_bilan=dernier_bilan)
 
 
-def _save_suivi_amblyopie_data(s, form):
+def _generer_hess_weiss_png(og_json, od_json, taille=300):
+    """Génère une image PNG du schéma Hess-Weiss depuis les coordonnées JSON."""
+    import json, io
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    from matplotlib.patches import FancyArrow
+
+    W = taille
+    TOTAL = 28
+    CS = W / TOTAL
+    COL = [6*CS, 14*CS, 22*CS]
+    ROW = [6*CS, 14*CS, 22*CS]
+    REF = [
+        (COL[1],ROW[1]),(COL[1],ROW[0]),(COL[2],ROW[0]),
+        (COL[2],ROW[1]),(COL[2],ROW[2]),(COL[1],ROW[2]),
+        (COL[0],ROW[2]),(COL[0],ROW[1]),(COL[0],ROW[0])
+    ]
+    THRESH = CS * 1.2
+    SEGS = [[8,1,'H'],[1,2,'H'],[2,3,'V'],[3,4,'V'],[4,5,'H'],[5,6,'H'],
+            [6,7,'V'],[7,8,'V'],[7,0,'H'],[0,3,'H'],[1,0,'V'],[0,5,'V']]
+    LABELS = [0,1,2,3,4,5,6,7,8]
+    LOFF = [(6,-8),(4,-10),(8,-10),(8,-8),(8,14),(4,14),(-14,14),(-14,-8),(-14,-10)]
+
+    def parse(j):
+        try:
+            p = json.loads(j)
+            if p and len(p) == 9: return [(pt['x'], pt['y']) for pt in p]
+        except: pass
+        return [(r[0], r[1]) for r in REF]
+
+    def edge(p):
+        return p[0]<=THRESH, p[0]>=W-THRESH, p[1]<=THRESH, p[1]>=W-THRESH
+
+    def draw_schema(ax, pts, label):
+        # Grille fine
+        for i in range(TOTAL+1):
+            ax.axhline(i*CS, color='#F5B090', lw=0.3, zorder=0)
+            ax.axvline(i*CS, color='#F5B090', lw=0.3, zorder=0)
+        # Carré intérieur
+        cx, cy = REF[0]; inn = 4*CS
+        rect = plt.Rectangle((cx-inn, cy-inn), inn*2, inn*2,
+                              fill=False, edgecolor='#C05020', lw=1.2, zorder=1)
+        ax.add_patch(rect)
+        # Structure de référence
+        cont = [8,1,2,3,4,5,6,7,8]
+        rx = [REF[i][0] for i in cont]; ry = [REF[i][1] for i in cont]
+        ax.plot(rx, ry, color='#C05020', lw=1.2, zorder=1)
+        ax.plot([REF[7][0],REF[0][0],REF[3][0]],[REF[7][1],REF[0][1],REF[3][1]],color='#C05020',lw=1.2,zorder=1)
+        ax.plot([REF[1][0],REF[0][0],REF[5][0]],[REF[1][1],REF[0][1],REF[5][1]],color='#C05020',lw=1.2,zorder=1)
+        # Ronds de référence et labels
+        for i, (rx2, ry2) in enumerate(REF):
+            ax.plot(rx2, ry2, 'o', color='white', markeredgecolor='#C05020', markersize=5, lw=1, zorder=2)
+            ax.text(rx2+LOFF[i][0], ry2+LOFF[i][1], str(LABELS[i]),
+                    color='#C05020', fontsize=6, ha='left', va='center', zorder=2)
+        # Tracé mobile
+        ep = [edge(p) for p in pts]
+        vis = [(max(5,min(W-5,p[0])), max(5,min(W-5,p[1]))) for p in pts]
+        for a,b,d in SEGS:
+            eL,eR,eU,eD = ep[a]; efL,efR,efU,efD = ep[b]
+            sup = (d=='V' and ((eL or eR) or (efL or efR))) or (d=='H' and ((eU or eD) or (efU or efD)))
+            if sup: continue
+            ax.plot([vis[a][0],vis[b][0]],[vis[a][1],vis[b][1]],color='#111',lw=1.5,zorder=3)
+        for i,(p,e,v) in enumerate(zip(pts,ep,vis)):
+            eL,eR,eU,eD = e
+            if eR: ax.annotate('', xy=(v[0]+12,v[1]), xytext=(v[0]-8,v[1]), arrowprops=dict(arrowstyle='->', color='#111', lw=1.5), zorder=4)
+            elif eL: ax.annotate('', xy=(v[0]-12,v[1]), xytext=(v[0]+8,v[1]), arrowprops=dict(arrowstyle='->', color='#111', lw=1.5), zorder=4)
+            if eD: ax.annotate('', xy=(v[0],v[1]+12), xytext=(v[0],v[1]-8), arrowprops=dict(arrowstyle='->', color='#111', lw=1.5), zorder=4)
+            elif eU: ax.annotate('', xy=(v[0],v[1]-12), xytext=(v[0],v[1]+8), arrowprops=dict(arrowstyle='->', color='#111', lw=1.5), zorder=4)
+            if not (eL or eR or eU or eD):
+                diamond_x = [v[0], v[0]+4, v[0], v[0]-4, v[0]]
+                diamond_y = [v[1]-4, v[1], v[1]+4, v[1], v[1]-4]
+                ax.fill(diamond_x, diamond_y, color='#111', zorder=4)
+        ax.set_title(label, fontsize=8, color='#333', pad=3)
+        ax.set_xlim(0, W); ax.set_ylim(W, 0)
+        ax.set_aspect('equal'); ax.axis('off')
+
+    og_pts = parse(og_json)
+    od_pts = parse(od_json)
+
+    fig, axes = plt.subplots(1, 2, figsize=(6, 3.2), dpi=120)
+    draw_schema(axes[0], og_pts, 'O.G.')
+    draw_schema(axes[1], od_pts, 'O.D.')
+    plt.tight_layout(pad=0.3)
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=120, bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    return buf.read()
+
+
+
     """Sauvegarde les données d'un suivi amblyopie depuis un form."""
     s.date_bilan   = _parse_date(form.get('date_bilan')) or s.date_bilan
     s.lunettes_od  = form.get('lunettes_od','').strip()
@@ -7000,6 +7093,8 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
     # ── Construire le corps du document ──────────────────────────────
     sections_db, _ = get_sections()
     sections_data = []
+    extra_files = {}   # fichiers supplémentaires à ajouter au zip (ex: images HW)
+    extra_rels  = {}   # relations supplémentaires à ajouter dans document.xml.rels
     # Collecter toutes les sections nécessaires (filtre par bloc fait plus tard)
     _all_sections_types = set(sections_incluses)
     if sections_par_bloc:
@@ -7031,7 +7126,15 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
         d = sec.get_donnees()
         lignes = []
 
-        if sec.type in ('refraction_obj', 'correction_portee', 'frontofocometrie'):
+        if sec.type == 'hess_weiss':
+            # Générer une image PNG du schéma
+            og_json = d.get('hw_og', '')
+            od_json = d.get('hw_od', '')
+            if og_json or od_json:
+                png_data = _generer_hess_weiss_png(og_json, od_json)
+                lignes.append(('__image__', png_data))
+
+        elif sec.type in ('refraction_obj', 'correction_portee', 'frontofocometrie'):
             od = fmt_refraction(d, 'od')
             og = fmt_refraction(d, 'og')
             od_add = fmt_sph(d.get('od_add', ''))
@@ -7159,6 +7262,9 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                     lignes.append(('__subtitle__', ch['label'] or ''))
                     continue
                 val = d.get(ch['name'], '')
+                # Ignorer les champs hidden Hess-Weiss (traités séparément)
+                if ch['name'] in ('hw_og', 'hw_od'):
+                    continue
                 pending_cells.append((ch['label'], str(val) if val else ''))
 
             flush_pending()
@@ -7378,6 +7484,47 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                                 f'<w:tr>{row_xml}</w:tr>'
                                 f'</w:tbl>'
                             )
+                    elif label == '__image__':
+                        # Image PNG (ex: Hess-Weiss)
+                        import uuid as _uuid
+                        png_data = valeur
+                        img_id = str(_uuid.uuid4()).replace('-','')[:8]
+                        img_name = f'hessweiss_{img_id}.png'
+                        extra_files[f'word/media/{img_name}'] = png_data
+                        rel_id = f'rIdHW{img_id}'
+                        extra_rels[rel_id] = img_name
+                        img_cx = 8229600
+                        img_cy = 4572000
+                        try:
+                            from PIL import Image as PILImage
+                            import io as _io
+                            pil = PILImage.open(_io.BytesIO(png_data))
+                            pw, ph = pil.size
+                            img_cy = int(img_cx * ph / pw)
+                        except: pass
+                        nid = int(img_id, 16) % 9999 + 1 if img_id.isalnum() else 1
+                        body_paras.append(
+                            f'<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>'
+                            f'<w:r><w:rPr/>'
+                            f'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+                            f'<wp:extent cx="{img_cx}" cy="{img_cy}"/>'
+                            f'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+                            f'<wp:docPr id="{nid}" name="hw_{img_id}"/>'
+                            f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                            f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                            f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                            f'<pic:nvPicPr><pic:cNvPr id="{nid}" name="hw_{img_id}"/><pic:cNvPicPr/></pic:nvPicPr>'
+                            f'<pic:blipFill>'
+                            f'<a:blip r:embed="{rel_id}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+                            f'<a:stretch><a:fillRect/></a:stretch>'
+                            f'</pic:blipFill>'
+                            f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{img_cx}" cy="{img_cy}"/></a:xfrm>'
+                            f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+                            f'</pic:spPr>'
+                            f'</pic:pic></a:graphicData></a:graphic>'
+                            f'</wp:inline></w:drawing>'
+                            f'</w:r></w:p>'
+                        )
                     else:
                         valeur_lines = str(valeur).split('\n') if valeur else ['']
                         for i, vline in enumerate(valeur_lines):
@@ -7525,6 +7672,16 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                             f'Target="media/signature.{sig_ext}"/>'
                             '</Relationships>'
                         )
+                    # Ajouter les relations extra (images HW etc.)
+                    for er_id, er_name in extra_rels.items():
+                        if er_id not in rels:
+                            rels = rels.replace(
+                                '</Relationships>',
+                                f'<Relationship Id="{er_id}" '
+                                f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+                                f'Target="media/{er_name}"/>'
+                                '</Relationships>'
+                            )
                     if 'rIdFooter1' not in rels:
                         rels = rels.replace(
                             '</Relationships>',
@@ -7573,6 +7730,9 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
             # Ajouter signature
             if sig_img_data:
                 zout.writestr(f'word/media/signature.{sig_ext}', sig_img_data)
+            # Ajouter fichiers extra (images HW etc.)
+            for ef_path, ef_data in extra_files.items():
+                zout.writestr(ef_path, ef_data)
 
     return new_out
 
