@@ -790,7 +790,28 @@ with app.app_context():
 
     # Créer le compte admin par défaut si aucun praticien n'existe
     with app.app_context():
-        from app import Praticien
+        from app import Praticien, SectionDef, ChampDef
+
+        # Injecter la section hess_weiss si absente
+        try:
+            if not SectionDef.query.filter_by(type_key='hess_weiss').first():
+                max_ordre = db.session.query(db.func.max(SectionDef.ordre)).scalar() or 0
+                sd = SectionDef(type_key='hess_weiss', label='Test de Hess-Weiss',
+                                ordre=max_ordre+1, builtin=True)
+                db.session.add(sd); db.session.flush()
+                for co, (name, label, ctype) in enumerate([
+                    ('hw_og', 'O.G. (coordonnées JSON)', 'hidden'),
+                    ('hw_od', 'O.D. (coordonnées JSON)', 'hidden'),
+                ]):
+                    db.session.add(ChampDef(section_id=sd.id, name=name, label=label,
+                                            type=ctype, ordre=co))
+                db.session.commit()
+                print("OK      : section hess_weiss injectée")
+            else:
+                print("Present : section hess_weiss")
+        except Exception as e:
+            db.session.rollback()
+            print(f"ERREUR  : section hess_weiss — {e}")
         if Praticien.query.count() == 0:
             from werkzeug.security import generate_password_hash
             admin = Praticien(
