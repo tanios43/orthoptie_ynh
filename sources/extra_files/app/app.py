@@ -1824,13 +1824,124 @@ def suivi_amblyopie_nouveau(patient_id):
 
 
 def _generer_hess_weiss_png(og_json, od_json, taille=300):
-    """Génère une image PNG du schéma Hess-Weiss depuis les coordonnées JSON."""
+    """Génère une image PNG du schéma Hess-Weiss avec PIL uniquement."""
     import json, io
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-    from matplotlib.patches import FancyArrow
+    from PIL import Image, ImageDraw
+
+    W = taille
+    TOTAL = 28
+    CS = W / TOTAL
+    COL = [6*CS, 14*CS, 22*CS]
+    ROW = [6*CS, 14*CS, 22*CS]
+    REF = [
+        (COL[1],ROW[1]),(COL[1],ROW[0]),(COL[2],ROW[0]),
+        (COL[2],ROW[1]),(COL[2],ROW[2]),(COL[1],ROW[2]),
+        (COL[0],ROW[2]),(COL[0],ROW[1]),(COL[0],ROW[0])
+    ]
+    THRESH = CS * 1.2
+    SEGS = [[8,1,'H'],[1,2,'H'],[2,3,'V'],[3,4,'V'],[4,5,'H'],[5,6,'H'],
+            [6,7,'V'],[7,8,'V'],[7,0,'H'],[0,3,'H'],[1,0,'V'],[0,5,'V']]
+    LABELS = [0,1,2,3,4,5,6,7,8]
+    LOFF = [(6,-8),(4,-10),(8,-10),(8,-8),(8,10),(4,10),(-12,10),(-12,-8),(-12,-10)]
+
+    def parse(j):
+        try:
+            p = json.loads(j)
+            if p and len(p) == 9:
+                return [(float(pt['x']), float(pt['y'])) for pt in p]
+        except: pass
+        return [(r[0], r[1]) for r in REF]
+
+    def edge(p):
+        return p[0]<=THRESH, p[0]>=W-THRESH, p[1]<=THRESH, p[1]>=W-THRESH
+
+    def vis(p):
+        return (max(5, min(W-5, p[0])), max(5, min(W-5, p[1])))
+
+    MARGIN = 20  # marge entre les deux schémas
+    IMG_W = W * 2 + MARGIN + 40  # 40px de marge totale
+    IMG_H = W + 30                # 30px pour le titre
+
+    img = Image.new('RGB', (IMG_W, IMG_H), 'white')
+    draw = ImageDraw.Draw(img)
+
+    def draw_schema(offset_x, offset_y, pts, title):
+        # Titre
+        draw.text((offset_x + W//2 - 10, offset_y - 16), title, fill='#333333')
+
+        # Grille fine
+        for i in range(TOTAL+1):
+            x = offset_x + i*CS
+            y = offset_y + i*CS
+            draw.line([(x, offset_y), (x, offset_y+W)], fill='#F5B090', width=1)
+            draw.line([(offset_x, y), (offset_x+W, y)], fill='#F5B090', width=1)
+
+        # Carré intérieur
+        cx, cy = REF[0]
+        inn = 4*CS
+        r = [(offset_x+cx-inn, offset_y+cy-inn), (offset_x+cx+inn, offset_y+cy+inn)]
+        draw.rectangle(r, outline='#C05020', width=2)
+
+        # Structure de référence
+        cont = [8,1,2,3,4,5,6,7,8]
+        ref_pts = [(offset_x+REF[i][0], offset_y+REF[i][1]) for i in cont]
+        draw.line(ref_pts, fill='#C05020', width=2)
+        draw.line([(offset_x+REF[7][0],offset_y+REF[7][1]),(offset_x+REF[0][0],offset_y+REF[0][1]),(offset_x+REF[3][0],offset_y+REF[3][1])], fill='#C05020', width=2)
+        draw.line([(offset_x+REF[1][0],offset_y+REF[1][1]),(offset_x+REF[0][0],offset_y+REF[0][1]),(offset_x+REF[5][0],offset_y+REF[5][1])], fill='#C05020', width=2)
+
+        # Ronds de référence + labels
+        for i, (rx, ry) in enumerate(REF):
+            r = 4
+            draw.ellipse([(offset_x+rx-r, offset_y+ry-r),(offset_x+rx+r, offset_y+ry+r)], outline='#C05020', fill='white', width=1)
+            draw.text((offset_x+rx+LOFF[i][0], offset_y+ry+LOFF[i][1]), str(LABELS[i]), fill='#C05020')
+
+        # Tracé mobile
+        ep = [edge(p) for p in pts]
+        vp = [vis(p) for p in pts]
+
+        for a, b, d in SEGS:
+            eL,eR,eU,eD = ep[a]; efL,efR,efU,efD = ep[b]
+            sup = (d=='V' and ((eL or eR) or (efL or efR))) or (d=='H' and ((eU or eD) or (efU or efD)))
+            if sup: continue
+            draw.line([(offset_x+vp[a][0], offset_y+vp[a][1]),
+                       (offset_x+vp[b][0], offset_y+vp[b][1])], fill='#111111', width=2)
+
+        for i, (p, e, v) in enumerate(zip(pts, ep, vp)):
+            eL,eR,eU,eD = e
+            vx, vy = offset_x+v[0], offset_y+v[1]
+            if eR:
+                draw.line([(vx-8,vy),(vx+12,vy)], fill='#111111', width=2)
+                draw.polygon([(vx+12,vy),(vx+6,vy-4),(vx+6,vy+4)], fill='#111111')
+            elif eL:
+                draw.line([(vx+8,vy),(vx-12,vy)], fill='#111111', width=2)
+                draw.polygon([(vx-12,vy),(vx-6,vy-4),(vx-6,vy+4)], fill='#111111')
+            if eD:
+                draw.line([(vx,vy-8),(vx,vy+12)], fill='#111111', width=2)
+                draw.polygon([(vx,vy+12),(vx-4,vy+6),(vx+4,vy+6)], fill='#111111')
+            elif eU:
+                draw.line([(vx,vy+8),(vx,vy-12)], fill='#111111', width=2)
+                draw.polygon([(vx,vy-12),(vx-4,vy-6),(vx+4,vy-6)], fill='#111111')
+            if not (eL or eR or eU or eD):
+                s = 4
+                draw.polygon([(vx,vy-s),(vx+s,vy),(vx,vy+s),(vx-s,vy)], fill='#111111')
+
+    og_pts = parse(og_json)
+    od_pts = parse(od_json)
+
+    draw_schema(20, 26, og_pts, 'O.G.')
+    draw_schema(20 + W + MARGIN, 26, od_pts, 'O.D.')
+
+    # Ligne de séparation verticale
+    sx = 20 + W + MARGIN // 2
+    draw.line([(sx, 10), (sx, IMG_H-5)], fill='#DDDDDD', width=1)
+
+    buf = io.BytesIO()
+    img.save(buf, format='PNG', dpi=(150, 150))
+    buf.seek(0)
+    return buf.read()
+
+
+
 
     W = taille
     TOTAL = 28
