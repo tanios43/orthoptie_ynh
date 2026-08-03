@@ -7596,45 +7596,73 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                                 f'</w:tbl>'
                             )
                     elif label == '__image__':
-                        # Image PNG (ex: Hess-Weiss)
+                        # Hess-Weiss : deux images séparées OG et OD dans un tableau 2 colonnes
                         import uuid as _uuid
+                        from PIL import Image as _PILImg
+                        import io as _io
                         png_data = valeur
-                        img_id = str(_uuid.uuid4()).replace('-','')[:8]
-                        img_name = f'hessweiss_{img_id}.png'
-                        extra_files[f'word/media/{img_name}'] = png_data
-                        rel_id = f'rIdHW{img_id}'
-                        extra_rels[rel_id] = img_name
-                        img_cx = 9017280  # = 9000 dxa, même largeur que les tableaux du courrier
-                        img_cy = 2700000
-                        try:
-                            from PIL import Image as PILImage
-                            import io as _io
-                            pil = PILImage.open(_io.BytesIO(png_data))
-                            pw, ph = pil.size
-                            img_cy = int(img_cx * ph / pw)
-                        except: pass
-                        nid = int(img_id, 16) % 9999 + 1 if img_id.isalnum() else 1
+                        full = _PILImg.open(_io.BytesIO(png_data))
+                        fw, fh = full.size
+                        mid = fw // 2
+                        og_img = full.crop((0, 0, mid, fh))
+                        od_img = full.crop((mid, 0, fw, fh))
+
+                        def _png_bytes(pil_img):
+                            b = _io.BytesIO(); pil_img.save(b, format='PNG'); return b.getvalue()
+
+                        # Largeur de chaque image = moitié du tableau (4500 dxa = ~8cm)
+                        half_cx = 4000000  # ~4.5cm par image
+                        half_cy = int(half_cx * fh / mid)
+
+                        def _add_img(side, img_bytes):
+                            img_id = str(_uuid.uuid4()).replace('-','')[:8]
+                            img_name = f'hw_{side}_{img_id}.png'
+                            extra_files[f'word/media/{img_name}'] = img_bytes
+                            rel_id = f'rIdHW{img_id}'
+                            extra_rels[rel_id] = img_name
+                            nid = abs(hash(img_id)) % 9000 + 100
+                            return rel_id, nid, img_name
+
+                        og_rel, og_nid, og_n = _add_img('og', _png_bytes(og_img))
+                        od_rel, od_nid, od_n = _add_img('od', _png_bytes(od_img))
+
+                        def _pic_xml(rel, nid2, name):
+                            return (
+                                f'<w:r><w:rPr/>'
+                                f'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+                                f'<wp:extent cx="{half_cx}" cy="{half_cy}"/>'
+                                f'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+                                f'<wp:docPr id="{nid2}" name="{name}"/>'
+                                f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                                f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                                f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                                f'<pic:nvPicPr><pic:cNvPr id="{nid2}" name="{name}"/><pic:cNvPicPr/></pic:nvPicPr>'
+                                f'<pic:blipFill>'
+                                f'<a:blip r:embed="{rel}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+                                f'<a:stretch><a:fillRect/></a:stretch>'
+                                f'</pic:blipFill>'
+                                f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{half_cx}" cy="{half_cy}"/></a:xfrm>'
+                                f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+                                f'</pic:spPr>'
+                                f'</pic:pic></a:graphicData></a:graphic>'
+                                f'</wp:inline></w:drawing></w:r>'
+                            )
+
                         body_paras.append(
-                            f'<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>'
-                            f'<w:r><w:rPr/>'
-                            f'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
-                            f'<wp:extent cx="{img_cx}" cy="{img_cy}"/>'
-                            f'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
-                            f'<wp:docPr id="{nid}" name="hw_{img_id}"/>'
-                            f'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
-                            f'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-                            f'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-                            f'<pic:nvPicPr><pic:cNvPr id="{nid}" name="hw_{img_id}"/><pic:cNvPicPr/></pic:nvPicPr>'
-                            f'<pic:blipFill>'
-                            f'<a:blip r:embed="{rel_id}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
-                            f'<a:stretch><a:fillRect/></a:stretch>'
-                            f'</pic:blipFill>'
-                            f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{img_cx}" cy="{img_cy}"/></a:xfrm>'
-                            f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
-                            f'</pic:spPr>'
-                            f'</pic:pic></a:graphicData></a:graphic>'
-                            f'</wp:inline></w:drawing>'
-                            f'</w:r></w:p>'
+                            f'<w:tbl>'
+                            f'<w:tblPr><w:tblW w:w="9000" w:type="dxa"/>'
+                            f'<w:tblBorders><w:top w:val="none"/><w:left w:val="none"/>'
+                            f'<w:bottom w:val="none"/><w:right w:val="none"/>'
+                            f'<w:insideH w:val="none"/><w:insideV w:val="none"/></w:tblBorders>'
+                            f'</w:tblPr>'
+                            f'<w:tr>'
+                            f'<w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/></w:tcPr>'
+                            f'<w:p><w:pPr><w:jc w:val="center"/></w:pPr>{_pic_xml(og_rel,og_nid,og_n)}</w:p>'
+                            f'</w:tc>'
+                            f'<w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/></w:tcPr>'
+                            f'<w:p><w:pPr><w:jc w:val="center"/></w:pPr>{_pic_xml(od_rel,od_nid,od_n)}</w:p>'
+                            f'</w:tc>'
+                            f'</w:tr></w:tbl>'
                         )
                     else:
                         valeur_lines = str(valeur).split('\n') if valeur else ['']
