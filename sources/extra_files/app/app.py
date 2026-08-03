@@ -1824,7 +1824,7 @@ def suivi_amblyopie_nouveau(patient_id):
 
 
 def _generer_hess_weiss_png(og_json, od_json, taille=300):
-    """Génère une image PNG du schéma Hess-Weiss avec PIL uniquement."""
+    """Génère deux images PNG séparées OG et OD du schéma Hess-Weiss avec PIL."""
     import json, io
     from PIL import Image, ImageDraw
 
@@ -1858,42 +1858,36 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
     def vis(p):
         return (max(5, min(W-5, p[0])), max(5, min(W-5, p[1])))
 
-    MARGIN = 20  # marge entre les deux schémas
-    IMG_W = W * 2 + MARGIN + 40  # 40px de marge totale
-    IMG_H = W + 30                # 30px pour le titre
+    def make_schema_png(pts, title):
+        PAD = 20  # marge pour le titre
+        img = Image.new('RGB', (W, W + PAD), 'white')
+        draw = ImageDraw.Draw(img)
 
-    img = Image.new('RGB', (IMG_W, IMG_H), 'white')
-    draw = ImageDraw.Draw(img)
-
-    def draw_schema(offset_x, offset_y, pts, title):
         # Titre
-        draw.text((offset_x + W//2 - 10, offset_y - 16), title, fill='#333333')
+        draw.text((W//2 - 12, 2), title, fill='#333333')
+
+        ox, oy = 0, PAD  # offset
 
         # Grille fine
         for i in range(TOTAL+1):
-            x = offset_x + i*CS
-            y = offset_y + i*CS
-            draw.line([(x, offset_y), (x, offset_y+W)], fill='#F5B090', width=1)
-            draw.line([(offset_x, y), (offset_x+W, y)], fill='#F5B090', width=1)
+            draw.line([(ox+i*CS, oy), (ox+i*CS, oy+W)], fill='#F5B090', width=1)
+            draw.line([(ox, oy+i*CS), (ox+W, oy+i*CS)], fill='#F5B090', width=1)
 
         # Carré intérieur
-        cx, cy = REF[0]
-        inn = 4*CS
-        r = [(offset_x+cx-inn, offset_y+cy-inn), (offset_x+cx+inn, offset_y+cy+inn)]
-        draw.rectangle(r, outline='#C05020', width=2)
+        cx, cy = REF[0]; inn = 4*CS
+        draw.rectangle([(ox+cx-inn, oy+cy-inn),(ox+cx+inn, oy+cy+inn)], outline='#C05020', width=2)
 
         # Structure de référence
         cont = [8,1,2,3,4,5,6,7,8]
-        ref_pts = [(offset_x+REF[i][0], offset_y+REF[i][1]) for i in cont]
-        draw.line(ref_pts, fill='#C05020', width=2)
-        draw.line([(offset_x+REF[7][0],offset_y+REF[7][1]),(offset_x+REF[0][0],offset_y+REF[0][1]),(offset_x+REF[3][0],offset_y+REF[3][1])], fill='#C05020', width=2)
-        draw.line([(offset_x+REF[1][0],offset_y+REF[1][1]),(offset_x+REF[0][0],offset_y+REF[0][1]),(offset_x+REF[5][0],offset_y+REF[5][1])], fill='#C05020', width=2)
+        draw.line([(ox+REF[i][0], oy+REF[i][1]) for i in cont], fill='#C05020', width=2)
+        draw.line([(ox+REF[7][0],oy+REF[7][1]),(ox+REF[0][0],oy+REF[0][1]),(ox+REF[3][0],oy+REF[3][1])], fill='#C05020', width=2)
+        draw.line([(ox+REF[1][0],oy+REF[1][1]),(ox+REF[0][0],oy+REF[0][1]),(ox+REF[5][0],oy+REF[5][1])], fill='#C05020', width=2)
 
         # Ronds de référence + labels
         for i, (rx, ry) in enumerate(REF):
             r = 4
-            draw.ellipse([(offset_x+rx-r, offset_y+ry-r),(offset_x+rx+r, offset_y+ry+r)], outline='#C05020', fill='white', width=1)
-            draw.text((offset_x+rx+LOFF[i][0], offset_y+ry+LOFF[i][1]), str(LABELS[i]), fill='#C05020')
+            draw.ellipse([(ox+rx-r, oy+ry-r),(ox+rx+r, oy+ry+r)], outline='#C05020', fill='white', width=1)
+            draw.text((ox+rx+LOFF[i][0], oy+ry+LOFF[i][1]), str(LABELS[i]), fill='#C05020')
 
         # Tracé mobile
         ep = [edge(p) for p in pts]
@@ -1903,12 +1897,11 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
             eL,eR,eU,eD = ep[a]; efL,efR,efU,efD = ep[b]
             sup = (d=='V' and ((eL or eR) or (efL or efR))) or (d=='H' and ((eU or eD) or (efU or efD)))
             if sup: continue
-            draw.line([(offset_x+vp[a][0], offset_y+vp[a][1]),
-                       (offset_x+vp[b][0], offset_y+vp[b][1])], fill='#111111', width=2)
+            draw.line([(ox+vp[a][0], oy+vp[a][1]),(ox+vp[b][0], oy+vp[b][1])], fill='#111111', width=2)
 
         for i, (p, e, v) in enumerate(zip(pts, ep, vp)):
             eL,eR,eU,eD = e
-            vx, vy = offset_x+v[0], offset_y+v[1]
+            vx, vy = ox+v[0], oy+v[1]
             if eR:
                 draw.line([(vx-8,vy),(vx+12,vy)], fill='#111111', width=2)
                 draw.polygon([(vx+12,vy),(vx+6,vy-4),(vx+6,vy+4)], fill='#111111')
@@ -1925,106 +1918,23 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
                 s = 4
                 draw.polygon([(vx,vy-s),(vx+s,vy),(vx,vy+s),(vx-s,vy)], fill='#111111')
 
-    og_pts = parse(og_json)
-    od_pts = parse(od_json)
-
-    draw_schema(20, 26, og_pts, 'O.G.')
-    draw_schema(20 + W + MARGIN, 26, od_pts, 'O.D.')
-
-    # Ligne de séparation verticale
-    sx = 20 + W + MARGIN // 2
-    draw.line([(sx, 10), (sx, IMG_H-5)], fill='#DDDDDD', width=1)
-
-    buf = io.BytesIO()
-    img.save(buf, format='PNG', dpi=(150, 150))
-    buf.seek(0)
-    return buf.read()
-
-
-
-
-    W = taille
-    TOTAL = 28
-    CS = W / TOTAL
-    COL = [6*CS, 14*CS, 22*CS]
-    ROW = [6*CS, 14*CS, 22*CS]
-    REF = [
-        (COL[1],ROW[1]),(COL[1],ROW[0]),(COL[2],ROW[0]),
-        (COL[2],ROW[1]),(COL[2],ROW[2]),(COL[1],ROW[2]),
-        (COL[0],ROW[2]),(COL[0],ROW[1]),(COL[0],ROW[0])
-    ]
-    THRESH = CS * 1.2
-    SEGS = [[8,1,'H'],[1,2,'H'],[2,3,'V'],[3,4,'V'],[4,5,'H'],[5,6,'H'],
-            [6,7,'V'],[7,8,'V'],[7,0,'H'],[0,3,'H'],[1,0,'V'],[0,5,'V']]
-    LABELS = [0,1,2,3,4,5,6,7,8]
-    LOFF = [(6,-8),(4,-10),(8,-10),(8,-8),(8,14),(4,14),(-14,14),(-14,-8),(-14,-10)]
-
-    def parse(j):
-        try:
-            p = json.loads(j)
-            if p and len(p) == 9: return [(pt['x'], pt['y']) for pt in p]
-        except: pass
-        return [(r[0], r[1]) for r in REF]
-
-    def edge(p):
-        return p[0]<=THRESH, p[0]>=W-THRESH, p[1]<=THRESH, p[1]>=W-THRESH
-
-    def draw_schema(ax, pts, label):
-        # Grille fine
-        for i in range(TOTAL+1):
-            ax.axhline(i*CS, color='#F5B090', lw=0.3, zorder=0)
-            ax.axvline(i*CS, color='#F5B090', lw=0.3, zorder=0)
-        # Carré intérieur
-        cx, cy = REF[0]; inn = 4*CS
-        rect = plt.Rectangle((cx-inn, cy-inn), inn*2, inn*2,
-                              fill=False, edgecolor='#C05020', lw=1.2, zorder=1)
-        ax.add_patch(rect)
-        # Structure de référence
-        cont = [8,1,2,3,4,5,6,7,8]
-        rx = [REF[i][0] for i in cont]; ry = [REF[i][1] for i in cont]
-        ax.plot(rx, ry, color='#C05020', lw=1.2, zorder=1)
-        ax.plot([REF[7][0],REF[0][0],REF[3][0]],[REF[7][1],REF[0][1],REF[3][1]],color='#C05020',lw=1.2,zorder=1)
-        ax.plot([REF[1][0],REF[0][0],REF[5][0]],[REF[1][1],REF[0][1],REF[5][1]],color='#C05020',lw=1.2,zorder=1)
-        # Ronds de référence et labels
-        for i, (rx2, ry2) in enumerate(REF):
-            ax.plot(rx2, ry2, 'o', color='white', markeredgecolor='#C05020', markersize=5, lw=1, zorder=2)
-            ax.text(rx2+LOFF[i][0], ry2+LOFF[i][1], str(LABELS[i]),
-                    color='#C05020', fontsize=6, ha='left', va='center', zorder=2)
-        # Tracé mobile
-        ep = [edge(p) for p in pts]
-        vis = [(max(5,min(W-5,p[0])), max(5,min(W-5,p[1]))) for p in pts]
-        for a,b,d in SEGS:
-            eL,eR,eU,eD = ep[a]; efL,efR,efU,efD = ep[b]
-            sup = (d=='V' and ((eL or eR) or (efL or efR))) or (d=='H' and ((eU or eD) or (efU or efD)))
-            if sup: continue
-            ax.plot([vis[a][0],vis[b][0]],[vis[a][1],vis[b][1]],color='#111',lw=1.5,zorder=3)
-        for i,(p,e,v) in enumerate(zip(pts,ep,vis)):
-            eL,eR,eU,eD = e
-            if eR: ax.annotate('', xy=(v[0]+12,v[1]), xytext=(v[0]-8,v[1]), arrowprops=dict(arrowstyle='->', color='#111', lw=1.5), zorder=4)
-            elif eL: ax.annotate('', xy=(v[0]-12,v[1]), xytext=(v[0]+8,v[1]), arrowprops=dict(arrowstyle='->', color='#111', lw=1.5), zorder=4)
-            if eD: ax.annotate('', xy=(v[0],v[1]+12), xytext=(v[0],v[1]-8), arrowprops=dict(arrowstyle='->', color='#111', lw=1.5), zorder=4)
-            elif eU: ax.annotate('', xy=(v[0],v[1]-12), xytext=(v[0],v[1]+8), arrowprops=dict(arrowstyle='->', color='#111', lw=1.5), zorder=4)
-            if not (eL or eR or eU or eD):
-                diamond_x = [v[0], v[0]+4, v[0], v[0]-4, v[0]]
-                diamond_y = [v[1]-4, v[1], v[1]+4, v[1], v[1]-4]
-                ax.fill(diamond_x, diamond_y, color='#111', zorder=4)
-        ax.set_title(label, fontsize=8, color='#333', pad=3)
-        ax.set_xlim(0, W); ax.set_ylim(W, 0)
-        ax.set_aspect('equal'); ax.axis('off')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        return buf.read()
 
     og_pts = parse(og_json)
     od_pts = parse(od_json)
+    # Retourner un tuple (og_png, od_png)
+    return make_schema_png(og_pts, 'O.G.'), make_schema_png(od_pts, 'O.D.')
 
-    fig, axes = plt.subplots(1, 2, figsize=(6, 3.2), dpi=120)
-    draw_schema(axes[0], og_pts, 'O.G.')
-    draw_schema(axes[1], od_pts, 'O.D.')
-    plt.tight_layout(pad=0.3)
 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=120, bbox_inches='tight')
-    plt.close(fig)
-    buf.seek(0)
-    return buf.read()
+
+
+
+
+
+
 
 
 
@@ -7242,8 +7152,8 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
             og_json = d.get('hw_og', '')
             od_json = d.get('hw_od', '')
             if og_json or od_json:
-                png_data = _generer_hess_weiss_png(og_json, od_json)
-                lignes.append(('__image__', png_data))
+                hw_tuple = _generer_hess_weiss_png(og_json, od_json)
+                lignes.append(('__image__', hw_tuple))
 
         elif sec.type in ('refraction_obj', 'correction_portee', 'frontofocometrie'):
             od = fmt_refraction(d, 'od')
@@ -7598,21 +7508,14 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                     elif label == '__image__':
                         # Hess-Weiss : deux images séparées OG et OD dans un tableau 2 colonnes
                         import uuid as _uuid
+                        og_bytes, od_bytes = valeur  # tuple (og_png, od_png)
+
                         from PIL import Image as _PILImg
                         import io as _io
-                        png_data = valeur
-                        full = _PILImg.open(_io.BytesIO(png_data))
-                        fw, fh = full.size
-                        mid = fw // 2
-                        og_img = full.crop((0, 0, mid, fh))
-                        od_img = full.crop((mid, 0, fw, fh))
-
-                        def _png_bytes(pil_img):
-                            b = _io.BytesIO(); pil_img.save(b, format='PNG'); return b.getvalue()
-
-                        # Largeur de chaque image = moitié du tableau (4500 dxa = ~8cm)
-                        half_cx = 4000000  # ~4.5cm par image
-                        half_cy = int(half_cx * fh / mid)
+                        sample = _PILImg.open(_io.BytesIO(og_bytes))
+                        sw, sh = sample.size
+                        half_cx = 4000000
+                        half_cy = int(half_cx * sh / sw)
 
                         def _add_img(side, img_bytes):
                             img_id = str(_uuid.uuid4()).replace('-','')[:8]
@@ -7623,8 +7526,8 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                             nid = abs(hash(img_id)) % 9000 + 100
                             return rel_id, nid, img_name
 
-                        og_rel, og_nid, og_n = _add_img('og', _png_bytes(og_img))
-                        od_rel, od_nid, od_n = _add_img('od', _png_bytes(od_img))
+                        og_rel, og_nid, og_n = _add_img('og', og_bytes)
+                        od_rel, od_nid, od_n = _add_img('od', od_bytes)
 
                         def _pic_xml(rel, nid2, name):
                             return (
