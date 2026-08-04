@@ -1876,7 +1876,9 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
     LWR = max(1, SCALE-1)
 
     def vis(p):
-        return (max(5, min(W-5, p[0])), max(5, min(W-5, p[1])))
+        # Laisser de la place pour les flèches (20px en espace scalé)
+        margin = 20 * SCALE
+        return (max(margin, min(W-margin, p[0])), max(margin, min(W-margin, p[1])))
 
     def make_schema_png(pts, title):
         PAD = 20 * SCALE
