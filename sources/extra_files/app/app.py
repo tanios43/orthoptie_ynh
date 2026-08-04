@@ -1850,13 +1850,10 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
         (COL[2],ROW[1]),(COL[2],ROW[2]),(COL[1],ROW[2]),
         (COL[0],ROW[2]),(COL[0],ROW[1]),(COL[0],ROW[0])
     ]
-    THRESH = CS * 1.2
-    SEGS = [[8,1,'H'],[1,2,'H'],[2,3,'V'],[3,4,'V'],[4,5,'H'],[5,6,'H'],
-            [6,7,'V'],[7,8,'V'],[7,0,'H'],[0,3,'H'],[1,0,'V'],[0,5,'V']]
-    LABELS = [0,1,2,3,4,5,6,7,8]
-    LOFF = [(6,-8),(4,-10),(8,-10),(8,-8),(8,10),(4,10),(-12,10),(-12,-8),(-12,-10)]
-    LW = max(1, SCALE)      # épaisseur des traits
-    LWR = max(1, SCALE-1)   # épaisseur traits référence
+    # Seuil de bord basé sur les coordonnées canvas originales (W_CANVAS=400, CS_CANVAS=400/28)
+    W_CANVAS = 400
+    CS_CANVAS = W_CANVAS / TOTAL
+    THRESH_CANVAS = CS_CANVAS * 1.2  # même seuil que dans le widget JS
 
     def parse(j):
         try:
@@ -1867,7 +1864,16 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
         return [(r[0], r[1]) for r in REF]
 
     def edge(p):
-        return p[0]<=THRESH, p[0]>=W-THRESH, p[1]<=THRESH, p[1]>=W-THRESH
+        # Comparer avec les coordonnées canvas originales (avant SCALE)
+        px, py = p[0]/SCALE, p[1]/SCALE
+        return px<=THRESH_CANVAS, px>=W_CANVAS-THRESH_CANVAS, py<=THRESH_CANVAS, py>=W_CANVAS-THRESH_CANVAS
+
+    SEGS = [[8,1,'H'],[1,2,'H'],[2,3,'V'],[3,4,'V'],[4,5,'H'],[5,6,'H'],
+            [6,7,'V'],[7,8,'V'],[7,0,'H'],[0,3,'H'],[1,0,'V'],[0,5,'V']]
+    LABELS = [0,1,2,3,4,5,6,7,8]
+    LOFF = [(6,-8),(4,-10),(8,-10),(8,-8),(8,10),(4,10),(-12,10),(-12,-8),(-12,-10)]
+    LW = max(1, SCALE)
+    LWR = max(1, SCALE-1)
 
     def vis(p):
         return (max(5, min(W-5, p[0])), max(5, min(W-5, p[1])))
