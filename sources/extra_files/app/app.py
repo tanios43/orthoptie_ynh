@@ -1850,10 +1850,10 @@ def _generer_hess_weiss_png(og_json, od_json, taille=300):
         (COL[2],ROW[1]),(COL[2],ROW[2]),(COL[1],ROW[2]),
         (COL[0],ROW[2]),(COL[0],ROW[1]),(COL[0],ROW[0])
     ]
-    # Seuil de bord basé sur les coordonnées canvas originales (W_CANVAS=400, CS_CANVAS=400/28)
-    W_CANVAS = 400
+    # Coordonnées JSON sauvegardées dans un canvas de HW_W=300px, TOTAL=28
+    W_CANVAS = 300
     CS_CANVAS = W_CANVAS / TOTAL
-    THRESH_CANVAS = CS_CANVAS * 1.2  # même seuil que dans le widget JS
+    THRESH_CANVAS = CS_CANVAS * 1.2  # ≈ 12.9px — même seuil que hwEdge() dans le JS
 
     def parse(j):
         try:
