@@ -30,6 +30,7 @@
   <nav class="aide-nav" id="aide-nav">
     <div class="nav-group">Démarrage</div>
     <a href="#connexion">Connexion</a>
+    <a href="#cabinet">Choix du cabinet</a>
     <a href="#interface">Interface</a>
     <div class="nav-group">Patients</div>
     <a href="#liste-patients">Liste patients</a>
@@ -38,7 +39,9 @@
     <div class="nav-group">Bilans</div>
     <a href="#nouveau-bilan">Nouveau bilan</a>
     <a href="#edition-bilan">Édition bilan</a>
+    <a href="#sauvegarde-auto">Sauvegarde auto</a>
     <a href="#sections">Sections</a>
+    <a href="#hess-weiss">Hess-Weiss</a>
     <a href="#mise-en-forme">Mise en forme</a>
     <a href="#documents">Documents Word</a>
     <div class="nav-group">Suivis</div>
@@ -68,7 +71,21 @@
       <p>Accédez à l'application via votre navigateur à l'adresse communiquée par votre administrateur.</p>
       <div class="step"><div class="step-num">1</div><p>Entrez votre identifiant et votre mot de passe.</p></div>
       <div class="step"><div class="step-num">2</div><p>Cliquez sur <strong>Se connecter</strong>.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Choisissez le cabinet dans lequel vous travaillez aujourd'hui.</p></div>
       <div class="tip">💡 La session reste ouverte indéfiniment. Pour vous déconnecter, cliquez sur <strong>→ Déconnexion</strong> en bas de la barre de gauche.</div>
+      <div class="warn">⚠️ Le mot de passe doit contenir au moins 10 caractères, une majuscule, un chiffre et un caractère spécial. Si votre mot de passe ne respecte pas cette politique, vous serez invité à le modifier avant d'accéder à l'application.</div>
+    </section>
+
+    {# ── CHOIX DU CABINET ── #}
+    <section class="aide-section" id="cabinet">
+      <h2>🏥 Choix du cabinet</h2>
+      <p>Après chaque connexion, une page vous demande de sélectionner le cabinet dans lequel vous travaillez. Ce choix est mémorisé pour la session en cours.</p>
+      <ul>
+        <li>Si vous n'êtes rattaché qu'à un seul cabinet, la sélection est automatique.</li>
+        <li>Le cabinet sélectionné est associé aux séances créées dans les suivis.</li>
+        <li>Vous pouvez changer de cabinet à tout moment depuis votre <strong>profil</strong>.</li>
+      </ul>
+      <div class="warn">⚠️ Vous ne pouvez pas ajouter de séance dans un suivi sans avoir sélectionné un cabinet au préalable.</div>
     </section>
 
     {# ── INTERFACE ── #}
@@ -91,8 +108,8 @@
     <section class="aide-section" id="liste-patients">
       <h2>👥 Liste des patients</h2>
       <p>La page d'accueil affiche vos patients avec la date de dernière activité (bilans et suivis confondus). Cliquez sur un patient pour ouvrir sa fiche.</p>
-      <h3>Recherche</h3>
-      <p>Utilisez la barre <strong>Recherche</strong> pour trouver un patient par nom, prénom, date de naissance ou numéro de téléphone. Les résultats affichent l'âge du patient à la date du jour.</p>
+      <h3>Recherche temps réel</h3>
+      <p>La barre de recherche filtre instantanément par nom, prénom, date de naissance, téléphone ou médecin référent. La recherche est <strong>insensible aux accents</strong> : chercher "Lea" retrouve "Léa" et inversement.</p>
     </section>
 
     {# ── FICHE PATIENT ── #}
@@ -152,7 +169,41 @@
       <div class="tip">💡 Cliquez sur le titre d'une section pour la replier/déplier. <span class="kbd">Ctrl</span>+<span class="kbd">S</span> enregistre le bilan.</div>
     </section>
 
-    {# ── SECTIONS ── #}
+    {# ── SAUVEGARDE AUTO ── #}
+    <section class="aide-section" id="sauvegarde-auto">
+      <h2>💾 Sauvegarde automatique</h2>
+      <p>Le bilan est sauvegardé automatiquement en arrière-plan sans recharger la page.</p>
+      <ul>
+        <li><strong>30 secondes</strong> après la dernière modification.</li>
+        <li><strong>Toutes les 2 minutes</strong> si des modifications sont en attente.</li>
+      </ul>
+      <p>Un indicateur discret <em>✓ Sauvegardé à HH:MM</em> s'affiche dans le bandeau bas après chaque sauvegarde.</p>
+      <h3>Boutons d'enregistrement</h3>
+      <ul>
+        <li><strong>Enregistrer</strong> (vert) — sauvegarde sans recharger la page, vous restez en édition.</li>
+        <li><strong>Enregistrer et quitter</strong> (violet) — sauvegarde et retourne à la visualisation du bilan.</li>
+        <li><strong>Annuler</strong> — retourne à la fiche patient sans sauvegarder les modifications.</li>
+      </ul>
+      <div class="tip">💡 Pour un nouveau bilan, le bilan est créé automatiquement dès que vous ajoutez la première section ou choisissez un modèle.</div>
+    </section>
+
+    {# ── HESS-WEISS ── #}
+    <section class="aide-section" id="hess-weiss">
+      <h2>📐 Test de Hess-Weiss</h2>
+      <p>La section <strong>Test de Hess-Weiss</strong> permet de tracer le schéma oculomoteur interactif directement dans le bilan.</p>
+      <h3>Utilisation</h3>
+      <ul>
+        <li>Sélectionnez <strong>O.G.</strong> ou <strong>O.D.</strong> pour choisir l'œil actif.</li>
+        <li><strong>Glissez</strong> les 9 points (0 à 8) pour les déplacer de leur position de référence.</li>
+        <li>En mode tactile, une <strong>loupe</strong> apparaît au-dessus du doigt pour positionner précisément le point.</li>
+        <li>Glissez un point jusqu'au <strong>bord de la grille</strong> : le point devient une flèche et le trait perpendiculaire disparaît (débordement clinique).</li>
+      </ul>
+      <h3>Grille de référence</h3>
+      <p>La grille orange représente le schéma vierge de Hess-Weiss. Les 9 points de référence (ronds creux) sont espacés de 8 petits carreaux. Le carré intérieur est centré sur le point 0.</p>
+      <h3>Dans le compte rendu</h3>
+      <p>Le schéma est automatiquement converti en image et inséré dans le document Word lors de la génération du courrier.</p>
+      <div class="tip">💡 Utilisez <strong>Réinitialiser</strong> pour remettre l'œil actif en position normale, ou <strong>Tout effacer</strong> pour remettre les deux yeux.</div>
+    </section>
     <section class="aide-section" id="sections">
       <h2>🗂️ Sections disponibles</h2>
       <p>Les sections se regroupent par catégorie (couleur). Principales sections natives :</p>
@@ -218,27 +269,43 @@
     <section class="aide-section" id="suivi-amblyopie">
       <h2>👁️ Suivi amblyopie</h2>
       <div class="step"><div class="step-num">1</div><p><strong>+ Nouveau suivi → Suivi amblyopie</strong> depuis la fiche patient.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Les champs sont pré-remplis avec les données du dernier bilan (correction portée, acuité…). Modifiables.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Les champs sont pré-remplis avec les données du dernier bilan. Modifiables.</p></div>
       <div class="step"><div class="step-num">3</div><p>Cliquez sur <strong>Créer le suivi</strong>.</p></div>
-      <p>Le tableau de séances contient : date, praticien, occlusion, acuité OD/OG, VB, notes. Bouton <strong>📄 Générer Word</strong> pour le récapitulatif.</p>
+      <p>Le tableau de séances contient : date, occlusion, acuité OD/OG, VB (ESE VL/VP, motilité, PPC, stéréo, divers), notes.</p>
+      <h3>Gestion des séances</h3>
+      <ul>
+        <li><strong>+ Ajouter une séance</strong> — la page défile automatiquement vers la nouvelle séance.</li>
+        <li><strong>⎘ Copier précédente</strong> — copie les données de la séance précédente (mise en forme préservée).</li>
+        <li><strong>🗑 Supprimer</strong> — supprime uniquement la dernière séance.</li>
+      </ul>
+      <h3>Ordonnances</h3>
+      <ul>
+        <li><strong>🩹 Occlusion</strong>, <strong>🔵 Ryser</strong>, <strong>📝 Compte rendu</strong> — générés depuis la séance sélectionnée et ouverts dans Collabora.</li>
+      </ul>
+      <h3>Enregistrement</h3>
+      <ul>
+        <li><strong>Enregistrer</strong> — sauvegarde AJAX, autosave toutes les 30s d'inactivité.</li>
+        <li><strong>Enregistrer et quitter</strong> — retour à la fiche patient.</li>
+      </ul>
+      <div class="warn">⚠️ Sélectionnez un cabinet avant d'ajouter une séance.</div>
     </section>
 
     {# ── SUIVI VB ── #}
     <section class="aide-section" id="suivi-vb">
       <h2>👓 Suivi rééducation VB</h2>
-      <p>Tableau de séances : <strong>Fusion</strong>, <strong>Accommodation</strong>, <strong>Stéréogrammes</strong>, <strong>Notes</strong>. Génération Word disponible.</p>
+      <p>Tableau de séances : <strong>Fusion</strong>, <strong>Accommodation</strong>, <strong>Stéréogrammes</strong>, <strong>Notes</strong>. Mêmes fonctionnalités de séances, copie et enregistrement que le suivi amblyopie.</p>
     </section>
 
     {# ── SUIVI NV ── #}
     <section class="aide-section" id="suivi-nv">
       <h2>🧠 Suivi rééducation neurovisuelle</h2>
-      <p>Tableau de séances : <strong>VB-ACCO-OMOT</strong>, <strong>Neurovisuel</strong>, <strong>Notes</strong>. Génération Word disponible.</p>
+      <p>Tableau de séances : <strong>VB-ACCO-OMOT</strong>, <strong>Neurovisuel</strong>, <strong>Notes</strong>. Mêmes fonctionnalités de séances, copie et enregistrement que le suivi amblyopie.</p>
     </section>
 
     {# ── SUIVI BV ── #}
     <section class="aide-section" id="suivi-bv">
       <h2>🔍 Suivi rééducation basse vision</h2>
-      <p>Tableau de séances : <strong>Acuité OD/OG</strong> + notes, <strong>Exercices</strong>, <strong>Notes</strong>. Génération Word disponible.</p>
+      <p>Tableau de séances : <strong>Acuité OD/OG</strong>, <strong>Exercices</strong>, <strong>Notes</strong>. Mêmes fonctionnalités de séances, copie et enregistrement que le suivi amblyopie.</p>
     </section>
 
     {# ── MESSAGERIE ── #}
