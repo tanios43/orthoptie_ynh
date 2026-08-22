@@ -4,461 +4,541 @@
 
 {% block content %}
 <style>
-.aide-nav { position:sticky;top:16px;display:flex;flex-direction:column;gap:4px; }
-.aide-nav a { font-size:12px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:5px;transition:all .15s;border-left:2px solid transparent; }
-.aide-nav a:hover, .aide-nav a.active { color:var(--accent);background:var(--accent-lt);border-left-color:var(--accent); }
-.aide-nav .nav-group { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:8px 10px 2px;opacity:.7; }
-.aide-section { scroll-margin-top:20px;margin-bottom:40px; }
-.aide-section h2 { font-size:18px;font-weight:600;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px; }
-.aide-section h3 { font-size:15px;font-weight:600;margin:20px 0 10px;color:var(--accent); }
-.aide-section p { font-size:13px;line-height:1.7;margin-bottom:10px;color:var(--text); }
-.aide-section ul, .aide-section ol { font-size:13px;line-height:1.8;padding-left:20px;margin-bottom:10px; }
-.tip { background:#E1F5EE;border-left:3px solid #1D9E75;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;margin:12px 0; }
-.warn { background:#FAEEDA;border-left:3px solid #EF9F27;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;margin:12px 0; }
-.kbd { background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:11px;font-family:monospace;display:inline-block; }
-.step { display:flex;gap:12px;align-items:flex-start;margin-bottom:10px; }
-.step-num { width:24px;height:24px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;margin-top:1px; }
-.step p { margin:0;font-size:13px; }
-.badge { display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:500; }
-.badge-admin { background:#FAEEDA;color:#633806; }
-.two-col { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0; }
-@media (max-width:600px) { .two-col { grid-template-columns:1fr; } }
+.layout{display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:start}
+.aide-nav{position:sticky;top:16px;max-height:calc(100vh - 48px);overflow-y:auto;font-size:12px;padding-right:4px}
+.aide-nav::-webkit-scrollbar{width:4px}
+.aide-nav::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px}
+.ng{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:10px 8px 3px;margin-top:6px}
+.aide-nav a{display:block;padding:4px 10px;color:var(--text);text-decoration:none;border-left:2px solid transparent;border-radius:0 4px 4px 0;transition:.12s;font-size:12px}
+.aide-nav a:hover,.aide-nav a.on{color:var(--accent);background:var(--accent-lt);border-left-color:var(--accent)}
+.aide-nav a.on{font-weight:500}
+.aide-section{scroll-margin-top:20px;margin-bottom:40px}
+.aide-section h2{font-size:17px;font-weight:600;border-bottom:1.5px solid var(--border);padding-bottom:8px;margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.aide-section h3{font-size:14px;font-weight:600;color:var(--accent);margin:18px 0 8px}
+.aide-section p{margin:0 0 9px;font-size:13px;line-height:1.7}
+.aide-section ul,.aide-section ol{margin:0 0 10px;padding-left:20px;font-size:13px;line-height:1.8}
+.aide-section li{margin-bottom:3px}
+.tip{background:var(--accent-lt);border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 5px 5px 0;margin:10px 0;font-size:13px}
+.warn{background:#FFF3CD;border-left:3px solid #E8A020;padding:8px 12px;border-radius:0 5px 5px 0;margin:10px 0;font-size:13px}
+.info{background:#E8F0FE;border-left:3px solid #4A7BF7;padding:8px 12px;border-radius:0 5px 5px 0;margin:10px 0;font-size:13px}
+.kbd{background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:11px;font-family:monospace;display:inline-block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
+.acard{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px}
+.acard h4{margin:0 0 6px;font-size:13px;font-weight:600}
+.badge-admin{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500;background:#FAEEDA;color:#633806}
+.aide-section table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px}
+.aide-section th{background:var(--surface);padding:6px 10px;text-align:left;font-weight:600;border:1px solid var(--border)}
+.aide-section td{padding:5px 10px;border:1px solid var(--border);vertical-align:top}
+@media(max-width:700px){.layout{grid-template-columns:1fr}.aide-nav{position:relative;max-height:none}}
 </style>
 
-<div style="display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:start;">
+<div class="layout">
+<nav class="aide-nav" id="aide-nav">
+  <div class="ng">Démarrage</div>
+  <a href="#connexion">Connexion & sécurité</a>
+  <a href="#cabinet">Choix du cabinet</a>
+  <a href="#interface">Interface générale</a>
+  <a href="#profil">Profil</a>
+  <div class="ng">Patients</div>
+  <a href="#liste">Liste des patients</a>
+  <a href="#nouveau-patient">Nouveau patient</a>
+  <a href="#fiche">Fiche patient</a>
+  <a href="#historique">Mon historique</a>
+  <a href="#recherche">Recherche</a>
+  <div class="ng">Bilans</div>
+  <a href="#nouveau-bilan">Nouveau bilan</a>
+  <a href="#edition">Édition du bilan</a>
+  <a href="#sections-bilan">Sections</a>
+  <a href="#hess-weiss">Test de Hess-Weiss</a>
+  <a href="#pieces-jointes">Pièces jointes</a>
+  <a href="#mise-en-forme">Mise en forme</a>
+  <a href="#visualisation">Visualisation</a>
+  <a href="#courrier">Courriers & ordonnances</a>
+  <div class="ng">Suivis</div>
+  <a href="#suivi-amblyopie">Amblyopie</a>
+  <a href="#suivi-vb">Vision binoculaire</a>
+  <a href="#suivi-nv">Neurovisuel</a>
+  <a href="#suivi-bv">Basse vision</a>
+  <div class="ng">Communication</div>
+  <a href="#messagerie">Messagerie</a>
+  <a href="#notes">Notes & Tâches</a>
+  <a href="#notes-patient">Notes partagées</a>
+  <a href="#repondeur">Répondeur</a>
+  <a href="#favoris">Favoris</a>
+  <div class="ng">Configuration</div>
+  <a href="#cfg-sections">Sections & champs</a>
+  <a href="#cfg-modeles">Modèles de bilan</a>
+  <a href="#cfg-docs">Modèles de documents</a>
+  <div class="ng">Administration</div>
+  <a href="#adm-praticiens">Praticiens</a>
+  <a href="#adm-cabinets">Cabinets</a>
+  <a href="#adm-categories">Catégories</a>
+  <a href="#adm-journal">Journal RGPD</a>
+  <a href="#adm-sauvegarde">Sauvegardes</a>
+  <a href="#adm-configuration">Configuration</a>
+</nav>
 
-  <nav class="aide-nav" id="aide-nav">
-    <div class="nav-group">Démarrage</div>
-    <a href="#connexion">Connexion</a>
-    <a href="#cabinet">Choix du cabinet</a>
-    <a href="#interface">Interface</a>
-    <div class="nav-group">Patients</div>
-    <a href="#liste-patients">Liste patients</a>
-    <a href="#fiche-patient">Fiche patient</a>
-    <a href="#nouveau-patient">Nouveau patient</a>
-    <div class="nav-group">Bilans</div>
-    <a href="#nouveau-bilan">Nouveau bilan</a>
-    <a href="#edition-bilan">Édition bilan</a>
-    <a href="#sauvegarde-auto">Sauvegarde auto</a>
-    <a href="#sections">Sections</a>
-    <a href="#hess-weiss">Hess-Weiss</a>
-    <a href="#mise-en-forme">Mise en forme</a>
-    <a href="#documents">Documents Word</a>
-    <div class="nav-group">Suivis</div>
-    <a href="#suivi-amblyopie">Amblyopie</a>
-    <a href="#suivi-vb">Vision binoculaire</a>
-    <a href="#suivi-nv">Neurovisuel</a>
-    <a href="#suivi-bv">Basse vision</a>
-    <div class="nav-group">Communication</div>
-    <a href="#messagerie">Messagerie</a>
-    <a href="#notes-taches">Notes & Tâches</a>
-    <a href="#notes-patient">Notes partagées</a>
-    <div class="nav-group">Configuration</div>
-    <a href="#admin-sections">Sections et champs</a>
-    <a href="#admin-modeles">Modèles de bilan</a>
-    <a href="#admin-document-modeles">Modèles documents</a>
-    <div class="nav-group">Administration</div>
-    <a href="#admin-categories">Catégories</a>
-    <a href="#admin-praticiens">Praticiens</a>
-    <a href="#admin-sauvegarde">Sauvegardes</a>
-    <a href="#admin-configuration">Configuration</a>
-  </nav>
+<div>
 
-  <div>
-    {# ── CONNEXION ── #}
-    <section class="aide-section" id="connexion">
-      <h2>🔐 Connexion</h2>
-      <p>Accédez à l'application via votre navigateur à l'adresse communiquée par votre administrateur.</p>
-      <div class="step"><div class="step-num">1</div><p>Entrez votre identifiant et votre mot de passe.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Cliquez sur <strong>Se connecter</strong>.</p></div>
-      <div class="step"><div class="step-num">3</div><p>Choisissez le cabinet dans lequel vous travaillez aujourd'hui.</p></div>
-      <div class="tip">💡 La session reste ouverte indéfiniment. Pour vous déconnecter, cliquez sur <strong>→ Déconnexion</strong> en bas de la barre de gauche.</div>
-      <div class="warn">⚠️ Le mot de passe doit contenir au moins 10 caractères, une majuscule, un chiffre et un caractère spécial. Si votre mot de passe ne respecte pas cette politique, vous serez invité à le modifier avant d'accéder à l'application.</div>
-    </section>
+<section class="aide-section" id="connexion">
+<h2>🔐 Connexion & sécurité</h2>
+<p>Accédez à l'application via votre navigateur à l'URL communiquée par votre administrateur.</p>
+<h3>Politique de mot de passe</h3>
+<ul>
+  <li>Au moins <strong>10 caractères</strong></li>
+  <li>Une <strong>lettre majuscule</strong></li>
+  <li>Un <strong>chiffre</strong></li>
+  <li>Un <strong>caractère spécial</strong> (!, @, #…)</li>
+</ul>
+<div class="warn">⚠️ Si votre mot de passe ne respecte pas ces critères, vous serez bloqué sur la page de profil jusqu'à sa modification. Après changement, vous êtes automatiquement déconnecté.</div>
+<h3>Déconnexion</h3>
+<p>Cliquez sur <strong>→ Déconnexion</strong> en bas de la barre de navigation gauche.</p>
+</section>
 
-    {# ── CHOIX DU CABINET ── #}
-    <section class="aide-section" id="cabinet">
-      <h2>🏥 Choix du cabinet</h2>
-      <p>Après chaque connexion, une page vous demande de sélectionner le cabinet dans lequel vous travaillez. Ce choix est mémorisé pour la session en cours.</p>
-      <ul>
-        <li>Si vous n'êtes rattaché qu'à un seul cabinet, la sélection est automatique.</li>
-        <li>Le cabinet sélectionné est associé aux séances créées dans les suivis.</li>
-        <li>Vous pouvez changer de cabinet à tout moment depuis votre <strong>profil</strong>.</li>
-      </ul>
-      <div class="warn">⚠️ Vous ne pouvez pas ajouter de séance dans un suivi sans avoir sélectionné un cabinet au préalable.</div>
-    </section>
+<section class="aide-section" id="cabinet">
+<h2>🏥 Choix du cabinet</h2>
+<p>Après chaque connexion réussie, vous devez indiquer dans quel cabinet vous travaillez aujourd'hui.</p>
+<ul>
+  <li>Si vous êtes rattaché à <strong>un seul cabinet</strong>, la sélection est automatique.</li>
+  <li>Si vous êtes rattaché à <strong>plusieurs cabinets</strong>, une page de sélection s'affiche.</li>
+  <li>Le cabinet sélectionné est associé aux séances créées dans les suivis.</li>
+  <li>Vous pouvez changer de cabinet depuis votre <strong>Profil</strong>.</li>
+</ul>
+<div class="warn">⚠️ Sans cabinet sélectionné, l'ajout de séances dans les suivis est bloqué.</div>
+</section>
 
-    {# ── INTERFACE ── #}
-    <section class="aide-section" id="interface">
-      <h2>🖥️ Interface</h2>
-      <p>L'interface est composée de trois zones : la <strong>barre de navigation gauche</strong>, la <strong>barre du haut</strong> avec les actions contextuelles, et la <strong>zone centrale</strong>.</p>
-      <h3>Navigation principale</h3>
-      <ul>
-        <li><strong>Mes patients</strong> — liste de vos patients avec date de dernière activité (bilans et suivis).</li>
-        <li><strong>Recherche</strong> — recherche par nom, prénom ou date de naissance.</li>
-        <li><strong>Mon historique</strong> — 20 derniers dossiers consultés.</li>
-        <li><strong>💬 Messages</strong> — messagerie inter-praticiens (badge rouge si messages non lus).</li>
-        <li><strong>Sections du bilan</strong> — configuration des sections (accessible à tous).</li>
-        <li><strong>Modèles de bilan</strong> — gestion des modèles (accessible à tous).</li>
-        <li><strong>Modèles de documents</strong> — gestion des modèles de courriers/ordonnances (accessible à tous).</li>
-      </ul>
-    </section>
+<section class="aide-section" id="interface">
+<h2>🖥️ Interface générale</h2>
+<div class="grid2">
+  <div class="acard"><h4>Barre de navigation gauche</h4><p>Accès à toutes les pages. Repliable via ☰. État mémorisé entre les sessions.</p></div>
+  <div class="acard"><h4>Zone centrale</h4><p>Affichage du contenu principal (liste, fiche, formulaire…).</p></div>
+  <div class="acard"><h4>Bandeau inférieur</h4><p>Actions contextuelles : enregistrer, quitter, ajouter une séance…</p></div>
+  <div class="acard"><h4>Badges</h4><p>Rouge 💬 = messages non lus. Orange 📝 = tâches actives.</p></div>
+</div>
+<h3>Navigation principale</h3>
+<table>
+  <tr><th>Lien</th><th>Description</th></tr>
+  <tr><td>👥 Mes patients</td><td>Liste de vos patients avec date de dernière activité</td></tr>
+  <tr><td>🔍 Recherche</td><td>Recherche globale par nom, prénom, date de naissance</td></tr>
+  <tr><td>🕐 Mon historique</td><td>20 derniers dossiers consultés</td></tr>
+  <tr><td>💬 Messages</td><td>Messagerie inter-praticiens</td></tr>
+  <tr><td>📝 Notes & Tâches</td><td>Post-its personnels et gestion de tâches</td></tr>
+  <tr><td>📖 Manuel</td><td>Cette page d'aide</td></tr>
+  <tr><td>⚙️ Sections</td><td>Configuration des sections de bilan</td></tr>
+  <tr><td>🗂️ Modèles bilan</td><td>Modèles de bilan prédéfinis</td></tr>
+  <tr><td>📄 Modèles documents</td><td>Modèles de courriers et ordonnances</td></tr>
+</table>
+</section>
 
-    {# ── LISTE PATIENTS ── #}
-    <section class="aide-section" id="liste-patients">
-      <h2>👥 Liste des patients</h2>
-      <p>La page d'accueil affiche vos patients avec la date de dernière activité (bilans et suivis confondus). Cliquez sur un patient pour ouvrir sa fiche.</p>
-      <h3>Recherche temps réel</h3>
-      <p>La barre de recherche filtre instantanément par nom, prénom, date de naissance, téléphone ou médecin référent. La recherche est <strong>insensible aux accents</strong> : chercher "Lea" retrouve "Léa" et inversement.</p>
-    </section>
+<section class="aide-section" id="profil">
+<h2>👤 Profil</h2>
+<p>Accessible via votre nom en bas de la navigation gauche.</p>
+<ul>
+  <li><strong>Nom, prénom, titre</strong> — affichés dans les en-têtes de documents.</li>
+  <li><strong>Numéro ADELI</strong> — apparaît sur les ordonnances.</li>
+  <li><strong>Signature</strong> — image PNG/JPEG insérée automatiquement dans les courriers.</li>
+  <li><strong>Changer de cabinet</strong> — modifie le cabinet actif pour la session en cours.</li>
+  <li><strong>Changer le mot de passe</strong> — doit respecter la politique de sécurité.</li>
+</ul>
+</section>
 
-    {# ── FICHE PATIENT ── #}
-    <section class="aide-section" id="fiche-patient">
-      <h2>📋 Fiche patient</h2>
-      <p>La fiche patient regroupe toutes les informations et l'historique clinique.</p>
-      <h3>Zones de la fiche</h3>
-      <ul>
-        <li><strong>Notes partagées</strong> (en haut) — visibles par tous les praticiens, repliables.</li>
-        <li><strong>Identité</strong> (colonne gauche) — nom, date de naissance, coordonnées, médecin, opticien.</li>
-        <li><strong>Timeline</strong> (colonne droite) — historique chronologique de tous les bilans et suivis.</li>
-      </ul>
-      <h3>Timeline</h3>
-      <p>La timeline affiche bilans et suivis triés du plus récent au plus ancien. Cliquez sur un bilan pour le déplier et voir le résumé des sections.</p>
-      <h3>Pièces jointes depuis la timeline</h3>
-      <p>Si un bilan possède des pièces jointes globales, un badge 📎 avec leur nombre apparaît dans sa barre de titre. Cliquez dessus pour afficher la liste des fichiers directement sous le bilan. Les PDF et images s'ouvrent dans l'onglet ; les autres formats se téléchargent.</p>
-      <h3>Créer une tâche liée au patient</h3>
-      <p>Le bouton <strong>+ Tâche</strong> en haut de la fiche ouvre une modale pour créer une tâche directement associée à ce patient. La tâche apparaît dans la page <strong>Notes & Tâches</strong> avec un lien 👤 qui ramène vers cette fiche.</p>
-      <div class="tip">💡 Cliquez sur l'icône 🗑 pour supprimer un suivi (action irréversible).</div>
-      <h3>Ajouter un suivi</h3>
-      <p>Le bouton <strong>+ Nouveau suivi</strong> ouvre un menu déroulant :</p>
-      <ul>
-        <li>👁 Suivi amblyopie</li>
-        <li>👓 Suivi rééducation vision binoculaire (VB)</li>
-        <li>🧠 Suivi rééducation neurovisuelle</li>
-        <li>🔍 Suivi rééducation basse vision</li>
-      </ul>
-    </section>
+<section class="aide-section" id="liste">
+<h2>👥 Liste des patients</h2>
+<p>Page d'accueil de l'application. Affiche vos patients avec la date de dernière activité (bilans + suivis).</p>
+<h3>Recherche temps réel</h3>
+<p>Filtre instantané par <strong>nom, prénom, date de naissance, téléphone, médecin référent</strong>. La recherche est <strong>insensible aux accents</strong> : chercher "Lea" retrouve "Léa" et vice-versa.</p>
+<div class="tip">💡 Un compteur affiche le nombre de patients visibles. Cliquez ✕ pour effacer la recherche.</div>
+</section>
 
-    {# ── NOUVEAU PATIENT ── #}
-    <section class="aide-section" id="nouveau-patient">
-      <h2>➕ Nouveau patient</h2>
-      <div class="step"><div class="step-num">1</div><p>Cliquez sur <strong>+ Nouveau patient</strong> dans la liste des patients.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Remplissez les informations : nom, prénom, date de naissance (obligatoire), coordonnées, médecin référent, opticien.</p></div>
-      <div class="step"><div class="step-num">3</div><p>Cliquez sur <strong>Enregistrer</strong>.</p></div>
-    </section>
+<section class="aide-section" id="nouveau-patient">
+<h2>➕ Nouveau patient</h2>
+<p>Bouton <strong>+ Nouveau patient</strong> en haut de la liste des patients.</p>
+<ul>
+  <li>Nom, prénom, date de naissance, sexe</li>
+  <li>Adresse, téléphone, email</li>
+  <li>Médecin prescripteur, médecin référent, opticien</li>
+  <li>Mutuelle, numéro de sécurité sociale</li>
+</ul>
+<div class="tip">💡 Le champ commune propose une autocomplétion basée sur le code postal.</div>
+</section>
 
-    {# ── NOUVEAU BILAN ── #}
-    <section class="aide-section" id="nouveau-bilan">
-      <h2>📝 Nouveau bilan</h2>
-      <div class="step"><div class="step-num">1</div><p>Depuis la fiche patient, cliquez sur <strong>+ Nouveau bilan</strong>.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Choisissez éventuellement un modèle existant pour pré-remplir les sections.</p></div>
-      <div class="step"><div class="step-num">3</div><p>Sélectionnez le motif de consultation et cliquez sur <strong>Créer</strong>.</p></div>
-    </section>
+<section class="aide-section" id="fiche">
+<h2>📋 Fiche patient</h2>
+<h3>Structure</h3>
+<ul>
+  <li><strong>Notes partagées</strong> (en haut) — visibles par tous les praticiens, repliables.</li>
+  <li><strong>Identité</strong> (colonne gauche) — coordonnées, médecins, opticien, mutuelle.</li>
+  <li><strong>Timeline</strong> (colonne droite) — bilans et suivis du plus récent au plus ancien.</li>
+</ul>
+<h3>Timeline</h3>
+<p>Cliquez sur un bilan pour le déplier et voir le résumé de ses sections. Un badge 📎 indique les pièces jointes globales — cliquez pour les afficher.</p>
+<h3>Actions disponibles</h3>
+<ul>
+  <li><strong>✏️ Modifier</strong> — éditer les informations d'identité.</li>
+  <li><strong>+ Nouveau bilan</strong> — créer un bilan orthoptique.</li>
+  <li><strong>+ Nouveau suivi</strong> — amblyopie, VB, neurovisuel, basse vision.</li>
+  <li><strong>+ Tâche</strong> — créer une tâche liée à ce patient.</li>
+  <li><strong>🗑 Supprimer</strong> — suppression irréversible du patient et de tout son dossier.</li>
+</ul>
+</section>
 
-    {# ── ÉDITION BILAN ── #}
-    <section class="aide-section" id="edition-bilan">
-      <h2>✏️ Édition d'un bilan</h2>
-      <h3>Ajouter une section</h3>
-      <p>Cliquez sur une section dans la liste des sections disponibles (colonne de droite) pour l'ajouter au bilan.</p>
-      <h3>Réorganiser les sections</h3>
-      <p>Utilisez les boutons <strong>↑</strong> et <strong>↓</strong> dans l'en-tête de chaque section pour modifier son ordre.</p>
-      <h3>Bilans précédents</h3>
-      <p>Un cadre <strong>Bilans précédents</strong> affiche tous les bilans précédents du patient. Cliquez sur un bilan pour le déplier. Utile pour comparer l'évolution.</p>
-      <h3>Copier une réfraction</h3>
-      <p>Dans la section <strong>Réfraction subjective</strong>, le bouton <strong>📋 Copier depuis…</strong> recopie automatiquement les valeurs Sphère/Cyl/Axe OD et OG depuis une <em>Correction portée</em> ou <em>Réfraction objective</em> déjà renseignée. Si plusieurs sections sources sont présentes, leurs observations libres sont affichées pour les différencier.</p>
-      <div class="tip">💡 Cliquez sur le titre d'une section pour la replier/déplier. <span class="kbd">Ctrl</span>+<span class="kbd">S</span> enregistre le bilan.</div>
-    </section>
+<section class="aide-section" id="historique">
+<h2>🕐 Mon historique</h2>
+<p>Affiche les 20 derniers dossiers consultés, avec nom, prénom et date de consultation. Cliquez sur un patient pour rouvrir sa fiche.</p>
+</section>
 
-    {# ── SAUVEGARDE AUTO ── #}
-    <section class="aide-section" id="sauvegarde-auto">
-      <h2>💾 Sauvegarde automatique</h2>
-      <p>Le bilan est sauvegardé automatiquement en arrière-plan sans recharger la page.</p>
-      <ul>
-        <li><strong>30 secondes</strong> après la dernière modification.</li>
-        <li><strong>Toutes les 2 minutes</strong> si des modifications sont en attente.</li>
-      </ul>
-      <p>Un indicateur discret <em>✓ Sauvegardé à HH:MM</em> s'affiche dans le bandeau bas après chaque sauvegarde.</p>
-      <h3>Boutons d'enregistrement</h3>
-      <ul>
-        <li><strong>Enregistrer</strong> (vert) — sauvegarde sans recharger la page, vous restez en édition.</li>
-        <li><strong>Enregistrer et quitter</strong> (violet) — sauvegarde et retourne à la visualisation du bilan.</li>
-        <li><strong>Annuler</strong> — retourne à la fiche patient sans sauvegarder les modifications.</li>
-      </ul>
-      <div class="tip">💡 Pour un nouveau bilan, le bilan est créé automatiquement dès que vous ajoutez la première section ou choisissez un modèle.</div>
-    </section>
+<section class="aide-section" id="recherche">
+<h2>🔍 Recherche</h2>
+<p>Recherche globale parmi <strong>tous les patients</strong> (pas seulement les vôtres). Par nom, prénom ou date de naissance. Insensible aux accents.</p>
+</section>
 
-    {# ── HESS-WEISS ── #}
-    <section class="aide-section" id="hess-weiss">
-      <h2>📐 Test de Hess-Weiss</h2>
-      <p>La section <strong>Test de Hess-Weiss</strong> permet de tracer le schéma oculomoteur interactif directement dans le bilan.</p>
-      <h3>Utilisation</h3>
-      <ul>
-        <li>Sélectionnez <strong>O.G.</strong> ou <strong>O.D.</strong> pour choisir l'œil actif.</li>
-        <li><strong>Glissez</strong> les 9 points (0 à 8) pour les déplacer de leur position de référence.</li>
-        <li>En mode tactile, une <strong>loupe</strong> apparaît au-dessus du doigt pour positionner précisément le point.</li>
-        <li>Glissez un point jusqu'au <strong>bord de la grille</strong> : le point devient une flèche et le trait perpendiculaire disparaît (débordement clinique).</li>
-      </ul>
-      <h3>Grille de référence</h3>
-      <p>La grille orange représente le schéma vierge de Hess-Weiss. Les 9 points de référence (ronds creux) sont espacés de 8 petits carreaux. Le carré intérieur est centré sur le point 0.</p>
-      <h3>Dans le compte rendu</h3>
-      <p>Le schéma est automatiquement converti en image et inséré dans le document Word lors de la génération du courrier.</p>
-      <div class="tip">💡 Utilisez <strong>Réinitialiser</strong> pour remettre l'œil actif en position normale, ou <strong>Tout effacer</strong> pour remettre les deux yeux.</div>
-    </section>
-    <section class="aide-section" id="sections">
-      <h2>🗂️ Sections disponibles</h2>
-      <p>Les sections se regroupent par catégorie (couleur). Principales sections natives :</p>
-      <div class="two-col">
-        <div>
-          <h3>Réfraction / Acuité</h3>
-          <ul>
-            <li>Correction portée</li><li>Réfraction objective</li>
-            <li>Réfraction subjective</li><li>Acuité visuelle</li><li>Test de Swaine</li>
-          </ul>
-        </div>
-        <div>
-          <h3>Vision binoculaire</h3>
-          <ul>
-            <li>Cornéorénographie (ESE/ESI)</li><li>Motilité oculaire</li>
-            <li>Vision stéréoscopique</li>
-          </ul>
-        </div>
-        <div>
-          <h3>Administratif</h3>
-          <ul>
-            <li>Anamnèse</li><li>Conclusions</li>
-            <li>Courrier médecin</li><li>Ordonnance</li><li>Ordonnance de lunettes</li>
-          </ul>
-        </div>
-        <div>
-          <h3>Personnalisées</h3>
-          <ul><li>Créées depuis <strong>Sections du bilan</strong> dans la navigation.</li></ul>
-        </div>
-      </div>
-    </section>
+<section class="aide-section" id="nouveau-bilan">
+<h2>📄 Nouveau bilan</h2>
+<p>Depuis la fiche patient : <strong>+ Nouveau bilan</strong>. Choisissez un modèle pour pré-remplir les sections, ou démarrez avec un <strong>Bilan vierge</strong>.</p>
+<div class="info">ℹ️ Le bilan est créé en base dès que vous ajoutez la première section ou choisissez un modèle. La sauvegarde automatique est alors active immédiatement.</div>
+</section>
 
-    {# ── MISE EN FORME ── #}
-    <section class="aide-section" id="mise-en-forme">
-      <h2>✨ Mise en forme du texte</h2>
-      <p>Dans les champs texte libre, une barre <strong>B / I / U</strong> permet de mettre en forme. Dans les tableaux de suivi, une barre flottante apparaît au-dessus du champ actif.</p>
-      <p><strong>Majuscules automatiques</strong> : la première lettre est automatiquement mise en majuscule dans les situations suivantes :</p>
-      <ul>
-        <li>En début de champ vide.</li>
-        <li>Après un point, un point d'exclamation ou un point d'interrogation (suivi d'un espace).</li>
-        <li>En début de nouvelle ligne (après <span class="kbd">Entrée</span>).</li>
-      </ul>
-      <div class="tip">💡 La mise en forme est conservée dans les documents Word générés.</div>
-    </section>
+<section class="aide-section" id="edition">
+<h2>✏️ Édition du bilan</h2>
+<h3>En-tête</h3>
+<ul>
+  <li>Date (pré-remplie à aujourd'hui), motif de consultation.</li>
+  <li>Classe / Profession — sélecteur de type + texte libre.</li>
+  <li>Médecin prescripteur — préfixé "Dr " par défaut.</li>
+</ul>
+<h3>Sauvegarde automatique</h3>
+<ul>
+  <li>Déclenchée <strong>30 secondes</strong> après la dernière modification.</li>
+  <li>Ou <strong>toutes les 2 minutes</strong> si des modifications sont en attente.</li>
+  <li>Indicateur <em>✓ Sauvegardé à HH:MM:SS</em> dans le bandeau bas.</li>
+</ul>
+<h3>Boutons du bandeau bas</h3>
+<ul>
+  <li><strong>Enregistrer</strong> (vert) — AJAX, sans rechargement de la page.</li>
+  <li><strong>Enregistrer et quitter</strong> (violet) — sauvegarde et retour à la visualisation.</li>
+  <li><strong>Annuler</strong> — retour à la fiche patient sans sauvegarder.</li>
+</ul>
+<h3>Navigation au clavier</h3>
+<p>La touche <span class="kbd">Tab</span> passe au champ suivant et centre automatiquement le champ actif dans la fenêtre, y compris les zones de texte enrichi.</p>
+</section>
 
-    {# ── DOCUMENTS WORD ── #}
-    <section class="aide-section" id="documents">
-      <h2>📄 Documents Word (Collabora)</h2>
-      <p>Les sections <strong>Courrier médecin</strong>, <strong>Ordonnance</strong> et <strong>Ordonnance de lunettes</strong> permettent de générer et d'éditer des documents Word via Collabora.</p>
-      <div class="step"><div class="step-num">1</div><p>Cliquez sur <strong>Générer le document</strong> dans la section concernée.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Sur la page de génération, sélectionnez les sections à inclure, le modèle de document, et éventuellement les images des pièces jointes à insérer.</p></div>
-      <div class="step"><div class="step-num">3</div><p>Cliquez sur <strong>Générer et ouvrir dans Collabora</strong>. Le document s'ouvre avec la mise en forme en colonnes identique à la page d'édition du bilan.</p></div>
-      <div class="step"><div class="step-num">4</div><p>Modifiez le document dans Collabora, puis enregistrez (<span class="kbd">Ctrl</span>+<span class="kbd">S</span>).</p></div>
-      <div class="step"><div class="step-num">5</div><p>Le document apparaît en pièce jointe de la section. Cliquez dessus pour le rouvrir.</p></div>
-      <h3>Insertion d'images</h3>
-      <p>Si une section sélectionnée possède des pièces jointes de type image, des miniatures apparaissent avec une case à cocher. Cochez les images à insérer — elles apparaîtront dans le document après la section correspondante.</p>
-      <h3>Pièces jointes de sections</h3>
-      <p>Les fichiers uploadés dans les champs <code>fichier</code> d'une section sont cliquables directement depuis la page d'édition du bilan, avant et après enregistrement.</p>
-      <div class="warn">⚠️ Ne fermez pas Collabora sans avoir enregistré.</div>
-    </section>
+<section class="aide-section" id="sections-bilan">
+<h2>🧩 Sections du bilan</h2>
+<p>Le panneau gauche liste toutes les sections disponibles, regroupées par catégorie. Cliquez sur une section pour l'ajouter au bilan. Glissez-déposez les en-têtes pour réordonner.</p>
+<h3>Sections natives</h3>
+<div class="grid2">
+  <div class="acard"><h4>Réfraction</h4><p>Tableaux OD/OG : sphère, cylindre, axe, addition. Modes : correction portée, objective, subjective, frontofocométrie.</p></div>
+  <div class="acard"><h4>Acuité visuelle</h4><p>AV de loin et de près OD/OG.</p></div>
+  <div class="acard"><h4>Motilité / Vergences</h4><p>Texte enrichi libre.</p></div>
+  <div class="acard"><h4>Ordonnance de lunettes</h4><p>Tableau OD/OG avec sphère, cylindre, axe, addition, prisme. Généré en document Word.</p></div>
+  <div class="acard"><h4>Courrier</h4><p>Éditeur de texte enrichi pour le corps du courrier destiné à l'ophtalmologue.</p></div>
+  <div class="acard"><h4>Test de Hess-Weiss</h4><p>Schéma oculomoteur interactif (voir section dédiée ci-dessous).</p></div>
+</div>
+</section>
 
-    {# ── SUIVI AMBLYOPIE ── #}
-    <section class="aide-section" id="suivi-amblyopie">
-      <h2>👁️ Suivi amblyopie</h2>
-      <div class="step"><div class="step-num">1</div><p><strong>+ Nouveau suivi → Suivi amblyopie</strong> depuis la fiche patient.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Les champs sont pré-remplis avec les données du dernier bilan. Modifiables.</p></div>
-      <div class="step"><div class="step-num">3</div><p>Cliquez sur <strong>Créer le suivi</strong>.</p></div>
-      <p>Le tableau de séances contient : date, occlusion, acuité OD/OG, VB (ESE VL/VP, motilité, PPC, stéréo, divers), notes.</p>
-      <h3>Gestion des séances</h3>
-      <ul>
-        <li><strong>+ Ajouter une séance</strong> — la page défile automatiquement vers la nouvelle séance.</li>
-        <li><strong>⎘ Copier précédente</strong> — copie les données de la séance précédente (mise en forme préservée).</li>
-        <li><strong>🗑 Supprimer</strong> — supprime uniquement la dernière séance.</li>
-      </ul>
-      <h3>Ordonnances</h3>
-      <ul>
-        <li><strong>🩹 Occlusion</strong>, <strong>🔵 Ryser</strong>, <strong>📝 Compte rendu</strong> — générés depuis la séance sélectionnée et ouverts dans Collabora.</li>
-      </ul>
-      <h3>Enregistrement</h3>
-      <ul>
-        <li><strong>Enregistrer</strong> — sauvegarde AJAX, autosave toutes les 30s d'inactivité.</li>
-        <li><strong>Enregistrer et quitter</strong> — retour à la fiche patient.</li>
-      </ul>
-      <div class="warn">⚠️ Sélectionnez un cabinet avant d'ajouter une séance.</div>
-    </section>
+<section class="aide-section" id="hess-weiss">
+<h2>📐 Test de Hess-Weiss</h2>
+<h3>Grille de référence</h3>
+<ul>
+  <li>Quadrillage fin orange sur fond blanc.</li>
+  <li>9 points de référence (ronds creux, numérotés 0–8) espacés de 8 carreaux.</li>
+  <li>Carré intérieur de 8×8 carreaux centré sur le point 0.</li>
+  <li>Structure orange : contour reliant les 9 points + médianes horizontale et verticale.</li>
+</ul>
+<h3>Tracer le schéma</h3>
+<ul>
+  <li>Sélectionnez <strong>O.G.</strong> ou <strong>O.D.</strong> pour choisir l'œil actif.</li>
+  <li><strong>Glissez</strong> les losanges noirs (points 0–8) pour les déplacer de leur position de référence.</li>
+  <li>En mode <strong>tactile</strong> : une loupe ×2.5 apparaît au-dessus du doigt pour positionner précisément.</li>
+  <li>Glissez un point jusqu'au <strong>bord de la grille</strong> : il devient une flèche dans la direction du trait restant, et les traits perpendiculaires disparaissent (débordement clinique).</li>
+</ul>
+<h3>Réinitialiser</h3>
+<ul>
+  <li><strong>Réinitialiser</strong> — remet l'œil actif en position de référence.</li>
+  <li><strong>Tout effacer</strong> — remet les deux yeux en position de référence.</li>
+</ul>
+<div class="tip">💡 Le schéma est automatiquement converti en image et inséré dans le document Word lors de la génération du courrier.</div>
+</section>
 
-    {# ── SUIVI VB ── #}
-    <section class="aide-section" id="suivi-vb">
-      <h2>👓 Suivi rééducation VB</h2>
-      <p>Tableau de séances : <strong>Fusion</strong>, <strong>Accommodation</strong>, <strong>Stéréogrammes</strong>, <strong>Notes</strong>. Mêmes fonctionnalités de séances, copie et enregistrement que le suivi amblyopie.</p>
-    </section>
+<section class="aide-section" id="pieces-jointes">
+<h2>📎 Pièces jointes</h2>
+<h3>Du bilan (globales)</h3>
+<p>En bas du formulaire d'édition. Accepte images, PDF, Word jusqu'à 16 Mo par fichier.</p>
+<ul>
+  <li><strong>Bouton "Ajouter un fichier"</strong> — plusieurs clics successifs <strong>accumulent</strong> les fichiers.</li>
+  <li><strong>Glisser-déposer</strong> — plusieurs dépôts successifs accumulent également les fichiers.</li>
+  <li>Un titre optionnel peut être saisi sous chaque prévisualisation.</li>
+</ul>
+<h3>Par section</h3>
+<p>Les sections personnalisées avec un champ <code>fichier</code> suivent la même logique d'accumulation.</p>
+<div class="tip">💡 Badge 📎 dans la timeline de la fiche patient = pièces jointes disponibles.</div>
+</section>
 
-    {# ── SUIVI NV ── #}
-    <section class="aide-section" id="suivi-nv">
-      <h2>🧠 Suivi rééducation neurovisuelle</h2>
-      <p>Tableau de séances : <strong>VB-ACCO-OMOT</strong>, <strong>Neurovisuel</strong>, <strong>Notes</strong>. Mêmes fonctionnalités de séances, copie et enregistrement que le suivi amblyopie.</p>
-    </section>
+<section class="aide-section" id="mise-en-forme">
+<h2>✍️ Mise en forme du texte</h2>
+<table>
+  <tr><th>Raccourci</th><th>Effet</th></tr>
+  <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">B</span></td><td><strong>Gras</strong></td></tr>
+  <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">I</span></td><td><em>Italique</em></td></tr>
+  <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">U</span></td><td><u>Souligné</u></td></tr>
+</table>
+<p>La mise en forme est préservée lors de la sauvegarde automatique, de la copie de séance et dans les documents Word générés.</p>
+</section>
 
-    {# ── SUIVI BV ── #}
-    <section class="aide-section" id="suivi-bv">
-      <h2>🔍 Suivi rééducation basse vision</h2>
-      <p>Tableau de séances : <strong>Acuité OD/OG</strong>, <strong>Exercices</strong>, <strong>Notes</strong>. Mêmes fonctionnalités de séances, copie et enregistrement que le suivi amblyopie.</p>
-    </section>
+<section class="aide-section" id="visualisation">
+<h2>👁️ Visualisation du bilan</h2>
+<ul>
+  <li>Navigation <strong>précédent / suivant</strong> entre les bilans du patient.</li>
+  <li>Pastilles de sections cliquables pour un scroll rapide.</li>
+  <li>Boutons : <strong>Modifier</strong>, <strong>Courrier</strong>, <strong>Ordonnance</strong>, <strong>Imprimer</strong>.</li>
+  <li>Schéma Hess-Weiss rendu en lecture seule (OG et OD côte à côte).</li>
+</ul>
+<div class="tip">💡 Le mode impression masque la sidebar et les boutons, et supprime les ombres des cartes.</div>
+</section>
 
-    {# ── MESSAGERIE ── #}
-    <section class="aide-section" id="messagerie">
-      <h2>💬 Messagerie</h2>
-      <p>Messages directs entre praticiens du cabinet. Un badge rouge indique les messages non lus (mis à jour toutes les 30 secondes).</p>
-      <div class="step"><div class="step-num">1</div><p>Cliquez sur <strong>💬 Messages</strong> dans la navigation.</p></div>
-      <div class="step"><div class="step-num">2</div><p>Créez une nouvelle conversation en sélectionnant un ou plusieurs praticiens.</p></div>
-      <div class="step"><div class="step-num">3</div><p>Rédigez votre message et cliquez sur <strong>Envoyer</strong> (ou <span class="kbd">Ctrl</span>+<span class="kbd">Entrée</span>).</p></div>
-    </section>
+<section class="aide-section" id="courrier">
+<h2>📨 Courriers & ordonnances</h2>
+<ol>
+  <li>Choisissez le <strong>modèle de document</strong>.</li>
+  <li>Sélectionnez les <strong>sections à inclure</strong>.</li>
+  <li>Ajoutez un <strong>commentaire</strong> optionnel.</li>
+  <li>Cliquez <strong>Générer</strong> → le document s'ouvre dans <strong>Collabora Online</strong>.</li>
+</ol>
+<h3>Contenu automatique</h3>
+<ul>
+  <li>En-tête cabinet : nom, adresse, téléphone, ADELI du praticien.</li>
+  <li>Informations patient : nom, prénom, date de naissance, âge, adresse.</li>
+  <li>Médecin prescripteur et classe/profession si renseignés.</li>
+  <li>Signature du praticien si uploadée dans le profil.</li>
+  <li>Schéma Hess-Weiss inséré en image si la section est présente.</li>
+</ul>
+<h3>Ordonnance de lunettes</h3>
+<p>Disponible si la section est dans le bilan. Ouvre directement Collabora avec le tableau OD/OG pré-rempli.</p>
+</section>
 
-    {# ── NOTES & TÂCHES ── #}
-    <section class="aide-section" id="notes-taches">
-      <h2>📝 Notes & Tâches</h2>
-      <p>Accessible via <strong>Notes & Tâches</strong> dans la navigation. Badge orange indique le nombre de tâches actives.</p>
-      <h3>Notes</h3>
-      <p>Post-its colorés personnels (visibles uniquement par vous). Créez une note, choisissez une couleur, épinglez les importantes en haut. Les post-its s'adaptent automatiquement à la taille du texte.</p>
-      <ul>
-        <li>Cliquez sur un post-it pour le modifier.</li>
-        <li>🗑 pour supprimer.</li>
-        <li>📌 pour épingler/désépingler.</li>
-      </ul>
-      <h3>Tâches</h3>
-      <p>Tâches avec priorité, échéance et assignation à un praticien.</p>
-      <ul>
-        <li><strong>Priorité</strong> : basse ↓ / normale → / haute ↑</li>
-        <li><strong>Assigner</strong> : la tâche apparaît aussi dans la liste du praticien assigné.</li>
-        <li><strong>Lien patient</strong> : si créée depuis une fiche patient, un lien 👤 apparaît sur la tâche.</li>
-        <li><strong>Modifier / Supprimer</strong> : autorisé pour le créateur ET le praticien assigné.</li>
-      </ul>
-      <h3>Créer une tâche liée à un patient</h3>
-      <p>Depuis la fiche d'un patient, cliquez sur <strong>+ Tâche</strong> dans la barre du haut. La tâche créée sera automatiquement liée à ce patient.</p>
-      <div class="tip">💡 Statuts disponibles : À faire, En cours, Terminée.</div>
-    </section>
+<section class="aide-section" id="suivi-amblyopie">
+<h2>👁️ Suivi amblyopie</h2>
+<p>Depuis la fiche : <strong>+ Nouveau suivi → Suivi amblyopie</strong>. Champs pré-remplis depuis le dernier bilan.</p>
+<h3>En-tête du suivi</h3>
+<p>Date du bilan initial, lunettes OD/OG, acuité initiale, ophtalmologue référent, stéréoscopie, ESE, versions, date de consultation, traitement, prochain RDV, notes générales.</p>
+<h3>Colonnes de séance</h3>
+<p>Date/praticien/cabinet · Occlusion · Acuité OD/OG · VB (ESE VL, ESE VP, Motilité, PPC, Stéréo, Divers — sur 2 colonnes) · Notes</p>
+<h3>Gestion des séances</h3>
+<ul>
+  <li><strong>+ Ajouter une séance</strong> — la page défile automatiquement vers la nouvelle séance.</li>
+  <li><strong>⎘ Copier précédente</strong> — recopie les données avec mise en forme préservée.</li>
+  <li><strong>🗑 Supprimer</strong> — supprime uniquement la dernière séance.</li>
+</ul>
+<h3>Ordonnances et compte rendu</h3>
+<ul>
+  <li><strong>🩹 Occlusion</strong> — œil, nombre d'heures/jour, durée, notes.</li>
+  <li><strong>🔵 Ryser</strong> — pénalisation par atropine, numérotation OD/OG, acuité.</li>
+  <li><strong>📝 Compte rendu</strong> — courrier de suivi destiné à l'ophtalmologue.</li>
+</ul>
+<p>Chaque document s'ouvre dans Collabora. Des badges (🩹 🔵 📝) apparaissent sous la ligne de séance après génération.</p>
+<h3>Enregistrement</h3>
+<ul>
+  <li><strong>Enregistrer</strong> — AJAX sans rechargement + autosave (30 s d'inactivité ou 2 min).</li>
+  <li><strong>Enregistrer et quitter</strong> — sauvegarde et retour à la fiche patient.</li>
+</ul>
+<div class="warn">⚠️ Un cabinet doit être sélectionné avant d'ajouter une séance (popup d'alerte sinon).</div>
+</section>
 
-    {# ── NOTES PARTAGÉES ── #}
-    <section class="aide-section" id="notes-patient">
-      <h2>📌 Notes partagées</h2>
-      <p>Visibles par tous les praticiens en haut de la fiche patient. Tapez votre note et cliquez <strong>Ajouter</strong>. Cliquez ✕ pour supprimer une de vos notes (toutes si admin).</p>
-    </section>
+<section class="aide-section" id="suivi-vb">
+<h2>👓 Suivi vision binoculaire</h2>
+<p>Colonnes de séance : <strong>Date</strong> · <strong>Fusion</strong> · <strong>Accommodation</strong> · <strong>Stéréogrammes</strong> · <strong>Notes</strong>.</p>
+<p>Mêmes fonctionnalités que le suivi amblyopie : ajout/copie/suppression de séances, enregistrement AJAX, autosave, génération Word.</p>
+</section>
 
-    {# ── ADMIN SECTIONS ── #}
-    <section class="aide-section" id="admin-sections">
-      <h2>⚙️ Sections et champs</h2>
-      <p>Accessible via <strong>Sections du bilan</strong> dans la navigation (tous les praticiens).</p>
-      <h3>Modifier une section</h3>
-      <p>Cliquez sur une section pour modifier son nom, sa catégorie, son statut, ses observations par défaut, le nombre de colonnes et ses champs.</p>
-      <h3>Nombre de colonnes</h3>
-      <p>Chaque section peut afficher ses champs sur <strong>1, 2, 3 ou 4 colonnes</strong>. Ce réglage s'applique à la fois dans l'édition du bilan et dans les documents Word générés.</p>
-      <h3>Types de champs</h3>
-      <div class="two-col">
-        <div>
-          <p><strong>Champs de saisie</strong></p>
-          <ul>
-            <li><code>text</code> — texte libre (1 ligne)</li>
-            <li><code>textarea</code> — texte multilignes</li>
-            <li><code>number</code> — valeur numérique</li>
-            <li><code>select</code> — liste déroulante</li>
-            <li><code>sph</code> — sphère (±)</li>
-            <li><code>fichier</code> — pièce jointe</li>
-          </ul>
-        </div>
-        <div>
-          <p><strong>Mise en page</strong></p>
-          <ul>
-            <li><code>spacer</code> — cellule vide (pour décaler les champs suivants dans la grille)</li>
-            <li><code>separator</code> — ligne horizontale avec titre optionnel (pour grouper visuellement les champs)</li>
-          </ul>
-        </div>
-      </div>
-      <div class="tip">💡 Les types <strong>spacer</strong> et <strong>separator</strong> n'apparaissent pas dans les courriers si aucun champ n'est rempli autour d'eux.</div>
-      <h3>Export / Import</h3>
-      <p>Bouton <strong>📤 Exporter toutes les sections</strong> → fichier JSON. À l'import : sections natives mises à jour (champs ajoutés sans suppression) ; sections personnalisées ajoutées ou remplacées selon le mode. Utile pour transférer une configuration entre serveurs.</p>
-    </section>
+<section class="aide-section" id="suivi-nv">
+<h2>🧠 Suivi neurovisuel</h2>
+<p>Colonnes de séance : <strong>Date</strong> · <strong>VB / ACCO / OMOT</strong> · <strong>Neurovisuel</strong> · <strong>Notes</strong>.</p>
+<p>Mêmes fonctionnalités que le suivi amblyopie.</p>
+</section>
 
-    {# ── ADMIN MODELES BILAN ── #}
-    <section class="aide-section" id="admin-modeles">
-      <h2>🗂️ Modèles de bilan</h2>
-      <p>Accessible via <strong>Modèles de bilan</strong> dans la navigation (tous les praticiens). Un modèle définit un ensemble de sections et un motif de consultation pré-remplis à la création d'un bilan.</p>
-      <h3>Export / Import</h3>
-      <p>Bouton <strong>📤 Exporter tous les modèles</strong> en haut de page, ou <strong>📤 Exporter</strong> par modèle. L'import accepte les fichiers JSON avec choix du mode (ajouter / remplacer).</p>
-    </section>
+<section class="aide-section" id="suivi-bv">
+<h2>🔍 Suivi basse vision</h2>
+<p>Colonnes de séance : <strong>Date</strong> · <strong>Acuité OD / OG</strong> · <strong>Exercices</strong> · <strong>Notes</strong>.</p>
+<p>Mêmes fonctionnalités que le suivi amblyopie.</p>
+</section>
 
-    {# ── ADMIN MODELES DOCUMENTS ── #}
-    <section class="aide-section" id="admin-document-modeles">
-      <h2>📄 Modèles de documents</h2>
-      <p>Accessible via <strong>Modèles de documents</strong> dans la navigation (tous les praticiens). Définit des blocs de texte réutilisables pour les courriers et ordonnances.</p>
-      <h3>Export / Import</h3>
-      <p>Bouton <strong>📤 Exporter tous</strong> en haut de page, ou <strong>📤</strong> par modèle individuel. Même fonctionnement que les modèles de bilan.</p>
-    </section>
+<section class="aide-section" id="messagerie">
+<h2>💬 Messagerie</h2>
+<p>Messagerie directe entre praticiens du même cabinet. Badge rouge = messages non lus (actualisé toutes les 30 s).</p>
+<ul>
+  <li>Créez une <strong>nouvelle conversation</strong> en sélectionnant un ou plusieurs praticiens.</li>
+  <li>Rédigez et envoyez avec <strong>Envoyer</strong> ou <span class="kbd">Ctrl</span>+<span class="kbd">Entrée</span>.</li>
+</ul>
+</section>
 
-    {# ── ADMIN CATÉGORIES ── #}
-    <section class="aide-section" id="admin-categories">
-      <h2>🎨 Catégories <span class="badge badge-admin">Admin</span></h2>
-      <p>Définissent la couleur et l'icône des groupes de sections. Accessible via <strong>Administration → Catégories</strong>.</p>
-    </section>
+<section class="aide-section" id="notes">
+<h2>📝 Notes & Tâches</h2>
+<h3>Notes personnelles (post-its)</h3>
+<ul>
+  <li>Visibles uniquement par vous. Couleur personnalisable.</li>
+  <li>Épinglez les importantes en haut. Cliquez ✕ pour supprimer.</li>
+</ul>
+<h3>Tâches</h3>
+<ul>
+  <li>Créez depuis cette page ou depuis la fiche d'un patient (bouton <strong>+ Tâche</strong>).</li>
+  <li>Statuts : <strong>À faire</strong>, <strong>En cours</strong>, <strong>Terminée</strong>.</li>
+  <li>Badge 👤 cliquable sur les tâches liées à un patient.</li>
+  <li>Badge orange dans la navigation = nombre de tâches actives.</li>
+</ul>
+</section>
 
-    {# ── ADMIN PRATICIENS ── #}
-    <section class="aide-section" id="admin-praticiens">
-      <h2>👤 Praticiens <span class="badge badge-admin">Admin</span></h2>
-      <p>Gérez les comptes via <strong>Administration → Praticiens</strong> : créer, modifier, désactiver, associer à un cabinet avec numéro ADELI.</p>
-    </section>
+<section class="aide-section" id="notes-patient">
+<h2>📌 Notes partagées</h2>
+<p>Visibles par tous les praticiens en haut de la fiche patient. Chaque praticien peut ajouter ses propres notes. Cliquez ✕ pour supprimer une note (les admins peuvent supprimer toutes les notes).</p>
+</section>
 
-    {# ── ADMIN SAUVEGARDES ── #}
-    <section class="aide-section" id="admin-sauvegarde">
-      <h2>💾 Sauvegardes <span class="badge badge-admin">Admin</span></h2>
-      <p>Accessible via <strong>Administration → Sauvegarde</strong>.</p>
-      <h3>Configuration (Collabora + SFTP)</h3>
-      <p>Exportez/importez la configuration Collabora et SFTP (incluant la clé SSH) avec les boutons <strong>📤/📥</strong>. L'import des URLs Collabora/WOPI nécessite de cocher la case explicitement.</p>
-      <h3>Sauvegarde locale manuelle</h3>
-      <p>Bouton <strong>📥 Télécharger la sauvegarde</strong> pour une archive complète immédiate.</p>
-      <h3>Sauvegardes automatiques locales</h3>
-      <p>Chaque nuit à 2h, les 7 dernières archives sont listées avec date, taille et bouton <strong>📥 Télécharger</strong>. Bouton <strong>▶ Lancer une sauvegarde maintenant</strong> pour déclencher manuellement.</p>
-      <h3>Sauvegarde distante NAS (SFTP)</h3>
-      <p>Sync incrémental vers un NAS ou serveur distant (seuls les nouveaux fichiers sont transférés) :</p>
-      <ul>
-        <li><strong>Étape 1</strong> — Générez une clé SSH et copiez la clé publique sur votre NAS (Credentials → Local Users → SSH Public Keys).</li>
-        <li><strong>Étape 2</strong> — Renseignez adresse, port, utilisateur, dossier distant.</li>
-        <li><strong>Étape 3</strong> — Testez la connexion, activez l'envoi automatique nocturne.</li>
-      </ul>
-      <h3>Restauration depuis le NAS</h3>
-      <p>Si le NAS est joignable, la date de la dernière sauvegarde distante s'affiche. Le bouton <strong>📡 Restaurer depuis le NAS</strong> restaure la base et les fichiers. Le service redémarre automatiquement.</p>
-      <h3>Restauration locale</h3>
-      <p>Importez un fichier .zip ou .tar.gz. Après restauration, le service redémarre automatiquement.</p>
-      <h3>Nettoyage des fichiers</h3>
-      <p>Le bouton <strong>🧹 Nettoyer les fichiers orphelins</strong> supprime les fichiers WOPI temporaires et les fichiers non référencés en base.</p>
-    </section>
+<section class="aide-section" id="repondeur">
+<h2>📞 Répondeur</h2>
+<p>Enregistrement de messages téléphoniques reçus pour un patient. Permet de garder une trace des appels et rappels à effectuer.</p>
+</section>
 
-    {# ── ADMIN CONFIGURATION ── #}
-    <section class="aide-section" id="admin-configuration">
-      <h2>⚙️ Configuration <span class="badge badge-admin">Admin</span></h2>
-      <p>Accessible via <strong>Administration → Configuration</strong>.</p>
-      <h3>URLs Collabora / WOPI</h3>
-      <p>Configurez l'URL du serveur Collabora et l'URL publique de ce serveur. Laissez vide pour utiliser les valeurs par défaut.</p>
-      <h3>Procédure Collabora</h3>
-      <p>La section dépliable <strong>Procédure de configuration</strong> détaille comment autoriser ce serveur dans <code>coolwsd.xml</code>, et comment forcer le thème clair si Collabora s'ouvre en mode sombre.</p>
-    </section>
+<section class="aide-section" id="favoris">
+<h2>⭐ Favoris</h2>
+<p>Épinglez des patients fréquemment consultés pour y accéder rapidement depuis la navigation gauche. Réorganisez par glisser-déposer.</p>
+</section>
 
-  </div>
+<section class="aide-section" id="cfg-sections">
+<h2>⚙️ Sections & champs</h2>
+<p>Accessible via <strong>⚙️ Sections du bilan</strong> dans la navigation (tous les praticiens).</p>
+<h3>Créer / modifier une section</h3>
+<ul>
+  <li>Nom, catégorie, observations par défaut, nombre de colonnes (1 à 4), statut (actif/masqué).</li>
+</ul>
+<h3>Types de champs</h3>
+<table>
+  <tr><th>Type</th><th>Description</th></tr>
+  <tr><td><code>text</code></td><td>Texte libre sur une ligne</td></tr>
+  <tr><td><code>textarea</code></td><td>Texte enrichi multilignes (gras, italique, souligné)</td></tr>
+  <tr><td><code>number</code></td><td>Valeur numérique</td></tr>
+  <tr><td><code>select</code></td><td>Liste déroulante avec options configurables</td></tr>
+  <tr><td><code>sph</code></td><td>Sphère avec signe ±</td></tr>
+  <tr><td><code>fichier</code></td><td>Pièce jointe (image, PDF, Word)</td></tr>
+  <tr><td><code>spacer</code></td><td>Cellule vide pour décaler dans la grille</td></tr>
+  <tr><td><code>separator</code></td><td>Ligne horizontale avec titre optionnel</td></tr>
+</table>
+<h3>Export / Import</h3>
+<p>Bouton <strong>📤 Exporter toutes les sections</strong> → fichier JSON. À l'import : sections natives mises à jour, sections personnalisées ajoutées ou remplacées selon le mode choisi.</p>
+<div class="tip">💡 Les sections natives (réfraction, Hess-Weiss, ordonnance…) ne peuvent pas être supprimées mais peuvent être masquées.</div>
+</section>
+
+<section class="aide-section" id="cfg-modeles">
+<h2>🗂️ Modèles de bilan</h2>
+<p>Un modèle définit un ensemble de sections et un motif pré-remplis à la création d'un bilan. Accessible via <strong>Modèles de bilan</strong> (tous les praticiens).</p>
+<ul>
+  <li>Un modèle peut être <strong>public</strong> (tous les praticiens) ou <strong>privé</strong> (vous seul).</li>
+  <li>Export/import JSON pour transférer une configuration entre serveurs.</li>
+</ul>
+</section>
+
+<section class="aide-section" id="cfg-docs">
+<h2>📄 Modèles de documents</h2>
+<p>Blocs de texte réutilisables pour courriers et ordonnances. Accessible via <strong>Modèles de documents</strong> (tous les praticiens).</p>
+<ul>
+  <li>Chaque modèle contient des blocs ordonnables par glisser-déposer.</li>
+  <li>Variables remplacées automatiquement : <code>{{NOM_PATIENT}}</code>, <code>{{DATE}}</code>…</li>
+  <li>Export/import JSON individuel ou global.</li>
+</ul>
+</section>
+
+<section class="aide-section" id="adm-praticiens">
+<h2>👤 Praticiens <span class="badge-admin">Admin</span></h2>
+<p>Accessible via <strong>Administration → Praticiens</strong>.</p>
+<ul>
+  <li>Créer, modifier, désactiver un compte praticien.</li>
+  <li>Définir le titre (Dr, M., Mme…), ADELI, cabinet(s) associés.</li>
+  <li>Uploader une signature (image insérée dans les courriers générés).</li>
+  <li>Réinitialiser le mot de passe.</li>
+</ul>
+</section>
+
+<section class="aide-section" id="adm-cabinets">
+<h2>🏥 Cabinets <span class="badge-admin">Admin</span></h2>
+<p>Accessible via <strong>Administration → Cabinets</strong>.</p>
+<ul>
+  <li>Nom, adresse, téléphone, couleur d'identification.</li>
+  <li>Association praticien ↔ cabinet avec numéro ADELI propre au cabinet.</li>
+  <li>La couleur apparaît dans les badges praticien/cabinet des séances de suivi.</li>
+</ul>
+</section>
+
+<section class="aide-section" id="adm-categories">
+<h2>🎨 Catégories <span class="badge-admin">Admin</span></h2>
+<p>Accessible via <strong>Administration → Catégories</strong>. Les catégories définissent la couleur et l'icône des groupes de sections dans le panneau gauche du bilan.</p>
+</section>
+
+<section class="aide-section" id="adm-journal">
+<h2>📋 Journal RGPD <span class="badge-admin">Admin</span></h2>
+<p>Accessible via <strong>Administration → Journal</strong>. Traçabilité de toutes les actions sur les données patients.</p>
+<ul>
+  <li>Filtres : praticien, patient, action, période.</li>
+  <li>Actions tracées : connexion, consultation dossier, création/modification/suppression de bilan ou patient, création de suivi…</li>
+  <li>Export CSV (UTF-8 avec BOM, compatible Excel).</li>
+</ul>
+</section>
+
+<section class="aide-section" id="adm-sauvegarde">
+<h2>💾 Sauvegardes <span class="badge-admin">Admin</span></h2>
+<p>Accessible via <strong>Administration → Sauvegarde</strong>.</p>
+<h3>Sauvegarde locale</h3>
+<ul>
+  <li><strong>📥 Télécharger</strong> — archive immédiate de la base et des fichiers.</li>
+  <li>Automatique chaque nuit à 2h — les 7 dernières archives sont listées.</li>
+  <li><strong>▶ Lancer maintenant</strong> — déclenche une sauvegarde manuelle.</li>
+</ul>
+<h3>Sauvegarde distante (SFTP/NAS)</h3>
+<ol>
+  <li>Générez une clé SSH et copiez la clé publique sur votre NAS.</li>
+  <li>Renseignez l'adresse, le port, l'utilisateur et le dossier distant.</li>
+  <li>Testez la connexion, activez l'envoi automatique nocturne.</li>
+</ol>
+<h3>Restauration</h3>
+<ul>
+  <li><strong>Depuis le NAS</strong> — si joignable, la date de dernière sauvegarde s'affiche. Bouton <strong>📡 Restaurer</strong>.</li>
+  <li><strong>Fichier local</strong> — importez un .zip ou .tar.gz. Le service redémarre automatiquement.</li>
+</ul>
+<h3>Nettoyage</h3>
+<p>Bouton <strong>🧹 Nettoyer les fichiers orphelins</strong> — supprime les fichiers WOPI temporaires et les fichiers non référencés en base.</p>
+</section>
+
+<section class="aide-section" id="adm-configuration">
+<h2>⚙️ Configuration <span class="badge-admin">Admin</span></h2>
+<p>Accessible via <strong>Administration → Configuration</strong>.</p>
+<ul>
+  <li>URLs Collabora / WOPI (vide = valeurs par défaut).</li>
+  <li>Export/import de la configuration complète (Collabora + SFTP + clé SSH).</li>
+  <li>Procédure de configuration Collabora : autorisation dans <code>coolwsd.xml</code>, forcer le thème clair.</li>
+</ul>
+</section>
+
+</div>
 </div>
 
 <script>
-const sections = document.querySelectorAll('.aide-section');
-const navLinks = document.querySelectorAll('.aide-nav a');
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      navLinks.forEach(a => a.classList.remove('active'));
-      const active = document.querySelector(`.aide-nav a[href="#${entry.target.id}"]`);
-      if (active) active.classList.add('active');
+const secs=document.querySelectorAll('.aide-section');
+const links=document.querySelectorAll('.aide-nav a');
+const nav=document.getElementById('aide-nav');
+const obs=new IntersectionObserver(function(entries){
+  entries.forEach(function(en){
+    if(en.isIntersecting){
+      links.forEach(function(a){a.classList.remove('on');});
+      var a=document.querySelector('.aide-nav a[href="#'+en.target.id+'"]');
+      if(a){
+        a.classList.add('on');
+        var aTop=a.offsetTop;
+        var navH=nav.clientHeight;
+        var scrollT=nav.scrollTop;
+        if(aTop<scrollT+20||aTop>scrollT+navH-20){
+          nav.scrollTo({top:aTop-navH/2,behavior:'smooth'});
+        }
+      }
     }
   });
-}, { rootMargin: '-20% 0px -70% 0px' });
-sections.forEach(s => observer.observe(s));
+},{rootMargin:'-15% 0px -75% 0px'});
+secs.forEach(function(s){obs.observe(s);});
 </script>
 {% endblock %}
