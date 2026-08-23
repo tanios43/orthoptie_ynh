@@ -2454,6 +2454,41 @@ def suivi_bv_nouveau(patient_id):
                            dernier_bilan=dernier_bilan, sections_def=sections)
 
 
+def _save_suivi_amblyopie_data(s, form):
+    """Sauvegarde les données d'un suivi amblyopie depuis un form."""
+    s.date_bilan   = _parse_date(form.get('date_bilan')) or s.date_bilan
+    s.lunettes_od  = form.get('lunettes_od','').strip()
+    s.lunettes_og  = form.get('lunettes_og','').strip()
+    s.av_od_init   = form.get('av_od_init','').strip()
+    s.av_og_init   = form.get('av_og_init','').strip()
+    s.ophthalmo    = form.get('ophthalmo','').strip()
+    s.stereo       = form.get('stereo','').strip()
+    s.ese          = form.get('ese','').strip()
+    s.versions     = form.get('versions','').strip()
+    s.date_cs      = _parse_date(form.get('date_cs'))
+    s.traitement   = form.get('traitement','').strip()
+    s.prochain_rdv = form.get('prochain_rdv','').strip()
+    s.notes        = form.get('notes','').strip()
+    s.updated_at   = datetime.utcnow()
+    for seance in s.seances:
+        pfx = f'seance_{seance.id}_'
+        seance.date_seance  = _parse_date(form.get(pfx+'date'))
+        seance.occlusion    = form.get(pfx+'occlusion','').strip()
+        seance.av_od        = form.get(pfx+'av_od','').strip()
+        seance.av_og        = form.get(pfx+'av_og','').strip()
+        seance.av_notes     = form.get(pfx+'av_notes','').strip()
+        seance.ese          = form.get(pfx+'ese','').strip()
+        seance.vb_ese_vl    = form.get(pfx+'vb_ese_vl','').strip()
+        seance.vb_ese_vp    = form.get(pfx+'vb_ese_vp','').strip()
+        seance.vb_motilite  = form.get(pfx+'vb_motilite','').strip()
+        seance.vb_ppc       = form.get(pfx+'vb_ppc','').strip()
+        seance.vb_stereo    = form.get(pfx+'vb_stereo','').strip()
+        seance.vb_libre     = form.get(pfx+'vb_libre','').strip()
+        seance.notes        = form.get(pfx+'notes','').strip()
+        prat_id = form.get(pfx+'praticien_id','').strip()
+        seance.praticien_id = int(prat_id) if prat_id else seance.praticien_id
+
+
 def _save_suivi_bv_data(s, form):
     s.date_debut = _parse_date(form.get('date_debut')) or s.date_debut
     s.notes      = form.get('notes','').strip()
