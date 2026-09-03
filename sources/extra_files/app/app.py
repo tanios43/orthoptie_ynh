@@ -4752,7 +4752,9 @@ def consultation_autosave(consultation_id):
         c.type_classe_profession = request.form.get('type_classe_profession','Classe') if request.form.get('classe_profession','').strip() else None
         for s in list(c.sections): db.session.delete(s)
         db.session.flush()
-        _save_sections(c.id, request.form, sections_all, request.files)
+        # Ne pas sauvegarder les fichiers de section via autosave
+        # pour éviter les doublons (les fichiers sont déjà en DB)
+        _save_sections(c.id, request.form, sections_all, files=None)
         db.session.commit()
         from datetime import datetime
         return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
