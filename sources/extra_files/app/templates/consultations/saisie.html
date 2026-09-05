@@ -319,8 +319,23 @@
                 {% endif %}
               </tbody>
             </table>
+            {% elif sec.type == 'hess_weiss' %}
+            {# Hess-Weiss : rendu canvas en lecture seule #}
+            {% if d.get('hw_og') or d.get('hw_od') %}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;">
+              <div>
+                <div style="font-size:9px;font-weight:600;color:#185FA5;text-align:center;margin-bottom:2px;">O.G.</div>
+                <canvas data-pts="{{ d.get('hw_og','') }}" width="200" height="200"
+                        style="width:100%;display:block;border:0.5px solid var(--border);border-radius:4px;"></canvas>
+              </div>
+              <div>
+                <div style="font-size:9px;font-weight:600;color:#A32D2D;text-align:center;margin-bottom:2px;">O.D.</div>
+                <canvas data-pts="{{ d.get('hw_od','') }}" width="200" height="200"
+                        style="width:100%;display:block;border:0.5px solid var(--border);border-radius:4px;"></canvas>
+              </div>
+            </div>
+            {% endif %}
             {% else %}
-            {% set sdef2 = sections_def.get(sec.type, {}) %}
             {% for champ in sdef2.get('champs', []) %}
               {% if champ.type == 'fichier' %}
                 {% set fics = c.fichiers_sec | selectattr('section_ordre', 'equalto', sec.ordre) | selectattr('champ_name', 'equalto', champ.name) | list %}
@@ -912,6 +927,43 @@ document.addEventListener('touchend',function(){
   });
 });
 // ── fin Hess-Weiss ───────────────────────────────────────────────
+
+// Rendu Hess-Weiss dans l'historique des bilans (canvas data-pts)
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('canvas[data-pts]').forEach(function(c) {
+    var raw=c.dataset.pts, pts;
+    try{pts=JSON.parse(raw);if(!pts||pts.length!==9)throw 0;}catch(e){pts=hwRefPts();}
+    var W=c.width, TOTAL=28, CS=W/TOTAL, THRESH=CS*1.2;
+    var scale=W/300;
+    pts=pts.map(function(p){return{x:p.x*scale,y:p.y*scale};});
+    var COL=[6*CS,14*CS,22*CS],ROW=[6*CS,14*CS,22*CS];
+    var REF=[{x:COL[1],y:ROW[1]},{x:COL[1],y:ROW[0]},{x:COL[2],y:ROW[0]},{x:COL[2],y:ROW[1]},{x:COL[2],y:ROW[2]},{x:COL[1],y:ROW[2]},{x:COL[0],y:ROW[2]},{x:COL[0],y:ROW[1]},{x:COL[0],y:ROW[0]}];
+    var SEGS=[[8,1,'H'],[1,2,'H'],[2,3,'V'],[3,4,'V'],[4,5,'H'],[5,6,'H'],[6,7,'V'],[7,8,'V'],[7,0,'H'],[0,3,'H'],[1,0,'V'],[0,5,'V']];
+    var ctx=c.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,W);
+    ctx.strokeStyle='#F5B090';ctx.lineWidth=0.3;
+    for(var i=0;i<=TOTAL;i++){ctx.beginPath();ctx.moveTo(i*CS,0);ctx.lineTo(i*CS,W);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*CS);ctx.lineTo(W,i*CS);ctx.stroke();}
+    var inn=4*CS;ctx.strokeStyle='#C05020';ctx.lineWidth=1;ctx.setLineDash([]);
+    ctx.strokeRect(REF[0].x-inn,REF[0].y-inn,inn*2,inn*2);
+    var cont=[8,1,2,3,4,5,6,7,8];
+    ctx.beginPath();ctx.moveTo(REF[cont[0]].x,REF[cont[0]].y);for(var j=1;j<cont.length;j++)ctx.lineTo(REF[cont[j]].x,REF[cont[j]].y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(REF[7].x,REF[7].y);ctx.lineTo(REF[0].x,REF[0].y);ctx.lineTo(REF[3].x,REF[3].y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(REF[1].x,REF[1].y);ctx.lineTo(REF[0].x,REF[0].y);ctx.lineTo(REF[5].x,REF[5].y);ctx.stroke();
+    function edge(p){return{L:p.x<=THRESH,R:p.x>=W-THRESH,U:p.y<=THRESH,D:p.y>=W-THRESH};}
+    function vis(p){return{x:Math.max(3,Math.min(W-3,p.x)),y:Math.max(3,Math.min(W-3,p.y))};}
+    var ep=pts.map(edge),vp=pts.map(vis);
+    ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.setLineDash([]);
+    SEGS.forEach(function(seg){var a=seg[0],b=seg[1],dir=seg[2],ea=ep[a],eb=ep[b];
+      var sup=(dir==='V'&&((ea.L||ea.R)||(eb.L||eb.R)))||(dir==='H'&&((ea.U||ea.D)||(eb.U||eb.D)));
+      if(sup)return;ctx.beginPath();ctx.moveTo(vp[a].x,vp[a].y);ctx.lineTo(vp[b].x,vp[b].y);ctx.stroke();});
+    pts.forEach(function(p,i){var e=ep[i],v=vp[i],drew=false;
+      function arw(dx,dy){var HW=4,BACK=6,TIP=2,ax=-dy,ay=dx;ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(v.x-dx*BACK,v.y-dy*BACK);ctx.lineTo(v.x+dx*TIP,v.y+dy*TIP);ctx.stroke();ctx.fillStyle='#111';ctx.beginPath();ctx.moveTo(v.x+dx*TIP,v.y+dy*TIP);ctx.lineTo(v.x+dx*TIP-dx*HW+ax*HW*.65,v.y+dy*TIP-dy*HW+ay*HW*.65);ctx.lineTo(v.x+dx*TIP-dx*HW-ax*HW*.65,v.y+dy*TIP-dy*HW-ay*HW*.65);ctx.closePath();ctx.fill();}
+      if(e.R){arw(1,0);drew=true;}else if(e.L){arw(-1,0);drew=true;}
+      if(e.D){arw(0,1);drew=true;}else if(e.U){arw(0,-1);drew=true;}
+      if(!drew){ctx.save();ctx.translate(v.x,v.y);ctx.rotate(Math.PI/4);ctx.fillStyle='#111';ctx.fillRect(-2.5,-2.5,5,5);ctx.restore();}
+    });
+  });
+});
 
 let sectionIndex = 0;
 
