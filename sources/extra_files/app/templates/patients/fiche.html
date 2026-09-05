@@ -1140,6 +1140,9 @@ document.getElementById('modal-tache-patient').addEventListener('click', functio
   document.querySelectorAll('canvas[data-pts]').forEach(function(c) {
     var raw=c.dataset.pts,pts;
     try{pts=JSON.parse(raw);if(!pts||pts.length!==9)throw 0;}catch(e){pts=REF.map(function(p){return{x:p.x,y:p.y};});}
+    // Scaler les coordonnées JSON (espace 300px) vers le canvas (200px)
+    var scale=c.width/300;
+    pts=pts.map(function(p){return{x:p.x*scale,y:p.y*scale};});
     var ctx=c.getContext('2d');ctx.drawImage(gc,0,0);
     var ep=pts.map(edge),vp=pts.map(vis);
     ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.setLineDash([]);
