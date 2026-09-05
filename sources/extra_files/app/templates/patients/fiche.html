@@ -175,6 +175,7 @@
         {{ row('Naissance', patient.date_naissance.strftime('%d/%m/%Y') if patient.date_naissance) }}
         {{ row('Sexe', patient.sexe) }}
         {{ row('Téléphone', patient.telephone) }}
+        {{ row('Téléphone 2', patient.telephone2) if patient.telephone2 }}
         {{ row('Email', patient.email) }}
         {{ row('Rue', patient.rue) }}
         {% if patient.code_postal or patient.commune %}

@@ -400,6 +400,7 @@ with app.app_context():
         ("ALTER TABLE patient ADD COLUMN rue VARCHAR(200)", "rue sur patient"),
         ("ALTER TABLE patient ADD COLUMN code_postal VARCHAR(10)", "code_postal sur patient"),
         ("ALTER TABLE patient ADD COLUMN commune VARCHAR(100)", "commune sur patient"),
+        ("ALTER TABLE patient ADD COLUMN telephone2 VARCHAR(20)", "telephone2 sur patient"),
         ("ALTER TABLE praticien ADD COLUMN role VARCHAR(20) DEFAULT 'praticien'", "role sur praticien"),
         ("ALTER TABLE praticien ADD COLUMN rpps VARCHAR(11)", "rpps sur praticien"),
         ("ALTER TABLE praticien ADD COLUMN couleur VARCHAR(7) DEFAULT '#2E7D6B'", "couleur sur praticien"),

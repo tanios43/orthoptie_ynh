@@ -567,6 +567,7 @@ class Patient(db.Model):
     code_postal      = db.Column(db.String(10))
     commune          = db.Column(db.String(100))
     telephone        = db.Column(db.String(20))
+    telephone2       = db.Column(db.String(20))
     email            = db.Column(db.String(200))
     medecin_referent = db.Column(db.String(200))
     num_secu         = db.Column(db.String(15))
@@ -1603,6 +1604,7 @@ def patient_nouveau():
                     code_postal=request.form.get('code_postal'),
                     commune=request.form.get('commune'),
                     telephone=request.form.get('telephone'),
+                    telephone2=request.form.get('telephone2'),
                     email=request.form.get('email'),
                     medecin_referent=request.form.get('medecin_referent'),
                     num_secu=request.form.get('num_secu'),
@@ -1691,6 +1693,7 @@ def patient_modifier(patient_id):
         patient.code_postal=request.form.get('code_postal')
         patient.commune=request.form.get('commune')
         patient.telephone=request.form.get('telephone')
+        patient.telephone2=request.form.get('telephone2')
         patient.email=request.form.get('email')
         patient.medecin_referent=request.form.get('medecin_referent')
         patient.num_secu=request.form.get('num_secu'); patient.notes_admin=request.form.get('notes_admin')

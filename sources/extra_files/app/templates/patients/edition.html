@@ -54,6 +54,10 @@
           <label class="field-label">Téléphone</label>
           <input type="tel" name="telephone" value="{{ patient.telephone if patient else '' }}" placeholder="06 00 00 00 00">
         </div>
+        <div class="form-group">
+          <label>Téléphone 2</label>
+          <input type="tel" name="telephone2" value="{{ patient.telephone2 if patient else '' }}" placeholder="06 00 00 00 00">
+        </div>
         <div class="field-group">
           <label class="field-label">Email</label>
           <input type="email" name="email" value="{{ patient.email if patient else '' }}" placeholder="marie@exemple.fr">
