@@ -34,10 +34,10 @@
         <th>Nom / Prénom</th>
         <th>Date de naissance</th>
         <th>Âge</th>
+        <th>Dernière consultation</th>
         <th>Téléphone</th>
         <th>Commune</th>
         <th>Médecin référent</th>
-        <th>Dernière consultation</th>
         <th></th>
       </tr>
     </thead>
@@ -57,17 +57,18 @@
         <td class="text-muted text-sm">
           {% if p.age %}{{ p.age }}{% else %}—{% endif %}
         </td>
-        <td class="text-muted text-sm">{{ p.telephone or '—' }}</td>
-        <td class="text-muted text-sm">{{ p.commune or '—' }}</td>
-        <td class="text-muted text-sm">{{ p.medecin_referent or '—' }}</td>
         <td class="text-sm">
           {% set da = activites.get(p.id) %}
           {% if da %}
-            <span class="badge badge-green">{{ da.strftime('%d/%m/%Y') }}</span>
+            <span class="badge badge-green">{{ da.date.strftime('%d/%m/%Y') }}</span>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">{{ da.motif[:40] }}{% if da.motif|length > 40 %}…{% endif %}</div>
           {% else %}
             <span class="badge badge-gray">Aucune</span>
           {% endif %}
         </td>
+        <td class="text-muted text-sm">{{ p.telephone or '—' }}</td>
+        <td class="text-muted text-sm">{{ p.commune or '—' }}</td>
+        <td class="text-muted text-sm">{{ p.medecin_referent or '—' }}</td>
         <td>
           <a href="{{ url_for('consultation_nouvelle', patient_id=p.id) }}"
              class="btn btn-secondary btn-sm">+ Bilan</a>

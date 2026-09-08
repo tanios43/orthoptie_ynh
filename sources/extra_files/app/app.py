@@ -1551,20 +1551,27 @@ def api_communes():
 # ============================================================
 
 def _derniere_activite(patient):
-    """Retourne la date la plus récente parmi bilans et tous les suivis."""
-    from datetime import date as date_type
-    dates = []
+    """Retourne un dict {date, motif} de la dernière activité parmi bilans et suivis."""
+    items = []  # liste de (date, motif)
     for c in patient.consultations:
-        if c.date_consult: dates.append(c.date_consult)
+        if c.date_consult:
+            items.append((c.date_consult, c.motif or 'Bilan orthoptique'))
     for s in SuiviAmblyopie.query.filter_by(patient_id=patient.id).all():
-        dates.append(s.derniere_seance_date)
+        if s.derniere_seance_date:
+            items.append((s.derniere_seance_date, 'Suivi amblyopie'))
     for s in SuiviVB.query.filter_by(patient_id=patient.id).all():
-        dates.append(s.derniere_seance_date)
+        if s.derniere_seance_date:
+            items.append((s.derniere_seance_date, 'Suivi vision binoculaire'))
     for s in SuiviNV.query.filter_by(patient_id=patient.id).all():
-        dates.append(s.derniere_seance_date)
+        if s.derniere_seance_date:
+            items.append((s.derniere_seance_date, 'Suivi neurovisuel'))
     for s in SuiviBV.query.filter_by(patient_id=patient.id).all():
-        dates.append(s.derniere_seance_date)
-    return max(dates) if dates else None
+        if s.derniere_seance_date:
+            items.append((s.derniere_seance_date, 'Suivi basse vision'))
+    if not items:
+        return None
+    items.sort(key=lambda x: x[0], reverse=True)
+    return {'date': items[0][0], 'motif': items[0][1]}
 
 
 @app.route('/')
