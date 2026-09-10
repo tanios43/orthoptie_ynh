@@ -472,7 +472,10 @@ app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 # DATA_FOLDER : résoudre le symlink uploads pour trouver le vrai répertoire de données
 _uploads_real = os.path.realpath(app.config['UPLOAD_FOLDER'])
 app.config['DATA_FOLDER'] = os.path.dirname(_uploads_real)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 Mo pour les pièces jointes
+
+# Limite plus haute pour la restauration de sauvegarde (override par route si besoin)
+BACKUP_MAX_SIZE = 1024 * 1024 * 1024  # 1 Go
 
 # ── Base de données — SQLCipher si disponible, sinon SQLite standard ──────────
 _db_key_file = _os.path.join(_os.path.dirname(__file__), '.db_key')
@@ -4363,6 +4366,15 @@ def admin_sauvegarde_exporter():
     from flask import send_file
     return send_file(zip_path, as_attachment=True, download_name=nom,
                      mimetype='application/zip')
+
+
+@app.before_request
+def adjust_max_content_length():
+    """Augmente la limite d'upload pour la route de restauration de sauvegarde."""
+    if request.path == '/admin/sauvegarde/importer':
+        app.config['MAX_CONTENT_LENGTH'] = BACKUP_MAX_SIZE
+    else:
+        app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 
 @app.route('/admin/sauvegarde/importer', methods=['POST'])
