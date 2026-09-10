@@ -4397,7 +4397,14 @@ def admin_sauvegarde_importer():
 
     tmpdir      = tempfile.mkdtemp()
     backup_path = os.path.join(tmpdir, 'restore_file')
-    f.save(backup_path)
+    # Écrire le fichier par chunks pour éviter de charger 200Mo+ en RAM
+    CHUNK = 8 * 1024 * 1024  # 8 Mo par chunk
+    with open(backup_path, 'wb') as out:
+        while True:
+            chunk = f.stream.read(CHUNK)
+            if not chunk:
+                break
+            out.write(chunk)
 
     uploads_dir = app.config['UPLOAD_FOLDER']
     data_dir    = app.config['DATA_FOLDER']
