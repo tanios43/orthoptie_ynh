@@ -4646,38 +4646,6 @@ def mon_historique():
     return render_template('historique_praticien.html', entrees=entrees)
 
 
-@app.route('/recherche')
-@login_required
-def recherche():
-    q = request.args.get('q', '').strip(); patients = []
-    if q:
-        dn = None
-        for fmt in ('%d/%m/%Y', '%d/%m/%y', '%Y-%m-%d'):
-            try: dn = datetime.strptime(q, fmt).date(); break
-            except ValueError: pass
-        if dn:
-            patients = Patient.query.filter(Patient.date_naissance == dn).order_by(Patient.nom).all()
-        else:
-            # Normaliser le numéro de téléphone (supprimer espaces/tirets/points)
-            q_tel = re.sub(r'[\s\.\-]', '', q)
-            # Si la requête ressemble à un numéro (que des chiffres après normalisation)
-            if q_tel.isdigit() and len(q_tel) >= 4:
-                patients = Patient.query.filter(
-                    db.func.replace(db.func.replace(db.func.replace(
-                        Patient.telephone, ' ', ''), '.', ''), '-', ''
-                    ).ilike(f'%{q_tel}%')
-                ).order_by(Patient.nom).all()
-            else:
-                conds = [db.or_(
-                    Patient.nom.ilike(f'%{m}%'),
-                    Patient.prenom.ilike(f'%{m}%'),
-                    Patient.telephone.ilike(f'%{m}%')
-                ) for m in q.split()]
-                patients = Patient.query.filter(db.and_(*conds)).order_by(Patient.nom).all()
-    activites = {p.id: _derniere_activite(p) for p in patients}
-    return render_template('patients/recherche.html', patients=patients, q=q,
-                           activites=activites, today=datetime.utcnow().date())
-
 
 # ============================================================
 # CONSULTATIONS
