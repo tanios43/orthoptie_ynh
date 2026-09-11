@@ -820,6 +820,12 @@ document.addEventListener('submit', function(e) {
   syncAllWysiwyg();
 }, true); // capture phase = avant le submit
 </script>
+<script>
+// Keepalive : ping toutes les 4 minutes pour maintenir la session active
+setInterval(function() {
+  fetch('/ping', {method:'GET', credentials:'same-origin'}).catch(function(){});
+}, 4 * 60 * 1000);
+</script>
 </body>
 {% if current_user.is_authenticated %}
 <script>

@@ -1577,6 +1577,13 @@ def _derniere_activite(patient):
     return {'date': items[0][0], 'motif': items[0][1]}
 
 
+@app.route('/ping')
+@login_required
+def ping():
+    """Keepalive endpoint pour maintenir la session active."""
+    return 'ok', 200
+
+
 @app.route('/')
 @login_required
 def index():
