@@ -62,6 +62,20 @@
           {% if da %}
             <span class="badge badge-green">{{ da.date.strftime('%d/%m/%Y') }}</span>
             <div style="font-size:11px;color:var(--muted);margin-top:2px;">{{ da.motif[:40] }}{% if da.motif|length > 40 %}…{% endif %}</div>
+            {% if da.praticien or da.cabinet %}
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">
+              {% if da.praticien %}
+              <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:{{ da.praticien.couleur or '#E8E8F0' }}22;color:{{ da.praticien.couleur or '#444' }};border:1px solid {{ da.praticien.couleur or '#ccc' }}44;">
+                {{ da.praticien.titre or '' }} {{ da.praticien.nom }}
+              </span>
+              {% endif %}
+              {% if da.cabinet %}
+              <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:{{ da.cabinet.couleur or '#E8F0E8' }}22;color:{{ da.cabinet.couleur or '#444' }};border:1px solid {{ da.cabinet.couleur or '#ccc' }}44;">
+                {{ da.cabinet.nom }}
+              </span>
+              {% endif %}
+            </div>
+            {% endif %}
           {% else %}
             <span class="badge badge-gray">Aucune</span>
           {% endif %}

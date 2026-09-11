@@ -1554,27 +1554,42 @@ def api_communes():
 # ============================================================
 
 def _derniere_activite(patient):
-    """Retourne un dict {date, motif} de la dernière activité parmi bilans et suivis."""
-    items = []  # liste de (date, motif)
+    """Retourne un dict {date, motif, praticien, cabinet} de la dernière activité."""
+    items = []  # liste de (date, motif, praticien, cabinet)
     for c in patient.consultations:
         if c.date_consult:
-            items.append((c.date_consult, c.motif or 'Bilan orthoptique'))
+            prat = c.praticien
+            cab  = c.cabinet
+            items.append((c.date_consult, c.motif or 'Bilan orthoptique', prat, cab))
     for s in SuiviAmblyopie.query.filter_by(patient_id=patient.id).all():
         if s.derniere_seance_date:
-            items.append((s.derniere_seance_date, 'Suivi amblyopie'))
+            last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            prat = last[0].praticien if last else None
+            cab  = last[0].cabinet  if last else None
+            items.append((s.derniere_seance_date, 'Suivi amblyopie', prat, cab))
     for s in SuiviVB.query.filter_by(patient_id=patient.id).all():
         if s.derniere_seance_date:
-            items.append((s.derniere_seance_date, 'Suivi vision binoculaire'))
+            last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            prat = last[0].praticien if last else None
+            cab  = last[0].cabinet  if last else None
+            items.append((s.derniere_seance_date, 'Suivi vision binoculaire', prat, cab))
     for s in SuiviNV.query.filter_by(patient_id=patient.id).all():
         if s.derniere_seance_date:
-            items.append((s.derniere_seance_date, 'Suivi neurovisuel'))
+            last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            prat = last[0].praticien if last else None
+            cab  = last[0].cabinet  if last else None
+            items.append((s.derniere_seance_date, 'Suivi neurovisuel', prat, cab))
     for s in SuiviBV.query.filter_by(patient_id=patient.id).all():
         if s.derniere_seance_date:
-            items.append((s.derniere_seance_date, 'Suivi basse vision'))
+            last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            prat = last[0].praticien if last else None
+            cab  = last[0].cabinet  if last else None
+            items.append((s.derniere_seance_date, 'Suivi basse vision', prat, cab))
     if not items:
         return None
     items.sort(key=lambda x: x[0], reverse=True)
-    return {'date': items[0][0], 'motif': items[0][1]}
+    d, m, prat, cab = items[0]
+    return {'date': d, 'motif': m, 'praticien': prat, 'cabinet': cab}
 
 
 @app.route('/ping')
