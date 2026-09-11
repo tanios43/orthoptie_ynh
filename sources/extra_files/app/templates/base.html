@@ -486,10 +486,7 @@
        class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
       <span class="icon">⊞</span><span class="nav-label"> Mes patients</span>
     </a>
-    <a href="{{ url_for('recherche') }}" data-label="Recherche"
-       class="nav-item {% if request.endpoint == 'recherche' %}active{% endif %}">
-      <span class="icon">⌕</span><span class="nav-label"> Recherche</span>
-    </a>
+
     <a href="{{ url_for('mon_historique') }}" data-label="Mon historique"
        class="nav-item {% if request.endpoint == 'mon_historique' %}active{% endif %}">
       <span class="icon">🕐</span><span class="nav-label"> Mon historique</span>
