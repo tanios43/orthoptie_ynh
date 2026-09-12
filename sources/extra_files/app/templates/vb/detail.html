@@ -5,6 +5,17 @@
 {% block title %}Suivi VB — {{ suivi.patient.prenom }} {{ suivi.patient.nom }}{% endblock %}
 {% block page_title %}Rééducation Vision Binoculaire{% endblock %}
 
+{% block topbar_center %}
+  <div style="text-align:center;">
+    <div style="font-size:18px;font-weight:700;color:var(--text);">
+      {{ suivi.patient.prenom }} {{ suivi.patient.nom }}
+      {% if suivi.patient.age %}
+      <span style="font-size:14px;font-weight:500;color:var(--muted);margin-left:6px;">{{ suivi.patient.age }}</span>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
 {% block topbar_actions %}
   <a href="{{ url_for('patient_detail', patient_id=suivi.patient_id) }}" class="btn btn-secondary btn-sm">← {{ suivi.patient.prenom }} {{ suivi.patient.nom }}</a>
   <a href="{{ url_for('suivi_vb_generer', suivi_id=suivi.id) }}" class="btn btn-secondary btn-sm">📄 Générer Word</a>
