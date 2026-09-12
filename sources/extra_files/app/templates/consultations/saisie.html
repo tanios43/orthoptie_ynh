@@ -6,9 +6,10 @@
     {%- set months = date_bilan.month - naissance.month -%}
     {%- if date_bilan.day < naissance.day -%}{%- set months = months - 1 -%}{%- endif -%}
     {%- if months < 0 -%}{%- set years = years - 1 -%}{%- set months = months + 12 -%}{%- endif -%}
+    {%- set ans = 'an' if years == 1 else 'ans' -%}
     {%- if years == 0 -%}{{ months }} mois
-    {%- elif months == 0 -%}{{ years }} ans
-    {%- else -%}{{ years }} ans {{ months }} mois
+    {%- elif months == 0 -%}{{ years }} {{ ans }}
+    {%- else -%}{{ years }} {{ ans }} {{ months }} mois
     {%- endif -%}
   {%- endif -%}
 {%- endmacro -%}
