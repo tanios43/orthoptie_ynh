@@ -18,23 +18,31 @@
 {% block page_title %}
   {% if consultation %}
     <div style="display:flex;flex-direction:column;gap:1px;">
+      <div style="font-size:14px;font-weight:400;color:var(--text);">Bilan du {{ consultation.date_consult.strftime('%d/%m/%Y') }}</div>
+    </div>
+  {% else %}
+    <div style="font-size:14px;font-weight:400;color:var(--text);">Nouveau bilan</div>
+  {% endif %}
+{% endblock %}
+
+{% block topbar_center %}
+  {% if consultation %}
+    <div style="text-align:center;">
       <div style="font-size:18px;font-weight:700;color:var(--text);">
         {{ patient.prenom }} {{ patient.nom }}
         {% if patient.date_naissance %}
         <span style="font-size:14px;font-weight:500;color:var(--muted);margin-left:6px;">{{ age_a_la_date(patient.date_naissance, consultation.date_consult) }}</span>
         {% endif %}
       </div>
-      <div style="font-size:12px;font-weight:400;color:var(--muted);">Bilan du {{ consultation.date_consult.strftime('%d/%m/%Y') }}</div>
     </div>
   {% else %}
-    <div style="display:flex;flex-direction:column;gap:1px;">
+    <div style="text-align:center;">
       <div style="font-size:18px;font-weight:700;color:var(--text);">
         {{ patient.prenom }} {{ patient.nom }}
         {% if patient.date_naissance %}
         <span id="age-preview" style="font-size:14px;font-weight:500;color:var(--muted);margin-left:6px;"></span>
         {% endif %}
       </div>
-      <div style="font-size:12px;font-weight:400;color:var(--muted);">Nouveau bilan</div>
     </div>
   {% endif %}
 {% endblock %}

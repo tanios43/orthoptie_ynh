@@ -593,6 +593,7 @@
 <main class="main">
   <div class="topbar">
     <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+    <div class="topbar-center" style="flex:1;text-align:center;">{% block topbar_center %}{% endblock %}</div>
     <div class="topbar-actions">
       {% block topbar_actions %}{% endblock %}
       {% if current_user.is_authenticated and cabinets_dispo %}
