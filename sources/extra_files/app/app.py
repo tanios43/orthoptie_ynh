@@ -54,7 +54,7 @@ def now():
 
 @app.template_global()
 def age_a_la_date(date_naissance, date_ref=None):
-    """Retourne l'âge sous la forme 'X ans Y mois' pour les templates Jinja."""
+    """Retourne l'âge sous la forme 'X an(s) Y mois' pour les templates Jinja."""
     if not date_naissance:
         return ''
     from datetime import date
@@ -66,11 +66,12 @@ def age_a_la_date(date_naissance, date_ref=None):
     if months < 0:
         years -= 1
         months += 12
+    ans = 'an' if years == 1 else 'ans'
     if years == 0:
         return f'{months} mois'
     if months == 0:
-        return f'{years} ans'
-    return f'{years} ans {months} mois'
+        return f'{years} {ans}'
+    return f'{years} {ans} {months} mois'
 
 
 CATEGORIES_BUILTIN = {
@@ -591,11 +592,12 @@ class Patient(db.Model):
             if months < 0:
                 years -= 1
                 months += 12
+            ans = 'an' if years == 1 else 'ans'
             if years == 0:
                 return f'{months} mois'
             if months == 0:
-                return f'{years} ans'
-            return f'{years} ans {months} mois'
+                return f'{years} {ans}'
+            return f'{years} {ans} {months} mois'
         return None
     def __repr__(self): return f'{self.nom} {self.prenom}'
 
