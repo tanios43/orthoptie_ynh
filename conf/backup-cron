@@ -5,7 +5,7 @@ APP="orthoptie"
 DATA_DIR="/home/yunohost.app/${APP}"
 BACKUP_DIR="${DATA_DIR}/backups"
 SSH_KEY="${DATA_DIR}/ssh/backup_key"
-MAX_BACKUPS=7
+MAX_BACKUPS=3
 LOG_FILE="/var/log/orthoptie/backup.log"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"; }
