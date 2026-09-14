@@ -791,7 +791,25 @@ with app.app_context():
 
     # Créer le compte admin par défaut si aucun praticien n'existe
     with app.app_context():
-        from app import Praticien, SectionDef, ChampDef
+        from app import Praticien, SectionDef, ChampDef, OptionDef, db as app_db
+
+        # Réordonner les options AV de loin : 10/10 en premier (ordre décroissant)
+        try:
+            av_loin_fields = ChampDef.query.filter(
+                ChampDef.name.in_(['av_od_loin','av_og_loin','av_bino','od_av_loin','og_av_loin'])
+            ).all()
+            ordre_voulu = ['10/10','9/10','8/10','7/10','6/10','5/10','4/10','3/10','2/10','1/10']
+            for champ in av_loin_fields:
+                opts = {o.valeur: o for o in champ.options}
+                if set(opts.keys()) == set(ordre_voulu):
+                    for i, val in enumerate(ordre_voulu):
+                        if val in opts:
+                            opts[val].ordre = i
+            app_db.session.commit()
+            print("OK      : options AV de loin réordonnées (10/10 → 1/10)")
+        except Exception as e:
+            print(f"SKIP    : réordonnancement AV de loin — {e}")
+            app_db.session.rollback()
 
         # Injecter la section hess_weiss si absente
         try:
