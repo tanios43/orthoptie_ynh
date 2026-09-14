@@ -1560,7 +1560,7 @@ function odOgHTML(idx, champs, donnees, type) {
       <div class="field-group">
         <label class="field-label">Binoculaire</label>
         <input list="dl-${idx}-bino" name="champ__${idx}__av_bino" value="${donnees.av_bino||''}" placeholder="Choisir ou saisir…" autocomplete="off">
-        <datalist id="dl-${idx}-bino">${['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
+        <datalist id="dl-${idx}-bino">${['10/10','9/10','8/10','7/10','6/10','5/10','4/10','3/10','2/10','1/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
       </div>
       <div class="field-group">
         <label class="field-label">Correction</label>
@@ -1581,11 +1581,11 @@ function odOgHTML(idx, champs, donnees, type) {
           <td style="padding:5px 8px;font-size:13px;color:var(--muted);">De loin (5m)</td>
           <td style="padding:5px 8px;">
             <input list="dl-${idx}-odl" name="champ__${idx}__av_od_loin" value="${donnees.av_od_loin||''}" placeholder="—" autocomplete="off">
-            <datalist id="dl-${idx}-odl">${['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
+            <datalist id="dl-${idx}-odl">${['10/10','9/10','8/10','7/10','6/10','5/10','4/10','3/10','2/10','1/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
           </td>
           <td style="padding:5px 8px;">
             <input list="dl-${idx}-ogl" name="champ__${idx}__av_og_loin" value="${donnees.av_og_loin||''}" placeholder="—" autocomplete="off">
-            <datalist id="dl-${idx}-ogl">${['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
+            <datalist id="dl-${idx}-ogl">${['10/10','9/10','8/10','7/10','6/10','5/10','4/10','3/10','2/10','1/10'].map(o=>`<option value="${o}">`).join('')}</datalist>
           </td>
         </tr>
         <tr>
@@ -1627,7 +1627,7 @@ function refractionHTML(idx, type, donnees) {
       <datalist id="${listId}">${opts.map(o=>`<option value="${o}">`).join('')}</datalist>`;
   };
 
-  const avLoinOpts = ['1/10','2/10','3/10','4/10','5/10','6/10','7/10','8/10','9/10','10/10'];
+  const avLoinOpts = ['10/10','9/10','8/10','7/10','6/10','5/10','4/10','3/10','2/10','1/10'];
   const avPresOpts = ['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'];
 
   const p = (name, val, type='sph') => {
