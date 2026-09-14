@@ -528,6 +528,12 @@
                 placeholder="CE1, lycée, infirmière…" style="flex:1;">
             </div>
           </div>
+          <div class="field-group" style="grid-column:span 2;">
+            <label class="field-label">Remarques</label>
+            <textarea name="remarques" rows="2"
+              placeholder="Remarques générales…"
+              style="resize:vertical;">{{ consultation.remarques or '' if consultation else '' }}</textarea>
+          </div>
         </div>
       </div>
     </div>

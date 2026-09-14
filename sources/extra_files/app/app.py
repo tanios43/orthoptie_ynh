@@ -612,6 +612,7 @@ class Consultation(db.Model):
     medecin_prescripteur  = db.Column(db.String(200))
     classe_profession     = db.Column(db.String(200))
     type_classe_profession = db.Column(db.String(20), default='Classe')
+    remarques             = db.Column(db.Text)
     cabinet_id            = db.Column(db.Integer, db.ForeignKey('cabinet.id'))
     created_at   = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -4703,6 +4704,7 @@ def consultation_nouvelle(patient_id):
                          medecin_prescripteur=request.form.get('medecin_prescripteur','').strip() or None,
                          classe_profession=request.form.get('classe_profession','').strip() or None,
                          type_classe_profession=request.form.get('type_classe_profession','Classe') if request.form.get('classe_profession','').strip() else None,
+                         remarques=request.form.get('remarques','').strip() or None,
                          cabinet_id=cab.id if cab else None)
         db.session.add(c); db.session.flush()
         _save_sections(c.id, request.form, sections_all, request.files)
@@ -4770,6 +4772,7 @@ def consultation_autosave(consultation_id):
         c.medecin_prescripteur = request.form.get('medecin_prescripteur','').strip() or None
         c.classe_profession     = request.form.get('classe_profession','').strip() or None
         c.type_classe_profession = request.form.get('type_classe_profession','Classe') if request.form.get('classe_profession','').strip() else None
+        c.remarques             = request.form.get('remarques','').strip() or None
         for s in list(c.sections): db.session.delete(s)
         db.session.flush()
         # Ne pas sauvegarder les fichiers de section via autosave
@@ -4800,6 +4803,7 @@ def consultation_modifier(consultation_id):
         c.medecin_prescripteur = request.form.get('medecin_prescripteur','').strip() or None
         c.classe_profession     = request.form.get('classe_profession','').strip() or None
         c.type_classe_profession = request.form.get('type_classe_profession','Classe') if request.form.get('classe_profession','').strip() else None
+        c.remarques             = request.form.get('remarques','').strip() or None
         for s in list(c.sections): db.session.delete(s)
         db.session.flush()
         _save_sections(c.id, request.form, sections_all, request.files)

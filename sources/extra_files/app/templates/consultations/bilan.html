@@ -213,6 +213,11 @@ document.addEventListener('DOMContentLoaded', function() {
               {{ c.type_classe_profession or 'Classe' }} : {{ c.classe_profession }}
             </div>
             {% endif %}
+            {% if c.remarques %}
+            <div class="text-sm text-muted" style="margin-top:4px;font-style:italic;">
+              {{ c.remarques }}
+            </div>
+            {% endif %}
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
