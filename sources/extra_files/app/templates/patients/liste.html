@@ -134,13 +134,21 @@ function filterPatients() {
   // Message si aucun résultat
   let emptyRow = document.getElementById('search-empty-row');
   if (visible === 0 && q) {
+    const rawQ = document.getElementById('search-patients').value.trim();
+    // Deviner nom/prénom depuis la saisie (premier mot = nom, reste = prénom)
+    const parts = rawQ.split(/\s+/);
+    const nom    = encodeURIComponent(parts[0] || '');
+    const prenom = encodeURIComponent(parts.slice(1).join(' ') || '');
+    const url    = `{{ url_for('patient_nouveau') }}?nom=${nom}&prenom=${prenom}`;
     if (!emptyRow) {
       emptyRow = document.createElement('tr');
       emptyRow.id = 'search-empty-row';
-      emptyRow.innerHTML = `<td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">
-        Aucun patient ne correspond à "<strong>${q}</strong>"</td>`;
       document.getElementById('patients-tbody').appendChild(emptyRow);
     }
+    emptyRow.innerHTML = `<td colspan="8" style="text-align:center;padding:24px;">
+      <div style="color:var(--muted);margin-bottom:12px;">Aucun patient ne correspond à "<strong>${rawQ}</strong>"</div>
+      <a href="${url}" class="btn btn-primary btn-sm">+ Créer le patient "${rawQ}"</a>
+    </td>`;
   } else if (emptyRow) {
     emptyRow.remove();
   }

@@ -1648,7 +1648,9 @@ def patient_nouveau():
         log_action('creation_patient', patient_id=p.id)
         flash(f'Patient {p} créé.', 'success')
         return redirect(url_for('patient_detail', patient_id=p.id))
-    return render_template('patients/edition.html', patient=None)
+    return render_template('patients/edition.html', patient=None,
+                           prefill_nom=request.args.get('nom',''),
+                           prefill_prenom=request.args.get('prenom',''))
 
 
 @app.route('/patient/<int:patient_id>')
