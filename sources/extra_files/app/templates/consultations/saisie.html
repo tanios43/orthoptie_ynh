@@ -1592,11 +1592,11 @@ function odOgHTML(idx, champs, donnees, type) {
           <td style="padding:5px 8px;font-size:13px;color:var(--muted);">De près (40cm)</td>
           <td style="padding:5px 8px;">
             <input list="dl-${idx}-odp" name="champ__${idx}__av_od_pres" value="${donnees.av_od_pres||''}" placeholder="—" autocomplete="off">
-            <datalist id="dl-${idx}-odp">${['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'].map(o=>`<option value="${o}">`).join('')}</datalist>
+            <datalist id="dl-${idx}-odp">${['P2','P3','P4','P5','P6','P8','P10','P14'].map(o=>`<option value="${o}">`).join('')}</datalist>
           </td>
           <td style="padding:5px 8px;">
             <input list="dl-${idx}-ogp" name="champ__${idx}__av_og_pres" value="${donnees.av_og_pres||''}" placeholder="—" autocomplete="off">
-            <datalist id="dl-${idx}-ogp">${['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'].map(o=>`<option value="${o}">`).join('')}</datalist>
+            <datalist id="dl-${idx}-ogp">${['P2','P3','P4','P5','P6','P8','P10','P14'].map(o=>`<option value="${o}">`).join('')}</datalist>
           </td>
         </tr>
       </tbody>
@@ -1628,7 +1628,7 @@ function refractionHTML(idx, type, donnees) {
   };
 
   const avLoinOpts = ['10/10','9/10','8/10','7/10','6/10','5/10','4/10','3/10','2/10','1/10'];
-  const avPresOpts = ['P14','P10','P8','P6','P5','P4','P3','P2','P1.5','P1'];
+  const avPresOpts = ['P2','P3','P4','P5','P6','P8','P10','P14'];
 
   const p = (name, val, type='sph') => {
     const full = `champ__${idx}__${name}`;

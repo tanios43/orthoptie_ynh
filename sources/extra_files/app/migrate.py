@@ -793,7 +793,28 @@ with app.app_context():
     with app.app_context():
         from app import Praticien, SectionDef, ChampDef, OptionDef, db as app_db
 
-        # Réordonner les options AV de loin : 10/10 en premier (ordre décroissant)
+        # Mettre à jour les options AV de près : supprimer P1, commencer par P2
+        try:
+            av_pres_fields = ChampDef.query.filter(
+                ChampDef.name.in_(['av_od_pres','av_og_pres','od_av_pres','og_av_pres'])
+            ).all()
+            ordre_voulu = ['P2','P3','P4','P5','P6','P8','P10','P14']
+            for champ in av_pres_fields:
+                # Supprimer P1 et P1.5
+                for opt in list(champ.options):
+                    if opt.valeur in ('P1', 'P1.5'):
+                        app_db.session.delete(opt)
+                app_db.session.flush()
+                # Réordonner les restantes
+                opts = {o.valeur: o for o in champ.options}
+                for i, val in enumerate(ordre_voulu):
+                    if val in opts:
+                        opts[val].ordre = i
+            app_db.session.commit()
+            print("OK      : options AV de près réordonnées (P2 → P14, P1/P1.5 supprimés)")
+        except Exception as e:
+            print(f"SKIP    : réordonnancement AV de près — {e}")
+            app_db.session.rollback()
         try:
             av_loin_fields = ChampDef.query.filter(
                 ChampDef.name.in_(['av_od_loin','av_og_loin','av_bino','od_av_loin','og_av_loin'])
