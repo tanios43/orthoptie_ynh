@@ -25,6 +25,11 @@
               style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);
                      background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">✕</button>
     </div>
+    <a id="btn-creer-patient" href="{{ url_for('patient_nouveau') }}"
+       style="display:none;white-space:nowrap;padding:8px 14px;background:var(--accent);
+              color:#fff;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;flex-shrink:0;">
+      + Créer
+    </a>
   </div>
 
   {% if patients %}
@@ -131,27 +136,25 @@ function filterPatients() {
   // Afficher/masquer le bouton effacer
   if (clearBtn) clearBtn.style.display = q ? 'inline' : 'none';
 
-  // Message si aucun résultat
+  // Bouton créer patient à côté de la recherche
   const rawQ = document.getElementById('search-patients').value.trim();
-  let emptyRow = document.getElementById('search-empty-row');
-  if (visible === 0 && rawQ) {
-    const parts = rawQ.split(/\s+/);
-    const nom    = encodeURIComponent(parts[0] || '');
-    const prenom = encodeURIComponent(parts.slice(1).join(' ') || '');
-    const url    = `{{ url_for('patient_nouveau') }}?nom=${nom}&prenom=${prenom}`;
-    if (!emptyRow) {
-      emptyRow = document.createElement('tr');
-      emptyRow.id = 'search-empty-row';
-      document.getElementById('patients-tbody').appendChild(emptyRow);
+  const btnCreer = document.getElementById('btn-creer-patient');
+  if (btnCreer) {
+    if (rawQ) {
+      const parts = rawQ.split(/\s+/);
+      const nom    = encodeURIComponent(parts[0] || '');
+      const prenom = encodeURIComponent(parts.slice(1).join(' ') || '');
+      btnCreer.href = `{{ url_for('patient_nouveau') }}?nom=${nom}&prenom=${prenom}`;
+      btnCreer.textContent = `+ Créer "${rawQ}"`;
+      btnCreer.style.display = 'inline-block';
+    } else {
+      btnCreer.style.display = 'none';
     }
-    emptyRow.style.display = '';
-    emptyRow.innerHTML = `<td colspan="8" style="text-align:center;padding:24px;">
-      <div style="color:var(--muted);margin-bottom:12px;">Aucun patient ne correspond à "<strong>${rawQ}</strong>"</div>
-      <a href="${url}" style="display:inline-block;padding:6px 16px;background:var(--accent);color:#fff;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;">+ Créer le patient "${rawQ}"</a>
-    </td>`;
-  } else {
-    if (emptyRow) emptyRow.style.display = 'none';
   }
+
+  // Masquer la ligne vide si elle existe encore
+  const emptyRow = document.getElementById('search-empty-row');
+  if (emptyRow) emptyRow.style.display = 'none';
 }
 
 document.getElementById('search-patients')?.addEventListener('input', filterPatients);
