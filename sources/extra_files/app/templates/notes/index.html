@@ -65,7 +65,7 @@
             </button>
           </form>
           <button type="button"
-                  onclick="event.stopPropagation();ouvrirModalNote({{ n.id }}, {{ n.titre|tojson }}, {{ n.contenu|tojson }}, '{{ n.couleur }}')"
+                  onclick="ouvrirModalNote({{ n.id }}, {{ n.titre|tojson }}, {{ n.contenu|tojson }}, {{ n.couleur|tojson }})"
                   title="Modifier"
                   style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px;color:var(--muted);">✎</button>
           <form method="POST" action="{{ url_for('note_supprimer', note_id=n.id) }}" style="margin:0;"
@@ -285,9 +285,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 function ouvrirModalNote(id, titre, contenu, couleur) {
   const modal = document.getElementById('modal-note');
   const form  = document.getElementById('form-note');
-  modal.style.display = 'flex';
-  modal.style.alignItems = 'center';
-  modal.style.justifyContent = 'center';
+  modal.style.cssText = 'display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;';
   document.getElementById('note-titre').value   = titre   || '';
   document.getElementById('note-contenu').value = contenu || '';
   if (id) {
@@ -297,7 +295,6 @@ function ouvrirModalNote(id, titre, contenu, couleur) {
     document.getElementById('modal-note-titre-h').textContent = 'Nouvelle note';
     form.action = '{{ url_for("note_nouvelle") }}';
   }
-  // Sélectionner la couleur
   document.querySelectorAll('.couleur-radio').forEach(r => {
     r.checked = r.value === (couleur || '#FEFCE8');
     r.closest('label').querySelector('.couleur-swatch').style.borderColor =
