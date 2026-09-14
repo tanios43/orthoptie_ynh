@@ -327,15 +327,16 @@ function ouvrirModalTache(id, titre, desc, echeance, priorite, assigneA) {
 }
 
 // Édition note via data attributes
-document.addEventListener('click', function(e) {
-  const btn = e.target.closest('.btn-edit-note');
-  if (!btn) return;
-  ouvrirModalNote(
-    btn.dataset.id,
-    btn.dataset.titre,
-    btn.dataset.contenu,
-    btn.dataset.couleur
-  );
+document.querySelectorAll('.btn-edit-note').forEach(function(btn) {
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    ouvrirModalNote(
+      btn.dataset.id,
+      btn.dataset.titre,
+      btn.dataset.contenu,
+      btn.dataset.couleur
+    );
+  });
 });
 
 // Édition tâche via data attributes
