@@ -132,10 +132,9 @@ function filterPatients() {
   if (clearBtn) clearBtn.style.display = q ? 'inline' : 'none';
 
   // Message si aucun résultat
+  const rawQ = document.getElementById('search-patients').value.trim();
   let emptyRow = document.getElementById('search-empty-row');
-  if (visible === 0 && q) {
-    const rawQ = document.getElementById('search-patients').value.trim();
-    // Deviner nom/prénom depuis la saisie (premier mot = nom, reste = prénom)
+  if (visible === 0 && rawQ) {
     const parts = rawQ.split(/\s+/);
     const nom    = encodeURIComponent(parts[0] || '');
     const prenom = encodeURIComponent(parts.slice(1).join(' ') || '');
@@ -145,12 +144,13 @@ function filterPatients() {
       emptyRow.id = 'search-empty-row';
       document.getElementById('patients-tbody').appendChild(emptyRow);
     }
+    emptyRow.style.display = '';
     emptyRow.innerHTML = `<td colspan="8" style="text-align:center;padding:24px;">
       <div style="color:var(--muted);margin-bottom:12px;">Aucun patient ne correspond à "<strong>${rawQ}</strong>"</div>
-      <a href="${url}" class="btn btn-primary btn-sm">+ Créer le patient "${rawQ}"</a>
+      <a href="${url}" style="display:inline-block;padding:6px 16px;background:var(--accent);color:#fff;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;">+ Créer le patient "${rawQ}"</a>
     </td>`;
-  } else if (emptyRow) {
-    emptyRow.remove();
+  } else {
+    if (emptyRow) emptyRow.style.display = 'none';
   }
 }
 
