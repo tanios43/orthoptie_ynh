@@ -283,6 +283,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 });
 
 function ouvrirModalNote(id, titre, contenu, couleur) {
+  console.log('ouvrirModalNote appelé', id, titre, couleur);
   const modal = document.getElementById('modal-note');
   const form  = document.getElementById('form-note');
   modal.style.cssText = 'display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;';
