@@ -293,7 +293,12 @@ document.querySelectorAll('.tel-mask').forEach(function(input) {
   input.addEventListener('paste', function(e) {
     e.preventDefault();
     var pasted = (e.clipboardData || window.clipboardData).getData('text');
-    var digits = pasted.replace(/\D/g, '').slice(0, 10);
+    // Supprimer espaces, tirets, points
+    var cleaned = pasted.replace(/[\s\.\-]/g, '');
+    // Convertir +33 → 0
+    cleaned = cleaned.replace(/^\+33/, '0');
+    // Ne garder que les chiffres, max 10
+    var digits = cleaned.replace(/\D/g, '').slice(0, 10);
     this.value = digits;
   });
 
