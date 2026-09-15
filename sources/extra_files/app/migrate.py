@@ -793,7 +793,36 @@ with app.app_context():
     with app.app_context():
         from app import Praticien, SectionDef, ChampDef, OptionDef, db as app_db
 
-        # Mettre à jour les options AV de près : supprimer P1, commencer par P2
+        # Normaliser les numéros de téléphone existants
+        try:
+            import re as _re
+            patients_tel = app_db.session.execute(
+                db.text("SELECT id, telephone, telephone2 FROM patient WHERE telephone IS NOT NULL OR telephone2 IS NOT NULL")
+            ).fetchall()
+            def normalize_tel(tel):
+                if not tel: return tel
+                t = tel.strip()
+                # +33 → 0
+                t = _re.sub(r'^\+33\s*', '0', t)
+                # Supprimer espaces, tirets, points
+                t = _re.sub(r'[\s\.\-]', '', t)
+                # Garder uniquement les chiffres
+                t = _re.sub(r'\D', '', t)
+                return t[:10] if t else None
+            for row in patients_tel:
+                pid, tel, tel2 = row
+                new_tel  = normalize_tel(tel)
+                new_tel2 = normalize_tel(tel2)
+                if new_tel != tel or new_tel2 != tel2:
+                    app_db.session.execute(
+                        db.text("UPDATE patient SET telephone=:t, telephone2=:t2 WHERE id=:id"),
+                        {'t': new_tel, 't2': new_tel2, 'id': pid}
+                    )
+            app_db.session.commit()
+            print(f"OK      : {len(patients_tel)} numéros de téléphone normalisés")
+        except Exception as e:
+            print(f"SKIP    : normalisation téléphones — {e}")
+            app_db.session.rollback()
         try:
             av_pres_fields = ChampDef.query.filter(
                 ChampDef.name.in_(['av_od_pres','av_og_pres','od_av_pres','og_av_pres'])
