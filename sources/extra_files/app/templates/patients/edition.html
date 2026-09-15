@@ -52,11 +52,11 @@
       <div class="field-grid field-grid-2">
         <div class="field-group">
           <label class="field-label">Téléphone</label>
-          <input type="tel" name="telephone" value="{{ patient.telephone if patient else '' }}" placeholder="06 00 00 00 00">
+          <input type="tel" name="telephone" class="tel-mask" value="{{ patient.telephone if patient else '' }}" placeholder="0600000000" maxlength="10">
         </div>
         <div class="field-group">
           <label class="field-label">Téléphone 2</label>
-          <input type="tel" name="telephone2" value="{{ patient.telephone2 if patient else '' }}" placeholder="06 00 00 00 00">
+          <input type="tel" name="telephone2" class="tel-mask" value="{{ patient.telephone2 if patient else '' }}" placeholder="0600000000" maxlength="10">
         </div>
         <div class="field-group">
           <label class="field-label">Email</label>
@@ -278,5 +278,24 @@ function forcerCreation() {
   </div>
 </div>
 {% endif %}
+
+<script>
+// Masque téléphone : uniquement des chiffres, max 10
+document.querySelectorAll('.tel-mask').forEach(function(input) {
+  input.value = input.value.replace(/\D/g, '').slice(0, 10);
+  input.addEventListener('input', function() {
+    var digits = this.value.replace(/\D/g, '').slice(0, 10);
+    this.value = digits;
+  });
+  input.addEventListener('keydown', function(e) {
+    if ([8,9,27,46,37,38,39,40].includes(e.keyCode) ||
+        (e.ctrlKey && [65,67,86,88].includes(e.keyCode))) return;
+    if ((e.shiftKey || e.keyCode < 48 || e.keyCode > 57) &&
+        (e.keyCode < 96 || e.keyCode > 105)) {
+      e.preventDefault();
+    }
+  });
+});
+</script>
 
 {% endblock %}
