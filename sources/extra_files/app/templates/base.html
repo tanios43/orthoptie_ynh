@@ -212,7 +212,6 @@
     }
     .sticky-thead th {
       position: sticky;
-      top: var(--topbar-h, 65px);
       z-index: 10;
       background: inherit;
       box-shadow: 0 2px 0 var(--border);
@@ -833,9 +832,18 @@ document.addEventListener('submit', function(e) {
 (function() {
   function setTopbarH() {
     var tb = document.querySelector('.topbar');
-    if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+    if (!tb) return;
+    var h = tb.getBoundingClientRect().height;
+    document.querySelectorAll('.sticky-thead th').forEach(function(th) {
+      th.style.top = h + 'px';
+    });
   }
-  setTopbarH();
+  // Attendre que le DOM soit prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setTopbarH);
+  } else {
+    setTopbarH();
+  }
   window.addEventListener('resize', setTopbarH);
 })();
 
