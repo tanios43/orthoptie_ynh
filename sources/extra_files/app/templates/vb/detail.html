@@ -238,7 +238,7 @@
       <h2 style="color:#3C3489;">Séances ({{ suivi.seances|length }})</h2>
     </div>
     <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;">
+      <table class="seances-table" style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;">
         <colgroup>
           <col style="width:32px;">
           <col style="width:115px;">
@@ -248,7 +248,7 @@
           <col style="width:15%;">
           <col>
         </colgroup>
-        <thead class="sticky-thead" style="background:#EEEDFE;">
+        <thead style="background:#EEEDFE;">
           <tr>
             <th style="padding:7px 8px;text-align:center;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">#</th>
             <th style="padding:7px 8px;color:#3C3489;font-size:12px;font-weight:600;border-bottom:1px solid #AFA9EC44;">Date</th>
@@ -502,5 +502,48 @@ function _scheduleSuiviSave() {
 document.getElementById('form-suivi-vb').addEventListener('input', _scheduleSuiviSave);
 document.getElementById('form-suivi-vb').addEventListener('change', _scheduleSuiviSave);
 setInterval(() => { if (_suiviSaveDirty) sauvegarderSuiviAjax(); }, 120000);
+
+// Thead flottant
+(function(){
+  var tbl = document.querySelector('table.seances-table');
+  if (!tbl) return;
+  var thead = tbl.querySelector('thead');
+  if (!thead) return;
+  var topbar = document.querySelector('.topbar');
+  var clone = null;
+  function getTopbarH(){ return topbar ? topbar.getBoundingClientRect().bottom : 0; }
+  function updateFloat(){
+    var tbRect = tbl.getBoundingClientRect();
+    var thRect = thead.getBoundingClientRect();
+    var topH = getTopbarH();
+    if (thRect.bottom < topH && tbRect.bottom > topH + 40) {
+      if (!clone) {
+        clone = document.createElement('div');
+        clone.style.cssText = 'position:fixed;z-index:40;overflow:hidden;pointer-events:none;';
+        var t2 = document.createElement('table');
+        t2.style.width = tbl.offsetWidth + 'px';
+        t2.style.tableLayout = 'fixed';
+        t2.style.borderCollapse = 'collapse';
+        t2.style.margin = '0';
+        t2.style.fontSize = window.getComputedStyle(tbl).fontSize;
+        t2.appendChild(thead.cloneNode(true));
+        clone.appendChild(t2);
+        document.body.appendChild(clone);
+      }
+      clone.style.top  = topH + 'px';
+      clone.style.left = tbRect.left + 'px';
+      clone.style.width = tbRect.width + 'px';
+      clone.style.display = 'block';
+      var origThs = thead.querySelectorAll('th');
+      var cloneThs = clone.querySelectorAll('th');
+      origThs.forEach(function(th,i){ if(cloneThs[i]) cloneThs[i].style.width = th.offsetWidth+'px'; });
+    } else if (clone) {
+      clone.style.display = 'none';
+    }
+  }
+  window.addEventListener('scroll', updateFloat, {passive:true});
+  window.addEventListener('resize', function(){ if(clone) clone.style.display='none'; updateFloat(); });
+  setTimeout(updateFloat, 200);
+})();
 </script>
 {% endblock %}
