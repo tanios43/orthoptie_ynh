@@ -210,6 +210,13 @@
       display: flex; align-items: center; gap: 16px;
       position: sticky; top: 0; z-index: 50;
     }
+    .sticky-thead th {
+      position: sticky;
+      top: var(--topbar-h, 65px);
+      z-index: 10;
+      background: var(--surface);
+      box-shadow: 0 1px 0 var(--border);
+    }
     .topbar-title {
       font-family: var(--font-serif);
       font-size: 20px; color: var(--text);
@@ -822,6 +829,16 @@ document.addEventListener('submit', function(e) {
 }, true); // capture phase = avant le submit
 </script>
 <script>
+// Hauteur dynamique du topbar pour sticky-thead
+(function() {
+  function setTopbarH() {
+    var tb = document.querySelector('.topbar');
+    if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+  }
+  setTopbarH();
+  window.addEventListener('resize', setTopbarH);
+})();
+
 // Keepalive : ping toutes les 4 minutes pour maintenir la session active
 setInterval(function() {
   fetch('/ping', {method:'GET', credentials:'same-origin'}).catch(function(){});
