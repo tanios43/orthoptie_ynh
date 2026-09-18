@@ -827,11 +827,11 @@ with app.app_context():
             av_pres_fields = ChampDef.query.filter(
                 ChampDef.name.in_(['av_od_pres','av_og_pres','od_av_pres','og_av_pres'])
             ).all()
-            ordre_voulu = ['P2','P3','P4','P5','P6','P8','P10','P14']
+            ordre_voulu = ['P1.5','P2','P3','P4','P5','P6','P8','P10','P14']
             for champ in av_pres_fields:
-                # Supprimer P1 et P1.5
+                # Supprimer uniquement P1
                 for opt in list(champ.options):
-                    if opt.valeur in ('P1', 'P1.5'):
+                    if opt.valeur == 'P1':
                         app_db.session.delete(opt)
                 app_db.session.flush()
                 # Réordonner les restantes
