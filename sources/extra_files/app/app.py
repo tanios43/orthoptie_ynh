@@ -193,10 +193,20 @@ def inject_globals_count():
                        Tache.assigne_a == current_user.id),
                 Tache.statut != 'termine'
             ).count()
-            return {'messages_non_lus': msgs, 'nb_taches_actives': taches}
+            # Répondeur : cabinets du praticien avec du texte
+            from sqlalchemy import func
+            cab_ids = [pc.cabinet_id for pc in
+                       PraticienCabinet.query.filter_by(praticien_id=current_user.id).all()]
+            repondeur_actif = Cabinet.query.filter(
+                Cabinet.id.in_(cab_ids),
+                Cabinet.repondeur != None,
+                func.trim(Cabinet.repondeur) != ''
+            ).count() > 0 if cab_ids else False
+            return {'messages_non_lus': msgs, 'nb_taches_actives': taches,
+                    'repondeur_actif': repondeur_actif}
         except Exception:
             pass
-    return {'messages_non_lus': 0, 'nb_taches_actives': 0}
+    return {'messages_non_lus': 0, 'nb_taches_actives': 0, 'repondeur_actif': False}
 
 
 @app.template_filter('fromjson')
