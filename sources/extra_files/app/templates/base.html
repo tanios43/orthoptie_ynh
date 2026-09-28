@@ -210,12 +210,6 @@
       display: flex; align-items: center; gap: 16px;
       position: sticky; top: 0; z-index: 50;
     }
-    .sticky-thead th {
-      position: sticky;
-      z-index: 10;
-      background: inherit;
-      box-shadow: 0 2px 0 var(--border);
-    }
     .topbar-title {
       font-family: var(--font-serif);
       font-size: 20px; color: var(--text);
@@ -521,7 +515,7 @@
                    font-size:11px;padding:0 5px;flex-shrink:0;">{{ nb_taches_actives }}</span>
       {% endif %}
     </a>
-    <a href="{{ url_for('repondeur') }}" data-label="Répondeur"
+    <a href="{{ url_for('repondeur', cabinet_id=session.get('cabinet_id', '')) }}" data-label="Répondeur"
        class="nav-item {% if request.endpoint == 'repondeur' %}active{% endif %}">
       <span class="icon">📞</span><span class="nav-label"> Répondeur</span>
     </a>
@@ -828,25 +822,6 @@ document.addEventListener('submit', function(e) {
 }, true); // capture phase = avant le submit
 </script>
 <script>
-// Hauteur dynamique du topbar pour sticky-thead
-(function() {
-  function setTopbarH() {
-    var tb = document.querySelector('.topbar');
-    if (!tb) return;
-    var h = tb.getBoundingClientRect().height;
-    document.querySelectorAll('.sticky-thead th').forEach(function(th) {
-      th.style.top = h + 'px';
-    });
-  }
-  // Attendre que le DOM soit prêt
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setTopbarH);
-  } else {
-    setTopbarH();
-  }
-  window.addEventListener('resize', setTopbarH);
-})();
-
 // Keepalive : ping toutes les 4 minutes pour maintenir la session active
 setInterval(function() {
   fetch('/ping', {method:'GET', credentials:'same-origin'}).catch(function(){});
