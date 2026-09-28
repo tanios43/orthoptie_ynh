@@ -427,6 +427,8 @@
       box-shadow: 0 -2px 8px rgba(0,0,0,.06); z-index: 90; flex-wrap: wrap;
       transition: left .22s ease;
     }
+    /* Espace sous le contenu pour éviter que le bandeau masque la dernière ligne */
+    body.has-bottom-bar .main { padding-bottom: 80px; }
     body.sidebar-collapsed .bottom-bar {
       left: var(--sidebar-collapsed-w);
     }
@@ -466,7 +468,7 @@
   </style>
   {% block extra_head %}{% endblock %}
 </head>
-<body class="{% if request.cookies.get('sidebar_collapsed') == '1' %}sidebar-collapsed{% endif %}">
+<body class="{% if request.cookies.get('sidebar_collapsed') == '1' %}sidebar-collapsed{% endif %} {% block body_class %}{% endblock %}">
 
 {% if current_user.is_authenticated %}
 <aside class="sidebar{% if request.cookies.get('sidebar_collapsed') == '1' %} collapsed{% endif %}" id="sidebar">

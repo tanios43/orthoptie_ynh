@@ -2,6 +2,7 @@
 {%- macro axe_f(val) -%}{%- if val is none or val == '' -%}—{%- else -%}{{ val }}°{%- endif -%}{%- endmacro -%}
 
 {% extends "base.html" %}
+{% block body_class %}has-bottom-bar{% endblock %}
 {% block title %}Suivi VB — {{ suivi.patient.prenom }} {{ suivi.patient.nom }}{% endblock %}
 {% block page_title %}Rééducation Vision Binoculaire{% endblock %}
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block body_class %}has-bottom-bar{% endblock %}
 {%- macro age_a_la_date(naissance, date_bilan) -%}
   {%- if naissance and date_bilan -%}
     {%- set years = date_bilan.year - naissance.year -%}
