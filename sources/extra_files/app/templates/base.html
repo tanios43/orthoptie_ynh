@@ -516,10 +516,15 @@
       {% endif %}
     </a>
     <a href="{{ url_for('repondeur', cabinet_id=session.get('cabinet_id', '')) }}" data-label="Répondeur"
-       class="nav-item {% if request.endpoint == 'repondeur' %}active{% endif %}">
-      <span class="icon">📞</span><span class="nav-label"> Répondeur</span>
+       class="nav-item {% if request.endpoint == 'repondeur' %}active{% endif %}"
+       style="justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span class="icon">📞</span><span class="nav-label"> Répondeur</span>
+      </span>
       {% if repondeur_actif %}
-      <span style="margin-left:auto;background:#E8A020;color:#fff;border-radius:8px;font-size:10px;font-weight:700;padding:1px 6px;min-width:16px;text-align:center;">!</span>
+      <span style="background:#E8A020;color:white;border-radius:9px;min-width:18px;height:18px;
+                   display:inline-flex;align-items:center;justify-content:center;
+                   font-size:11px;padding:0 5px;flex-shrink:0;">!</span>
       {% endif %}
     </a>
     <a href="{{ url_for('favoris') }}" data-label="Mes favoris"
