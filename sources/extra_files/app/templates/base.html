@@ -35,6 +35,37 @@
       --sidebar-w: 240px;
       --sidebar-collapsed-w: 56px;
     }
+    body.theme-dark {
+      --bg:        #1A1A1A;
+      --surface:   #242424;
+      --sidebar:   #111111;
+      --sidebar-hover: #1E1E1E;
+      --accent:    #2E9E7A;
+      --accent-lt: #1D9E7520;
+      --accent-dk: #1D7A5E;
+      --text:      #E8E8E8;
+      --muted:     #666666;
+      --border:    #333333;
+      --danger:    #E55555;
+      --danger-lt: #3A1A1A;
+      --warn:      #E8A020;
+      --warn-lt:   #3A2A0A;
+      --success:   #2E9E7A;
+      --shadow:    0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.2);
+      color-scheme: dark;
+    }
+    body.theme-dark input, body.theme-dark textarea, body.theme-dark select {
+      background: var(--surface) !important;
+      color: var(--text) !important;
+      border-color: var(--border) !important;
+    }
+    body.theme-dark .md-toolbar, body.theme-dark #float-toolbar {
+      background: #2a2a2a !important;
+      border-color: var(--border) !important;
+    }
+    body.theme-dark .md-editor { background: var(--surface) !important; }
+    body.theme-dark table th { background: #2a2a2a !important; }
+    body.theme-dark .bottom-bar { background: #1e1e1e !important; }
 
     body {
       font-family: var(--font);
@@ -468,7 +499,7 @@
   </style>
   {% block extra_head %}{% endblock %}
 </head>
-<body class="{% if request.cookies.get('sidebar_collapsed') == '1' %}sidebar-collapsed{% endif %} {% block body_class %}{% endblock %}">
+<body class="{% if request.cookies.get('sidebar_collapsed') == '1' %}sidebar-collapsed{% endif %} {% block body_class %}{% endblock %} {% if current_user.is_authenticated and current_user.theme == 'dark' %}theme-dark{% endif %}">
 
 {% if current_user.is_authenticated %}
 <aside class="sidebar{% if request.cookies.get('sidebar_collapsed') == '1' %} collapsed{% endif %}" id="sidebar">
@@ -590,6 +621,10 @@
         <div class="user-role">{{ current_user.titre }}</div>
       </div>
     </div>
+    <button id="theme-toggle-btn" onclick="toggleTheme()"
+            class="logout-link" style="background:none;border:none;cursor:pointer;text-align:left;width:100%;padding:0;">
+      {% if current_user.is_authenticated and current_user.theme == 'dark' %}☀️ Thème clair{% else %}🌙 Thème sombre{% endif %}
+    </button>
     <a href="{{ url_for('profil') }}" class="logout-link">⚙ Mon profil</a>
     <a href="{{ url_for('aide') }}" data-label="Manuel"
        class="nav-item {% if request.endpoint == 'aide' %}active{% endif %}" style="padding:6px 0;">
@@ -833,6 +868,18 @@ document.addEventListener('submit', function(e) {
 }, true); // capture phase = avant le submit
 </script>
 <script>
+// Toggle thème clair/sombre
+function toggleTheme() {
+  fetch('/toggle-theme', {method:'POST', headers:{'Content-Type':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var isDark = data.theme === 'dark';
+      document.body.classList.toggle('theme-dark', isDark);
+      var btn = document.getElementById('theme-toggle-btn');
+      if (btn) btn.textContent = isDark ? '☀️ Thème clair' : '🌙 Thème sombre';
+    });
+}
+
 // Keepalive : ping toutes les 4 minutes pour maintenir la session active
 setInterval(function() {
   fetch('/ping', {method:'GET', credentials:'same-origin'}).catch(function(){});

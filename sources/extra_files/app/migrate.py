@@ -401,6 +401,7 @@ with app.app_context():
         ("ALTER TABLE patient ADD COLUMN code_postal VARCHAR(10)", "code_postal sur patient"),
         ("ALTER TABLE patient ADD COLUMN commune VARCHAR(100)", "commune sur patient"),
         ("ALTER TABLE consultation ADD COLUMN remarques TEXT", "remarques sur consultation"),
+        ("ALTER TABLE praticien ADD COLUMN theme VARCHAR(10) DEFAULT 'light'", "theme sur praticien"),
         ("ALTER TABLE patient ADD COLUMN da_date DATE", "da_date sur patient"),
         ("ALTER TABLE patient ADD COLUMN da_motif VARCHAR(200)", "da_motif sur patient"),
         ("ALTER TABLE patient ADD COLUMN da_praticien_id INTEGER", "da_praticien_id sur patient"),

@@ -551,6 +551,7 @@ class Praticien(UserMixin, db.Model):
     actif         = db.Column(db.Boolean, default=True)
     role          = db.Column(db.String(20), default='praticien')
     signature     = db.Column(db.String(500))  # chemin vers l'image de signature
+    theme         = db.Column(db.String(10), default='light')
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -1633,6 +1634,14 @@ def _derniere_activite(patient):
         'praticien': patient.da_praticien,
         'cabinet':   patient.da_cabinet,
     }
+
+
+@app.route('/toggle-theme', methods=['POST'])
+@login_required
+def toggle_theme():
+    current_user.theme = 'dark' if current_user.theme == 'light' else 'light'
+    db.session.commit()
+    return jsonify({'theme': current_user.theme})
 
 
 @app.route('/ping')
