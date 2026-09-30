@@ -589,6 +589,13 @@ class Patient(db.Model):
     notes_admin      = db.Column(db.Text)
     created_at       = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at       = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Cache dernière activité — mis à jour à chaque bilan/séance
+    da_date          = db.Column(db.Date)
+    da_motif         = db.Column(db.String(200))
+    da_praticien_id  = db.Column(db.Integer, db.ForeignKey('praticien.id'), nullable=True)
+    da_cabinet_id    = db.Column(db.Integer, db.ForeignKey('cabinet.id'), nullable=True)
+    da_praticien     = db.relationship('Praticien', foreign_keys=[da_praticien_id])
+    da_cabinet       = db.relationship('Cabinet',   foreign_keys=[da_cabinet_id])
     consultations    = db.relationship('Consultation', backref='patient', lazy=True,
                                        order_by='Consultation.date_consult.desc()')
     @property
@@ -1566,42 +1573,66 @@ def api_communes():
 # PATIENTS
 # ============================================================
 
-def _derniere_activite(patient):
-    """Retourne un dict {date, motif, praticien, cabinet} de la dernière activité."""
+def _get_cab(seance):
+    return getattr(seance, 'cabinet', None) or getattr(seance, 'cabinet_seance', None)
+
+
+def _update_da_cache(patient):
+    """Recalcule et sauvegarde le cache dernière activité sur le patient."""
     items = []
-
-    def get_cab(seance):
-        """Retourne le cabinet d'une séance quel que soit le nom de l'attribut."""
-        return getattr(seance, 'cabinet', None) or getattr(seance, 'cabinet_seance', None)
-
     for c in patient.consultations:
         if c.date_consult:
-            items.append((c.date_consult, c.motif or 'Bilan orthoptique', c.praticien, c.cabinet))
+            items.append((c.date_consult, c.motif or 'Bilan orthoptique',
+                          c.praticien_id, c.cabinet_id if hasattr(c, 'cabinet_id') else None))
     for s in SuiviAmblyopie.query.filter_by(patient_id=patient.id).all():
         if s.derniere_seance_date:
             last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            cab = _get_cab(last[0]) if last else None
             items.append((s.derniere_seance_date, 'Suivi amblyopie',
-                          last[0].praticien if last else None, get_cab(last[0]) if last else None))
+                          last[0].praticien_id if last else None,
+                          cab.id if cab else None))
     for s in SuiviVB.query.filter_by(patient_id=patient.id).all():
         if s.derniere_seance_date:
             last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            cab = _get_cab(last[0]) if last else None
             items.append((s.derniere_seance_date, 'Suivi vision binoculaire',
-                          last[0].praticien if last else None, get_cab(last[0]) if last else None))
+                          last[0].praticien_id if last else None,
+                          cab.id if cab else None))
     for s in SuiviNV.query.filter_by(patient_id=patient.id).all():
         if s.derniere_seance_date:
             last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            cab = _get_cab(last[0]) if last else None
             items.append((s.derniere_seance_date, 'Suivi neurovisuel',
-                          last[0].praticien if last else None, get_cab(last[0]) if last else None))
+                          last[0].praticien_id if last else None,
+                          cab.id if cab else None))
     for s in SuiviBV.query.filter_by(patient_id=patient.id).all():
         if s.derniere_seance_date:
             last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            cab = _get_cab(last[0]) if last else None
             items.append((s.derniere_seance_date, 'Suivi basse vision',
-                          last[0].praticien if last else None, get_cab(last[0]) if last else None))
-    if not items:
+                          last[0].praticien_id if last else None,
+                          cab.id if cab else None))
+    if items:
+        items.sort(key=lambda x: x[0], reverse=True)
+        d, m, prat_id, cab_id = items[0]
+        patient.da_date         = d
+        patient.da_motif        = m
+        patient.da_praticien_id = prat_id
+        patient.da_cabinet_id   = cab_id
+    else:
+        patient.da_date = patient.da_motif = patient.da_praticien_id = patient.da_cabinet_id = None
+
+
+def _derniere_activite(patient):
+    """Retourne un dict depuis le cache da_* du patient."""
+    if not patient.da_date:
         return None
-    items.sort(key=lambda x: x[0], reverse=True)
-    d, m, prat, cab = items[0]
-    return {'date': d, 'motif': m, 'praticien': prat, 'cabinet': cab}
+    return {
+        'date':      patient.da_date,
+        'motif':     patient.da_motif or '',
+        'praticien': patient.da_praticien,
+        'cabinet':   patient.da_cabinet,
+    }
 
 
 @app.route('/ping')
@@ -1614,7 +1645,12 @@ def ping():
 @app.route('/')
 @login_required
 def index():
-    patients = Patient.query.order_by(Patient.nom).all()
+    # Chargement optimisé : jointures eager sur da_praticien et da_cabinet
+    patients = Patient.query.options(
+        db.joinedload(Patient.da_praticien),
+        db.joinedload(Patient.da_cabinet)
+    ).order_by(Patient.nom).all()
+    # _derniere_activite lit directement les colonnes da_* — pas de requêtes supplémentaires
     activites = {p.id: _derniere_activite(p) for p in patients}
     return render_template('patients/liste.html', patients=patients, activites=activites)
 
@@ -2243,6 +2279,7 @@ def suivi_amblyopie_autosave(suivi_id):
     s = SuiviAmblyopie.query.get_or_404(suivi_id)
     try:
         _save_suivi_amblyopie_data(s, request.form)
+        _update_da_cache(s.patient)
         db.session.commit()
         from datetime import datetime
         return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
@@ -2258,6 +2295,7 @@ def suivi_bv_autosave(suivi_id):
     s = SuiviBV.query.get_or_404(suivi_id)
     try:
         _save_suivi_bv_data(s, request.form)
+        _update_da_cache(s.patient)
         db.session.commit()
         from datetime import datetime
         return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
@@ -2273,6 +2311,7 @@ def suivi_nv_autosave(suivi_id):
     s = SuiviNV.query.get_or_404(suivi_id)
     try:
         _save_suivi_nv_data(s, request.form)
+        _update_da_cache(s.patient)
         db.session.commit()
         from datetime import datetime
         return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
@@ -2288,6 +2327,7 @@ def suivi_vb_autosave(suivi_id):
     s = SuiviVB.query.get_or_404(suivi_id)
     try:
         _save_suivi_vb_data(s, request.form)
+        _update_da_cache(s.patient)
         db.session.commit()
         from datetime import datetime
         return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
@@ -4790,6 +4830,7 @@ def consultation_autosave(consultation_id):
         # Ne pas sauvegarder les fichiers de section via autosave
         # pour éviter les doublons (les fichiers sont déjà en DB)
         _save_sections(c.id, request.form, sections_all, files=None)
+        _update_da_cache(c.patient)
         db.session.commit()
         from datetime import datetime
         return jsonify({'ok': True, 'at': datetime.now().strftime('%H:%M:%S')})
@@ -4820,6 +4861,7 @@ def consultation_modifier(consultation_id):
         db.session.flush()
         _save_sections(c.id, request.form, sections_all, request.files)
         _save_fichiers(c.id, request.files, request.form)
+        _update_da_cache(c.patient)
         db.session.commit()
 
         # Mettre à jour section_ordre des FichierSection WOPI selon le type actuel

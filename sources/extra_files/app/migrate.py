@@ -401,6 +401,10 @@ with app.app_context():
         ("ALTER TABLE patient ADD COLUMN code_postal VARCHAR(10)", "code_postal sur patient"),
         ("ALTER TABLE patient ADD COLUMN commune VARCHAR(100)", "commune sur patient"),
         ("ALTER TABLE consultation ADD COLUMN remarques TEXT", "remarques sur consultation"),
+        ("ALTER TABLE patient ADD COLUMN da_date DATE", "da_date sur patient"),
+        ("ALTER TABLE patient ADD COLUMN da_motif VARCHAR(200)", "da_motif sur patient"),
+        ("ALTER TABLE patient ADD COLUMN da_praticien_id INTEGER", "da_praticien_id sur patient"),
+        ("ALTER TABLE patient ADD COLUMN da_cabinet_id INTEGER", "da_cabinet_id sur patient"),
         ("ALTER TABLE praticien ADD COLUMN role VARCHAR(20) DEFAULT 'praticien'", "role sur praticien"),
         ("ALTER TABLE praticien ADD COLUMN rpps VARCHAR(11)", "rpps sur praticien"),
         ("ALTER TABLE praticien ADD COLUMN couleur VARCHAR(7) DEFAULT '#2E7D6B'", "couleur sur praticien"),
@@ -793,7 +797,21 @@ with app.app_context():
     with app.app_context():
         from app import Praticien, SectionDef, ChampDef, OptionDef, db as app_db
 
-        # Normaliser les numéros de téléphone existants
+        # Initialiser le cache da_* pour tous les patients existants
+        try:
+            from app import Patient as _Patient, _update_da_cache
+            patients_sans_cache = _Patient.query.filter(_Patient.da_date == None).all()
+            print(f"Cache DA : initialisation pour {len(patients_sans_cache)} patients...")
+            for i, p in enumerate(patients_sans_cache):
+                _update_da_cache(p)
+                if (i+1) % 50 == 0:
+                    app_db.session.commit()
+                    print(f"  ... {i+1}/{len(patients_sans_cache)}")
+            app_db.session.commit()
+            print(f"OK      : cache dernière activité initialisé ({len(patients_sans_cache)} patients)")
+        except Exception as e:
+            print(f"SKIP    : cache DA — {e}")
+            app_db.session.rollback()
         try:
             import re as _re
             patients_tel = app_db.session.execute(
