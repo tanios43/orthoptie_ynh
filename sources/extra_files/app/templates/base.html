@@ -283,6 +283,13 @@
     }
     .bilan-section-header:hover { background: #EDE9E3; }
     body.theme-dark .bilan-section-header:hover { background: #2e2e2e; }
+    /* Titres et badges de section : forcer couleurs lisibles en sombre */
+    body.theme-dark .bilan-section-title { color: #e8e8e8 !important; }
+    body.theme-dark .bilan-section-header span[style*="background"][style*="color"] {
+      background: #2a2a2a !important;
+      color: #aaaaaa !important;
+      border-color: #444 !important;
+    }
     .bilan-section-num {
       width: 24px; height: 24px; border-radius: 50%;
       background: var(--accent); color: #fff;
