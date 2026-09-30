@@ -283,10 +283,10 @@
     }
     .bilan-section-header:hover { background: #EDE9E3; }
     body.theme-dark .bilan-section-header:hover { background: #2e2e2e; }
-    /* Thème sombre : section header — même rendu que card-header dans bilan.html */
-    body.theme-dark .bilan-section-header,
-    body.theme-dark .bilan-section-header * { color: #e8e8e8 !important; }
-    body.theme-dark .bilan-section-header { opacity: 0.85; }
+    /* Thème sombre : section header — surpasser les color inline avec [style] */
+    body.theme-dark .bilan-section-header[style],
+    body.theme-dark .bilan-section-header [style] { color: #e8e8e8 !important; }
+    body.theme-dark .bilan-section-header { color: #e8e8e8 !important; }
     .bilan-section-num {
       width: 24px; height: 24px; border-radius: 50%;
       background: var(--accent); color: #fff;
