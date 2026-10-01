@@ -68,6 +68,25 @@
       color: var(--text) !important;
       border-color: var(--border) !important;
     }
+    /* Vignettes de section dans l'historique (fiche patient + historique bilans) */
+    body.theme-dark .card {
+      background: var(--surface) !important;
+      border-color: var(--border) !important;
+      color: var(--text) !important;
+    }
+    body.theme-dark .card-header {
+      border-color: var(--border) !important;
+      filter: brightness(0.85);
+    }
+    body.theme-dark .card-header h2,
+    body.theme-dark .card-header * { color: #1a1a1a !important; }
+    body.theme-dark .card-body { color: var(--text) !important; }
+    body.theme-dark .card-body * { color: var(--text) !important; }
+    body.theme-dark .section-mini-card {
+      background: var(--surface) !important;
+      border-color: var(--border) !important;
+      color: var(--text) !important;
+    }
     body.theme-dark .md-toolbar, body.theme-dark #float-toolbar {
       background: #2a2a2a !important;
       border-color: var(--border) !important;
