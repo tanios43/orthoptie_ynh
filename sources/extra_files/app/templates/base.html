@@ -70,8 +70,10 @@
     }
     /* Vignettes de section dans l'historique */
     body.theme-dark .card { background: var(--surface) !important; border-color: var(--border) !important; }
-    body.theme-dark .card-header { border-color: var(--border) !important; filter: brightness(0.85); }
-    body.theme-dark .card-header h2 { color: #1a1a1a !important; }
+    body.theme-dark .card-header { border-color: var(--border) !important; }
+    body.theme-dark .card-header[style*="background"] { filter: brightness(0.85); }
+    body.theme-dark .card-header[style*="background"] h2 { color: #1a1a1a !important; }
+    body.theme-dark .card-header[style*="background"] span[style*="color"] { color: #1a1a1a !important; }
     body.theme-dark .card-body { background: var(--surface) !important; }
     /* Corriger les background:white hardcodés dans fiche et saisie */
     body.theme-dark [style*="background:white"] { background: var(--surface) !important; }
