@@ -36,7 +36,11 @@
             {% endif %}
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;">
-            <button class="btn btn-sm" onclick="ouvrirModal({{ ct.id }}, {{ ct.titre|tojson }}, {{ ct.contenu|tojson }}, [])">✎</button>
+            <button class="btn btn-sm btn-edit-ct"
+                    data-id="{{ ct.id }}"
+                    data-titre="{{ ct.titre | e }}"
+                    data-contenu="{{ ct.contenu | e }}"
+                    data-prats="[]">✎</button>
             <form method="POST" action="{{ url_for('conclusion_type_supprimer', ct_id=ct.id) }}" style="margin:0;"
                   onsubmit="return confirm('Supprimer « {{ ct.titre }} » ?')">
               <button type="submit" class="btn btn-sm" style="color:var(--danger);">🗑</button>
@@ -79,7 +83,11 @@
             </div>
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;">
-            <button class="btn btn-sm" onclick="ouvrirModal({{ ct.id }}, {{ ct.titre|tojson }}, {{ ct.contenu|tojson }}, {{ ct.praticiens|map(attribute='id')|list|tojson }})">✎</button>
+            <button class="btn btn-sm btn-edit-ct"
+                    data-id="{{ ct.id }}"
+                    data-titre="{{ ct.titre | e }}"
+                    data-contenu="{{ ct.contenu | e }}"
+                    data-prats="{{ ct.praticiens|map(attribute='id')|list|tojson | e }}">✎</button>
             <form method="POST" action="{{ url_for('conclusion_type_supprimer', ct_id=ct.id) }}" style="margin:0;"
                   onsubmit="return confirm('Supprimer « {{ ct.titre }} » ?')">
               <button type="submit" class="btn btn-sm" style="color:var(--danger);">🗑</button>
@@ -149,6 +157,19 @@
 <script>
 var modal = document.getElementById('modal-ct');
 var form  = document.getElementById('form-ct');
+
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.btn-edit-ct');
+  if (!btn) return;
+  var pratIds = [];
+  try { pratIds = JSON.parse(btn.dataset.prats || '[]'); } catch(err) {}
+  ouvrirModal(
+    parseInt(btn.dataset.id),
+    btn.dataset.titre,
+    btn.dataset.contenu,
+    pratIds
+  );
+});
 
 function ouvrirModal(id, titre, contenu, pratIds) {
   var isEdit = !!id;
