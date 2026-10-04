@@ -1062,8 +1062,8 @@ function champHTML(idx, champ, val, sectionType) {
         <button type="button" tabindex="-1" title="Gras (Ctrl+B)" onmousedown="event.preventDefault();applyFormat('strong',this)"><b>B</b></button>
         <button type="button" tabindex="-1" title="Italique (Ctrl+I)" onmousedown="event.preventDefault();applyFormat('em',this)"><i>I</i></button>
         <button type="button" tabindex="-1" title="Souligné" onmousedown="event.preventDefault();applyFormat('u',this)"><u>U</u></button>
-        ${sectionType === 'conclusions' ? `<button type="button" tabindex="-1" title="Insérer une conclusion type"
-          onmousedown="event.preventDefault();ouvrirModalConclusion('${uid}')"
+        ${['conclusions','anam'].includes(sectionType) ? `<button type="button" tabindex="-1" title="Insérer un modèle de texte"
+          onmousedown="event.preventDefault();ouvrirModalConclusion('${uid}','${sectionType}')"
           style="margin-left:8px;border-left:1px solid var(--border);padding-left:8px;">📋</button>` : ''}
       </div>
       <div id="${uid}"
@@ -3191,7 +3191,7 @@ document.addEventListener('DOMContentLoaded', () => {
 var _ctTargetUid = null;
 var _ctData = [];
 
-function ouvrirModalConclusion(uid) {
+function ouvrirModalConclusion(uid, categorie) {
   _ctTargetUid = uid;
   var modal = document.getElementById('modal-conclusion-type');
   var liste = document.getElementById('ct-liste');
@@ -3199,8 +3199,13 @@ function ouvrirModalConclusion(uid) {
   var search = document.getElementById('ct-search');
   if (search) search.value = '';
   modal.style.display = 'flex';
+  // Titre de la modale selon la catégorie
+  var titreModal = document.getElementById('ct-modal-titre');
+  if (titreModal) titreModal.textContent = categorie === 'anam'
+    ? '📝 Insérer un modèle d\'anamnèse'
+    : '📋 Insérer une conclusion type';
 
-  fetch('/conclusions-types/json')
+  fetch('/conclusions-types/json?categorie=' + (categorie || 'conclusions'))
     .then(function(r){ return r.json(); })
     .then(function(data){
       _ctData = data;
@@ -3291,7 +3296,7 @@ function fermerModalConclusion() {
               display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2);">
     {# Titre #}
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
-      <span style="font-size:16px;font-weight:600;color:var(--text);flex:1;">📋 Insérer une conclusion type</span>
+      <span id="ct-modal-titre" style="font-size:16px;font-weight:600;color:var(--text);flex:1;">📋 Insérer une conclusion type</span>
       <button type="button" onclick="fermerModalConclusion()"
               style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">✕</button>
     </div>

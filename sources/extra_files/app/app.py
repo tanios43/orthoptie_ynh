@@ -988,6 +988,7 @@ class Message(db.Model):
 class ConclusionType(db.Model):
     __tablename__ = 'conclusion_type'
     id          = db.Column(db.Integer, primary_key=True)
+    categorie   = db.Column(db.String(20), default='conclusions')  # 'conclusions' ou 'anam'
     titre       = db.Column(db.String(200), nullable=False)
     contenu     = db.Column(db.Text, default='')
     ordre       = db.Column(db.Integer, default=0)
@@ -3544,23 +3545,26 @@ def repondeur():
 @app.route('/conclusions-types', methods=['GET'])
 @login_required
 def conclusions_types_liste():
-    # Mes conclusions + partagées (sans praticien assigné)
-    toutes = ConclusionType.query.order_by(ConclusionType.ordre, ConclusionType.titre).all()
-    miennes = [c for c in toutes if current_user in c.praticiens or len(c.praticiens) == 0]
-    partagees = [c for c in toutes if len(c.praticiens) == 0]
+    onglet = request.args.get('onglet', 'conclusions')
+    toutes = ConclusionType.query.filter_by(categorie=onglet)\
+                                 .order_by(ConclusionType.ordre, ConclusionType.titre).all()
+    partagees  = [c for c in toutes if len(c.praticiens) == 0]
     mes_propres = [c for c in toutes if current_user in c.praticiens and len(c.praticiens) > 0]
     praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
     return render_template('conclusions/index.html',
                            mes_propres=mes_propres,
                            partagees=partagees,
-                           praticiens=praticiens)
+                           praticiens=praticiens,
+                           onglet=onglet)
 
 
 @app.route('/conclusions-types/json')
 @login_required
 def conclusions_types_json():
-    """Retourne les conclusions disponibles pour le praticien connecté."""
-    toutes = ConclusionType.query.order_by(ConclusionType.ordre, ConclusionType.titre).all()
+    """Retourne les modèles disponibles pour le praticien connecté."""
+    categorie = request.args.get('categorie', 'conclusions')
+    toutes = ConclusionType.query.filter_by(categorie=categorie)\
+                                 .order_by(ConclusionType.ordre, ConclusionType.titre).all()
     result = []
     for c in toutes:
         if len(c.praticiens) == 0 or current_user in c.praticiens:
@@ -3581,7 +3585,8 @@ def conclusion_type_nouveau():
     if not titre:
         flash('Le titre est requis.', 'danger')
         return redirect(url_for('conclusions_types_liste'))
-    ct = ConclusionType(titre=titre, contenu=contenu, created_by=current_user.id)
+    categorie = request.form.get('categorie', 'conclusions')
+    ct = ConclusionType(titre=titre, contenu=contenu, created_by=current_user.id, categorie=categorie)
     db.session.add(ct)
     db.session.flush()
     # Associer les praticiens sélectionnés
@@ -3591,8 +3596,8 @@ def conclusion_type_nouveau():
         if p:
             ct.praticiens.append(p)
     db.session.commit()
-    flash('Conclusion type créée.', 'success')
-    return redirect(url_for('conclusions_types_liste'))
+    flash('Modèle créé.', 'success')
+    return redirect(url_for('conclusions_types_liste', onglet=categorie))
 
 
 @app.route('/conclusions-types/<int:ct_id>/modifier', methods=['POST'])
@@ -3611,8 +3616,8 @@ def conclusion_type_modifier(ct_id):
         if p:
             ct.praticiens.append(p)
     db.session.commit()
-    flash('Conclusion type modifiée.', 'success')
-    return redirect(url_for('conclusions_types_liste'))
+    flash('Modèle modifié.', 'success')
+    return redirect(url_for('conclusions_types_liste', onglet=ct.categorie))
 
 
 @app.route('/conclusions-types/<int:ct_id>/supprimer', methods=['POST'])
@@ -3623,8 +3628,8 @@ def conclusion_type_supprimer(ct_id):
         abort(403)
     db.session.delete(ct)
     db.session.commit()
-    flash('Conclusion type supprimée.', 'success')
-    return redirect(url_for('conclusions_types_liste'))
+    flash('Modèle supprimé.', 'success')
+    return redirect(url_for('conclusions_types_liste', onglet=ct.categorie))
 
 
 @app.route('/conclusions-types/reordonner', methods=['POST'])

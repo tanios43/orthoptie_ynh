@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Conclusions types{% endblock %}
-{% block page_title %}📋 Conclusions types{% endblock %}
+{% block title %}Modèles de texte{% endblock %}
+{% block page_title %}📋 Modèles de texte{% endblock %}
 
 {% block topbar_actions %}
-  <button class="btn btn-primary btn-sm" onclick="ouvrirModal()">+ Nouvelle conclusion</button>
+  <button class="btn btn-primary btn-sm" onclick="ouvrirModal()">+ Nouveau modèle</button>
 {% endblock %}
 
 {% block content %}
@@ -15,17 +15,34 @@
     {% endfor %}
   {% endwith %}
 
+  {# ── ONGLETS ── #}
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;">
+    <a href="{{ url_for('conclusions_types_liste', onglet='conclusions') }}"
+       style="padding:8px 20px;font-size:13px;font-weight:500;text-decoration:none;border-bottom:2px solid {{ 'var(--accent)' if onglet == 'conclusions' else 'transparent' }};
+              color:{{ 'var(--accent)' if onglet == 'conclusions' else 'var(--muted)' }};margin-bottom:-2px;">
+      📋 Conclusions
+    </a>
+    <a href="{{ url_for('conclusions_types_liste', onglet='anam') }}"
+       style="padding:8px 20px;font-size:13px;font-weight:500;text-decoration:none;border-bottom:2px solid {{ 'var(--accent)' if onglet == 'anam' else 'transparent' }};
+              color:{{ 'var(--accent)' if onglet == 'anam' else 'var(--muted)' }};margin-bottom:-2px;">
+      📝 Anamnèse
+    </a>
+  </div>
+
+  {% set label = 'conclusion' if onglet == 'conclusions' else 'anamnèse' %}
+
   {# ── PARTAGÉES ── #}
   <div class="card" style="margin-bottom:20px;">
     <div class="card-header">
-      <h2>🌐 Partagées avec tous les praticiens</h2>
-      <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ partagees|length }} conclusion{{ 's' if partagees|length > 1 }}</span>
+      <h2>🌐 Partagés avec tous les praticiens</h2>
+      <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ partagees|length }} modèle{{ 's' if partagees|length > 1 }}</span>
     </div>
     <div class="card-body" style="padding:0;">
       {% if partagees %}
       <div id="list-partagees">
         {% for ct in partagees %}
-        <div class="ct-row" data-id="{{ ct.id }}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
+        <div class="ct-row" data-id="{{ ct.id }}"
+             style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
           <span style="cursor:grab;color:var(--muted);font-size:14px;">⠿</span>
           <div style="flex:1;">
             <div style="font-weight:500;font-size:13px;color:var(--text);">{{ ct.titre }}</div>
@@ -42,7 +59,7 @@
                     data-contenu="{{ ct.contenu | e }}"
                     data-prats="[]">✎</button>
             <form method="POST" action="{{ url_for('conclusion_type_supprimer', ct_id=ct.id) }}" style="margin:0;"
-                  onsubmit="return confirm('Supprimer « {{ ct.titre }} » ?')">
+                  onsubmit="return confirm('Supprimer ce modèle ?')">
               <button type="submit" class="btn btn-sm" style="color:var(--danger);">🗑</button>
             </form>
           </div>
@@ -50,7 +67,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Aucune conclusion partagée</div>
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Aucun modèle partagé</div>
       {% endif %}
     </div>
   </div>
@@ -58,14 +75,15 @@
   {# ── MES PROPRES ── #}
   <div class="card">
     <div class="card-header">
-      <h2>👤 Mes conclusions (praticiens spécifiques)</h2>
-      <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ mes_propres|length }} conclusion{{ 's' if mes_propres|length > 1 }}</span>
+      <h2>👤 Modèles assignés à des praticiens spécifiques</h2>
+      <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ mes_propres|length }} modèle{{ 's' if mes_propres|length > 1 }}</span>
     </div>
     <div class="card-body" style="padding:0;">
       {% if mes_propres %}
       <div id="list-propres">
         {% for ct in mes_propres %}
-        <div class="ct-row" data-id="{{ ct.id }}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
+        <div class="ct-row" data-id="{{ ct.id }}"
+             style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
           <span style="cursor:grab;color:var(--muted);font-size:14px;">⠿</span>
           <div style="flex:1;">
             <div style="font-weight:500;font-size:13px;color:var(--text);">{{ ct.titre }}</div>
@@ -89,7 +107,7 @@
                     data-contenu="{{ ct.contenu | e }}"
                     data-prats="{{ ct.praticiens|map(attribute='id')|list|tojson | e }}">✎</button>
             <form method="POST" action="{{ url_for('conclusion_type_supprimer', ct_id=ct.id) }}" style="margin:0;"
-                  onsubmit="return confirm('Supprimer « {{ ct.titre }} » ?')">
+                  onsubmit="return confirm('Supprimer ce modèle ?')">
               <button type="submit" class="btn btn-sm" style="color:var(--danger);">🗑</button>
             </form>
           </div>
@@ -97,19 +115,20 @@
         {% endfor %}
       </div>
       {% else %}
-      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Aucune conclusion assignée à des praticiens spécifiques</div>
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Aucun modèle assigné à des praticiens spécifiques</div>
       {% endif %}
     </div>
   </div>
 </div>
 
-{# ── MODAL CRÉATION / ÉDITION ── #}
+{# ── MODAL ── #}
 <div id="modal-ct" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;
-     display:none;align-items:center;justify-content:center;">
+     align-items:center;justify-content:center;">
   <div style="background:var(--surface);border-radius:12px;width:min(640px,95vw);max-height:90vh;
               overflow-y:auto;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-    <h3 id="modal-ct-titre" style="margin:0 0 16px;font-size:16px;font-weight:600;">Nouvelle conclusion type</h3>
+    <h3 id="modal-ct-titre" style="margin:0 0 16px;font-size:16px;font-weight:600;">Nouveau modèle</h3>
     <form id="form-ct" method="POST" action="{{ url_for('conclusion_type_nouveau') }}">
+      <input type="hidden" name="categorie" value="{{ onglet }}">
 
       <div class="field-group" style="margin-bottom:14px;">
         <label class="field-label">Titre *</label>
@@ -163,40 +182,27 @@ document.addEventListener('click', function(e) {
   if (!btn) return;
   var pratIds = [];
   try { pratIds = JSON.parse(btn.dataset.prats || '[]'); } catch(err) {}
-  ouvrirModal(
-    parseInt(btn.dataset.id),
-    btn.dataset.titre,
-    btn.dataset.contenu,
-    pratIds
-  );
+  ouvrirModal(parseInt(btn.dataset.id), btn.dataset.titre, btn.dataset.contenu, pratIds);
 });
 
 function ouvrirModal(id, titre, contenu, pratIds) {
   var isEdit = !!id;
-  document.getElementById('modal-ct-titre').textContent = isEdit ? 'Modifier la conclusion type' : 'Nouvelle conclusion type';
+  document.getElementById('modal-ct-titre').textContent = isEdit ? 'Modifier le modèle' : 'Nouveau modèle';
   document.getElementById('ct-titre').value = titre || '';
   document.getElementById('ct-contenu-editor').innerHTML = contenu || '';
-  // Reset checkboxes
   document.querySelectorAll('.prat-checkbox').forEach(function(cb) {
     cb.checked = pratIds && pratIds.includes(parseInt(cb.value));
   });
-  if (isEdit) {
-    form.action = '/conclusions-types/' + id + '/modifier';
-  } else {
-    form.action = '{{ url_for("conclusion_type_nouveau") }}';
-  }
+  form.action = isEdit ? '/conclusions-types/' + id + '/modifier' : '{{ url_for("conclusion_type_nouveau") }}';
   modal.style.display = 'flex';
 }
 function fermerModal() { modal.style.display = 'none'; }
 modal.addEventListener('click', function(e) { if (e.target === modal) fermerModal(); });
-
 function fmt(cmd) { document.execCommand(cmd, false, null); }
-
 form.addEventListener('submit', function() {
   document.getElementById('ct-contenu-hidden').value = document.getElementById('ct-contenu-editor').innerHTML;
 });
 
-// Drag & drop réordonnancement
 function initDragDrop(listId) {
   var list = document.getElementById(listId);
   if (!list) return;
@@ -206,7 +212,6 @@ function initDragDrop(listId) {
     row.addEventListener('dragstart', function() { dragged = row; row.style.opacity = '.4'; });
     row.addEventListener('dragend', function() {
       row.style.opacity = '1';
-      // Sauvegarder l'ordre
       var ids = Array.from(list.querySelectorAll('.ct-row')).map(function(r){ return parseInt(r.dataset.id); });
       fetch('/conclusions-types/reordonner', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:ids})});
     });
@@ -215,9 +220,7 @@ function initDragDrop(listId) {
       e.preventDefault();
       if (dragged && dragged !== row) {
         var rows = Array.from(list.querySelectorAll('.ct-row'));
-        var dragIdx = rows.indexOf(dragged);
-        var dropIdx = rows.indexOf(row);
-        if (dragIdx < dropIdx) row.after(dragged); else row.before(dragged);
+        if (rows.indexOf(dragged) < rows.indexOf(row)) row.after(dragged); else row.before(dragged);
       }
     });
   });

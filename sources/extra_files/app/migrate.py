@@ -402,6 +402,7 @@ with app.app_context():
         ("ALTER TABLE patient ADD COLUMN commune VARCHAR(100)", "commune sur patient"),
         ("ALTER TABLE consultation ADD COLUMN remarques TEXT", "remarques sur consultation"),
         ("ALTER TABLE praticien ADD COLUMN theme VARCHAR(10) DEFAULT 'light'", "theme sur praticien"),
+        ("ALTER TABLE conclusion_type ADD COLUMN categorie VARCHAR(20) DEFAULT 'conclusions'", "categorie sur conclusion_type"),
         ("""CREATE TABLE IF NOT EXISTS conclusion_type (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             titre VARCHAR(200) NOT NULL,
