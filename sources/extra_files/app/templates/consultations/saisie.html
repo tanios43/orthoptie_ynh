@@ -3196,6 +3196,8 @@ function ouvrirModalConclusion(uid) {
   var modal = document.getElementById('modal-conclusion-type');
   var liste = document.getElementById('ct-liste');
   liste.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">Chargement…</div>';
+  var search = document.getElementById('ct-search');
+  if (search) search.value = '';
   modal.style.display = 'flex';
 
   fetch('/conclusions-types/json')
@@ -3204,6 +3206,13 @@ function ouvrirModalConclusion(uid) {
       _ctData = data;
       renderCTListe(data);
     });
+}
+
+function filtrerCT(q) {
+  var filtered = q.trim()
+    ? _ctData.filter(function(ct){ return ct.titre.toLowerCase().includes(q.toLowerCase()); })
+    : _ctData;
+  renderCTListe(filtered);
 }
 
 function renderCTListe(data) {
@@ -3289,7 +3298,15 @@ function fermerModalConclusion() {
     {# Corps #}
     <div style="display:grid;grid-template-columns:1fr 1fr;flex:1;overflow:hidden;min-height:0;">
       {# Liste #}
-      <div id="ct-liste" style="overflow-y:auto;border-right:1px solid var(--border);"></div>
+      <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);">
+        <div style="padding:8px 10px;border-bottom:0.5px solid var(--border);">
+          <input type="text" id="ct-search" placeholder="🔍 Rechercher…"
+                 oninput="filtrerCT(this.value)"
+                 style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);
+                        background:var(--surface);color:var(--text);font-size:12px;">
+        </div>
+        <div id="ct-liste" style="overflow-y:auto;flex:1;"></div>
+      </div>
       {# Aperçu #}
       <div style="display:flex;flex-direction:column;padding:14px;overflow-y:auto;">
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;
