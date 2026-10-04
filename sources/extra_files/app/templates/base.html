@@ -614,6 +614,10 @@
        class="nav-item {% if request.endpoint and 'modele' in request.endpoint and 'document' not in request.endpoint %}active{% endif %}">
       <span class="icon">🗂</span><span class="nav-label"> Modèles de bilan</span>
     </a>
+    <a href="{{ url_for('conclusions_types_liste') }}" data-label="Conclusions types"
+       class="nav-item {% if request.endpoint == 'conclusions_types_liste' %}active{% endif %}">
+      <span class="icon">📋</span><span class="nav-label"> Conclusions types</span>
+    </a>
     <a href="/admin/document-modeles" data-label="Modèles de documents"
        class="nav-item {% if request.endpoint and 'document' in request.endpoint %}active{% endif %}">
       <span class="icon">📄</span><span class="nav-label"> Modèles de docs</span>

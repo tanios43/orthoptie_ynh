@@ -402,6 +402,19 @@ with app.app_context():
         ("ALTER TABLE patient ADD COLUMN commune VARCHAR(100)", "commune sur patient"),
         ("ALTER TABLE consultation ADD COLUMN remarques TEXT", "remarques sur consultation"),
         ("ALTER TABLE praticien ADD COLUMN theme VARCHAR(10) DEFAULT 'light'", "theme sur praticien"),
+        ("""CREATE TABLE IF NOT EXISTS conclusion_type (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titre VARCHAR(200) NOT NULL,
+            contenu TEXT DEFAULT '',
+            ordre INTEGER DEFAULT 0,
+            created_by INTEGER REFERENCES praticien(id),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""", "table conclusion_type"),
+        ("""CREATE TABLE IF NOT EXISTS conclusion_type_praticien (
+            conclusion_type_id INTEGER REFERENCES conclusion_type(id) ON DELETE CASCADE,
+            praticien_id INTEGER REFERENCES praticien(id) ON DELETE CASCADE,
+            PRIMARY KEY (conclusion_type_id, praticien_id)
+        )""", "table conclusion_type_praticien"),
         ("ALTER TABLE patient ADD COLUMN da_date DATE", "da_date sur patient"),
         ("ALTER TABLE patient ADD COLUMN da_motif VARCHAR(200)", "da_motif sur patient"),
         ("ALTER TABLE patient ADD COLUMN da_praticien_id INTEGER", "da_praticien_id sur patient"),

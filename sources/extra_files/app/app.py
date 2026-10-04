@@ -985,6 +985,24 @@ class Message(db.Model):
 
 
 
+class ConclusionType(db.Model):
+    __tablename__ = 'conclusion_type'
+    id          = db.Column(db.Integer, primary_key=True)
+    titre       = db.Column(db.String(200), nullable=False)
+    contenu     = db.Column(db.Text, default='')
+    ordre       = db.Column(db.Integer, default=0)
+    created_by  = db.Column(db.Integer, db.ForeignKey('praticien.id'))
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    praticiens  = db.relationship('Praticien', secondary='conclusion_type_praticien',
+                                  backref='conclusion_types', lazy=True)
+    auteur      = db.relationship('Praticien', foreign_keys=[created_by])
+
+class ConclusionTypePraticien(db.Model):
+    __tablename__ = 'conclusion_type_praticien'
+    conclusion_type_id = db.Column(db.Integer, db.ForeignKey('conclusion_type.id'), primary_key=True)
+    praticien_id       = db.Column(db.Integer, db.ForeignKey('praticien.id'), primary_key=True)
+
+
 class Note(db.Model):
     """Note personnelle d'un praticien."""
     __tablename__ = 'note'
@@ -3521,6 +3539,104 @@ def repondeur():
         return redirect(url_for('repondeur', cabinet_id=cabinet_id))
     return render_template('repondeur/index.html', cabinet=cabinet,
                            cabinets=cabinets, cabinet_id=cabinet_id)
+
+
+@app.route('/conclusions-types', methods=['GET'])
+@login_required
+def conclusions_types_liste():
+    # Mes conclusions + partagées (sans praticien assigné)
+    toutes = ConclusionType.query.order_by(ConclusionType.ordre, ConclusionType.titre).all()
+    miennes = [c for c in toutes if current_user in c.praticiens or len(c.praticiens) == 0]
+    partagees = [c for c in toutes if len(c.praticiens) == 0]
+    mes_propres = [c for c in toutes if current_user in c.praticiens and len(c.praticiens) > 0]
+    praticiens = Praticien.query.filter_by(actif=True).order_by(Praticien.nom).all()
+    return render_template('conclusions/index.html',
+                           mes_propres=mes_propres,
+                           partagees=partagees,
+                           praticiens=praticiens)
+
+
+@app.route('/conclusions-types/json')
+@login_required
+def conclusions_types_json():
+    """Retourne les conclusions disponibles pour le praticien connecté."""
+    toutes = ConclusionType.query.order_by(ConclusionType.ordre, ConclusionType.titre).all()
+    result = []
+    for c in toutes:
+        if len(c.praticiens) == 0 or current_user in c.praticiens:
+            result.append({
+                'id': c.id,
+                'titre': c.titre,
+                'contenu': c.contenu,
+                'partage': len(c.praticiens) == 0,
+            })
+    return jsonify(result)
+
+
+@app.route('/conclusions-types/nouveau', methods=['POST'])
+@login_required
+def conclusion_type_nouveau():
+    titre   = request.form.get('titre', '').strip()
+    contenu = request.form.get('contenu', '').strip()
+    if not titre:
+        flash('Le titre est requis.', 'danger')
+        return redirect(url_for('conclusions_types_liste'))
+    ct = ConclusionType(titre=titre, contenu=contenu, created_by=current_user.id)
+    db.session.add(ct)
+    db.session.flush()
+    # Associer les praticiens sélectionnés
+    prat_ids = request.form.getlist('praticien_ids')
+    for pid in prat_ids:
+        p = Praticien.query.get(int(pid))
+        if p:
+            ct.praticiens.append(p)
+    db.session.commit()
+    flash('Conclusion type créée.', 'success')
+    return redirect(url_for('conclusions_types_liste'))
+
+
+@app.route('/conclusions-types/<int:ct_id>/modifier', methods=['POST'])
+@login_required
+def conclusion_type_modifier(ct_id):
+    ct = ConclusionType.query.get_or_404(ct_id)
+    if ct.created_by != current_user.id and current_user.role != 'admin':
+        abort(403)
+    ct.titre   = request.form.get('titre', '').strip()
+    ct.contenu = request.form.get('contenu', '').strip()
+    ct.praticiens = []
+    db.session.flush()
+    prat_ids = request.form.getlist('praticien_ids')
+    for pid in prat_ids:
+        p = Praticien.query.get(int(pid))
+        if p:
+            ct.praticiens.append(p)
+    db.session.commit()
+    flash('Conclusion type modifiée.', 'success')
+    return redirect(url_for('conclusions_types_liste'))
+
+
+@app.route('/conclusions-types/<int:ct_id>/supprimer', methods=['POST'])
+@login_required
+def conclusion_type_supprimer(ct_id):
+    ct = ConclusionType.query.get_or_404(ct_id)
+    if ct.created_by != current_user.id and current_user.role != 'admin':
+        abort(403)
+    db.session.delete(ct)
+    db.session.commit()
+    flash('Conclusion type supprimée.', 'success')
+    return redirect(url_for('conclusions_types_liste'))
+
+
+@app.route('/conclusions-types/reordonner', methods=['POST'])
+@login_required
+def conclusions_types_reordonner():
+    ids = request.json.get('ids', [])
+    for i, cid in enumerate(ids):
+        ct = ConclusionType.query.get(cid)
+        if ct:
+            ct.ordre = i
+    db.session.commit()
+    return jsonify({'ok': True})
 
 
 @app.route('/notes', methods=['GET'])

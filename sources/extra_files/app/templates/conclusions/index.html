@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Conclusions types{% endblock %}
+{% block page_title %}📋 Conclusions types{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-primary btn-sm" onclick="ouvrirModal()">+ Nouvelle conclusion</button>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:860px;margin:0 auto;padding:20px 24px;">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}" style="margin-bottom:12px;">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {# ── PARTAGÉES ── #}
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+      <h2>🌐 Partagées avec tous les praticiens</h2>
+      <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ partagees|length }} conclusion{{ 's' if partagees|length > 1 }}</span>
+    </div>
+    <div class="card-body" style="padding:0;">
+      {% if partagees %}
+      <div id="list-partagees">
+        {% for ct in partagees %}
+        <div class="ct-row" data-id="{{ ct.id }}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
+          <span style="cursor:grab;color:var(--muted);font-size:14px;">⠿</span>
+          <div style="flex:1;">
+            <div style="font-weight:500;font-size:13px;color:var(--text);">{{ ct.titre }}</div>
+            {% if ct.contenu %}
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:600px;">
+              {{ ct.contenu | striptags | truncate(100) }}
+            </div>
+            {% endif %}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn btn-sm" onclick="ouvrirModal({{ ct.id }}, {{ ct.titre|tojson }}, {{ ct.contenu|tojson }}, [])">✎</button>
+            <form method="POST" action="{{ url_for('conclusion_type_supprimer', ct_id=ct.id) }}" style="margin:0;"
+                  onsubmit="return confirm('Supprimer « {{ ct.titre }} » ?')">
+              <button type="submit" class="btn btn-sm" style="color:var(--danger);">🗑</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Aucune conclusion partagée</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── MES PROPRES ── #}
+  <div class="card">
+    <div class="card-header">
+      <h2>👤 Mes conclusions (praticiens spécifiques)</h2>
+      <span style="font-size:12px;color:var(--muted);margin-left:auto;">{{ mes_propres|length }} conclusion{{ 's' if mes_propres|length > 1 }}</span>
+    </div>
+    <div class="card-body" style="padding:0;">
+      {% if mes_propres %}
+      <div id="list-propres">
+        {% for ct in mes_propres %}
+        <div class="ct-row" data-id="{{ ct.id }}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
+          <span style="cursor:grab;color:var(--muted);font-size:14px;">⠿</span>
+          <div style="flex:1;">
+            <div style="font-weight:500;font-size:13px;color:var(--text);">{{ ct.titre }}</div>
+            {% if ct.contenu %}
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:500px;">
+              {{ ct.contenu | striptags | truncate(100) }}
+            </div>
+            {% endif %}
+            <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
+              {% for p in ct.praticiens %}
+              <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--accent-lt);color:var(--accent);">
+                {{ p.prenom }} {{ p.nom }}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn btn-sm" onclick="ouvrirModal({{ ct.id }}, {{ ct.titre|tojson }}, {{ ct.contenu|tojson }}, {{ ct.praticiens|map(attribute='id')|list|tojson }})">✎</button>
+            <form method="POST" action="{{ url_for('conclusion_type_supprimer', ct_id=ct.id) }}" style="margin:0;"
+                  onsubmit="return confirm('Supprimer « {{ ct.titre }} » ?')">
+              <button type="submit" class="btn btn-sm" style="color:var(--danger);">🗑</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Aucune conclusion assignée à des praticiens spécifiques</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ── MODAL CRÉATION / ÉDITION ── #}
+<div id="modal-ct" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;
+     display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:12px;width:min(640px,95vw);max-height:90vh;
+              overflow-y:auto;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 id="modal-ct-titre" style="margin:0 0 16px;font-size:16px;font-weight:600;">Nouvelle conclusion type</h3>
+    <form id="form-ct" method="POST" action="{{ url_for('conclusion_type_nouveau') }}">
+
+      <div class="field-group" style="margin-bottom:14px;">
+        <label class="field-label">Titre *</label>
+        <input type="text" name="titre" id="ct-titre" required placeholder="Ex: Exotropie alternante stable">
+      </div>
+
+      <div class="field-group" style="margin-bottom:14px;">
+        <label class="field-label">Contenu</label>
+        <div class="md-toolbar" style="margin-bottom:4px;">
+          <button type="button" onclick="fmt('bold')"><b>B</b></button>
+          <button type="button" onclick="fmt('italic')"><i>I</i></button>
+          <button type="button" onclick="fmt('underline')"><u>U</u></button>
+        </div>
+        <div id="ct-contenu-editor" contenteditable="true"
+             style="min-height:120px;padding:10px;border:1px solid var(--border);border-radius:6px;
+                    background:var(--surface);font-size:13px;line-height:1.7;outline:none;"></div>
+        <input type="hidden" name="contenu" id="ct-contenu-hidden">
+      </div>
+
+      <div class="field-group" style="margin-bottom:20px;">
+        <label class="field-label">Visible par</label>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+          Laissez tout décoché pour partager avec <strong>tous les praticiens</strong>.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          {% for p in praticiens %}
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;
+                        padding:4px 10px;border-radius:6px;border:1px solid var(--border);">
+            <input type="checkbox" name="praticien_ids" value="{{ p.id }}"
+                   class="prat-checkbox" id="cb-prat-{{ p.id }}">
+            {{ p.titre or '' }} {{ p.prenom }} {{ p.nom }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+var modal = document.getElementById('modal-ct');
+var form  = document.getElementById('form-ct');
+
+function ouvrirModal(id, titre, contenu, pratIds) {
+  var isEdit = !!id;
+  document.getElementById('modal-ct-titre').textContent = isEdit ? 'Modifier la conclusion type' : 'Nouvelle conclusion type';
+  document.getElementById('ct-titre').value = titre || '';
+  document.getElementById('ct-contenu-editor').innerHTML = contenu || '';
+  // Reset checkboxes
+  document.querySelectorAll('.prat-checkbox').forEach(function(cb) {
+    cb.checked = pratIds && pratIds.includes(parseInt(cb.value));
+  });
+  if (isEdit) {
+    form.action = '/conclusions-types/' + id + '/modifier';
+  } else {
+    form.action = '{{ url_for("conclusion_type_nouveau") }}';
+  }
+  modal.style.display = 'flex';
+}
+function fermerModal() { modal.style.display = 'none'; }
+modal.addEventListener('click', function(e) { if (e.target === modal) fermerModal(); });
+
+function fmt(cmd) { document.execCommand(cmd, false, null); }
+
+form.addEventListener('submit', function() {
+  document.getElementById('ct-contenu-hidden').value = document.getElementById('ct-contenu-editor').innerHTML;
+});
+
+// Drag & drop réordonnancement
+function initDragDrop(listId) {
+  var list = document.getElementById(listId);
+  if (!list) return;
+  var dragged = null;
+  list.querySelectorAll('.ct-row').forEach(function(row) {
+    row.setAttribute('draggable', true);
+    row.addEventListener('dragstart', function() { dragged = row; row.style.opacity = '.4'; });
+    row.addEventListener('dragend', function() {
+      row.style.opacity = '1';
+      // Sauvegarder l'ordre
+      var ids = Array.from(list.querySelectorAll('.ct-row')).map(function(r){ return parseInt(r.dataset.id); });
+      fetch('/conclusions-types/reordonner', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:ids})});
+    });
+    row.addEventListener('dragover', function(e) { e.preventDefault(); });
+    row.addEventListener('drop', function(e) {
+      e.preventDefault();
+      if (dragged && dragged !== row) {
+        var rows = Array.from(list.querySelectorAll('.ct-row'));
+        var dragIdx = rows.indexOf(dragged);
+        var dropIdx = rows.indexOf(row);
+        if (dragIdx < dropIdx) row.after(dragged); else row.before(dragged);
+      }
+    });
+  });
+}
+initDragDrop('list-partagees');
+initDragDrop('list-propres');
+</script>
+{% endblock %}

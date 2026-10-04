@@ -1024,9 +1024,10 @@ function mettreAJourSectionsNav() {
 }
 
 // ── Templates HTML des types de champs ──
-function champHTML(idx, champ, val) {
+function champHTML(idx, champ, val, sectionType) {
   const name = `champ__${idx}__${champ.name}`;
   const v = val || '';
+  sectionType = sectionType || '';
 
   if (champ.type === 'spacer') {
     return `<div class="field-group" aria-hidden="true" style="visibility:hidden;"></div>`;
@@ -1061,6 +1062,9 @@ function champHTML(idx, champ, val) {
         <button type="button" tabindex="-1" title="Gras (Ctrl+B)" onmousedown="event.preventDefault();applyFormat('strong',this)"><b>B</b></button>
         <button type="button" tabindex="-1" title="Italique (Ctrl+I)" onmousedown="event.preventDefault();applyFormat('em',this)"><i>I</i></button>
         <button type="button" tabindex="-1" title="Souligné" onmousedown="event.preventDefault();applyFormat('u',this)"><u>U</u></button>
+        ${sectionType === 'conclusions' ? `<button type="button" tabindex="-1" title="Insérer une conclusion type"
+          onmousedown="event.preventDefault();ouvrirModalConclusion('${uid}')"
+          style="margin-left:8px;border-left:1px solid var(--border);padding-left:8px;">📋</button>` : ''}
       </div>
       <div id="${uid}"
            contenteditable="true"
@@ -1437,7 +1441,7 @@ function renderSection(type, label, idx, titre, obs, donnees) {
   } else {
     const cols = def.nb_colonnes || (def.champs.length > 1 ? 2 : 1);
     champsHTML = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;">
-      ${def.champs.map(c => champHTML(idx, c, donnees[c.name])).join('')}
+      ${def.champs.map(c => champHTML(idx, c, donnees[c.name], type)).join('')}
     </div>`;
   }
 
@@ -3182,6 +3186,126 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 })();
+
+// ── Modal conclusions types ─────────────────────────────────────────
+var _ctTargetUid = null;
+var _ctData = [];
+
+function ouvrirModalConclusion(uid) {
+  _ctTargetUid = uid;
+  var modal = document.getElementById('modal-conclusion-type');
+  var liste = document.getElementById('ct-liste');
+  liste.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">Chargement…</div>';
+  modal.style.display = 'flex';
+
+  fetch('/conclusions-types/json')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      _ctData = data;
+      renderCTListe(data);
+    });
+}
+
+function renderCTListe(data) {
+  var liste = document.getElementById('ct-liste');
+  if (!data.length) {
+    liste.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">Aucune conclusion type disponible.<br><a href="/conclusions-types" target="_blank">Créer des conclusions types →</a></div>';
+    return;
+  }
+  liste.innerHTML = data.map(function(ct) {
+    return `<div class="ct-item" data-id="${ct.id}"
+      style="padding:10px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;transition:.1s;"
+      onmouseenter="this.style.background='var(--accent-lt)'"
+      onmouseleave="this.style.background=''"
+      onclick="selectionnerCT(${ct.id})">
+      <div style="font-weight:500;font-size:13px;color:var(--text);">${ct.titre}</div>
+      ${ct.partage ? '<span style="font-size:10px;color:var(--muted);">🌐 Partagée</span>' : '<span style="font-size:10px;color:var(--accent);">👤 Spécifique</span>'}
+      ${ct.contenu ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ct.contenu.replace(/<[^>]+>/g,'').substring(0,80)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectionnerCT(id) {
+  var ct = _ctData.find(function(c){ return c.id === id; });
+  if (!ct || !_ctTargetUid) return;
+  // Afficher aperçu et boutons d'insertion
+  document.getElementById('ct-apercu-titre').textContent = ct.titre;
+  document.getElementById('ct-apercu-contenu').innerHTML = ct.contenu || '';
+  document.getElementById('ct-actions').style.display = 'flex';
+  document.getElementById('ct-selected-id').value = id;
+  // Highlight
+  document.querySelectorAll('.ct-item').forEach(function(el){
+    el.style.background = parseInt(el.dataset.id) === id ? 'var(--accent-lt)' : '';
+  });
+}
+
+function insererConclusion(mode) {
+  var id = parseInt(document.getElementById('ct-selected-id').value);
+  var ct = _ctData.find(function(c){ return c.id === id; });
+  if (!ct || !_ctTargetUid) return;
+  var editor = document.getElementById(_ctTargetUid);
+  if (!editor) return;
+  if (mode === 'remplacer') {
+    editor.innerHTML = ct.contenu || '';
+  } else {
+    // Ajouter à la fin
+    if (editor.innerHTML && editor.innerHTML !== '<br>') {
+      editor.innerHTML += '<br>' + (ct.contenu || '');
+    } else {
+      editor.innerHTML = ct.contenu || '';
+    }
+  }
+  // Sync hidden input
+  var hiddenId = _ctTargetUid + '_hidden';
+  var hidden = document.getElementById(hiddenId);
+  if (hidden) hidden.value = editor.innerHTML;
+  // Déclencher autosave
+  editor.dispatchEvent(new Event('input', {bubbles: true}));
+  fermerModalConclusion();
+}
+
+function fermerModalConclusion() {
+  document.getElementById('modal-conclusion-type').style.display = 'none';
+  _ctTargetUid = null;
+  document.getElementById('ct-actions').style.display = 'none';
+  document.getElementById('ct-apercu-titre').textContent = '';
+  document.getElementById('ct-apercu-contenu').innerHTML = '';
+  document.getElementById('ct-selected-id').value = '';
+}
 </script>
+
+{# Modal conclusion type #}
+<div id="modal-conclusion-type"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;
+            align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:12px;width:min(700px,96vw);max-height:88vh;
+              display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    {# Titre #}
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <span style="font-size:16px;font-weight:600;color:var(--text);flex:1;">📋 Insérer une conclusion type</span>
+      <button type="button" onclick="fermerModalConclusion()"
+              style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">✕</button>
+    </div>
+    {# Corps #}
+    <div style="display:grid;grid-template-columns:1fr 1fr;flex:1;overflow:hidden;min-height:0;">
+      {# Liste #}
+      <div id="ct-liste" style="overflow-y:auto;border-right:1px solid var(--border);"></div>
+      {# Aperçu #}
+      <div style="display:flex;flex-direction:column;padding:14px;overflow-y:auto;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;
+                    color:var(--muted);margin-bottom:8px;">Aperçu</div>
+        <div id="ct-apercu-titre" style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:8px;"></div>
+        <div id="ct-apercu-contenu" style="font-size:13px;color:var(--text);line-height:1.7;flex:1;"></div>
+        <input type="hidden" id="ct-selected-id">
+        <div id="ct-actions" style="display:none;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+          <button type="button" class="btn btn-sm" onclick="insererConclusion('ajouter')"
+                  style="flex:1;">+ Ajouter à la fin</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="insererConclusion('remplacer')"
+                  style="flex:1;">↺ Remplacer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endblock %}
