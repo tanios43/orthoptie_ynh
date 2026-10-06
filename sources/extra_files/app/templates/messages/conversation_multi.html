@@ -108,24 +108,96 @@
     {# Saisie #}
     <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;
                 background:white;padding:12px;">
-      <form method="POST" style="display:flex;gap:8px;align-items:flex-end;">
+      <form method="POST" style="display:flex;gap:8px;align-items:flex-end;" id="msg-form-multi">
         <input type="hidden" name="action" value="send">
-        <textarea name="contenu" rows="2" required
-                  placeholder="Votre message… (Ctrl+Entrée pour envoyer)"
-                  style="flex:1;resize:none;font-size:13px;border:1px solid var(--border);
-                         border-radius:6px;padding:8px;"
-                  onkeydown="if(event.ctrlKey&&event.key==='Enter'){this.form.submit();}"></textarea>
+        <div style="flex:1;position:relative;">
+          <textarea name="contenu" id="msg-textarea-multi" rows="2" required
+                    placeholder="Votre message… (Ctrl+Entrée pour envoyer)"
+                    style="width:100%;resize:none;font-size:13px;border:1px solid var(--border);
+                           border-radius:6px;padding:8px;padding-right:36px;box-sizing:border-box;"
+                    onkeydown="if(event.ctrlKey&&event.key==='Enter'){document.getElementById('msg-form-multi').submit();}"></textarea>
+          <button type="button" id="emoji-btn-multi" title="Insérer un emoji"
+                  onclick="toggleEmojiPickerMulti()"
+                  style="position:absolute;right:6px;bottom:6px;background:none;border:none;font-size:16px;cursor:pointer;opacity:.7;line-height:1;">😊</button>
+        </div>
         <button type="submit" class="btn btn-primary" style="flex-shrink:0;">
           Envoyer<br><span style="font-size:10px;opacity:.7;">Ctrl+↵</span>
         </button>
       </form>
     </div>
   </div>
+</div>
 
+{# Picker emoji #}
+<div id="emoji-picker-multi" style="display:none;position:fixed;z-index:300;background:var(--surface);
+     border:1px solid var(--border);border-radius:10px;padding:10px;box-shadow:0 4px 20px rgba(0,0,0,.2);
+     width:280px;max-height:220px;overflow-y:auto;">
+  <input type="text" id="emoji-search-multi" placeholder="🔍 Rechercher…" oninput="filtrerEmojisMulti(this.value)"
+         style="width:100%;margin-bottom:8px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);
+                background:var(--surface);color:var(--text);font-size:12px;box-sizing:border-box;">
+  <div id="emoji-grid-multi" style="display:flex;flex-wrap:wrap;gap:2px;"></div>
 </div>
 
 <script>
 const c = document.getElementById('msgs-container');
 if (c) c.scrollTop = c.scrollHeight;
+
+const EMOJIS_M = [
+  {e:'😊',n:'sourire'},{e:'😄',n:'joie'},{e:'😂',n:'rire'},
+  {e:'🤣',n:'lol'},{e:'😍',n:'amour'},{e:'🥰',n:'coeur'},
+  {e:'😘',n:'bisou'},{e:'😎',n:'cool'},{e:'🤔',n:'réfléchit'},
+  {e:'😅',n:'gêné'},{e:'😬',n:'grincer'},{e:'🙄',n:'yeux'},
+  {e:'😴',n:'dort'},{e:'🤒',n:'malade'},{e:'😷',n:'masque'},
+  {e:'🤗',n:'câlin'},{e:'🤝',n:'poignée main'},{e:'👍',n:'ok pouce'},
+  {e:'👎',n:'pouce bas'},{e:'👌',n:'parfait'},{e:'🙏',n:'merci svp'},
+  {e:'💪',n:'fort muscle'},{e:'✅',n:'validé oui'},{e:'❌',n:'non erreur'},
+  {e:'⚠️',n:'attention'},{e:'ℹ️',n:'info'},{e:'🔔',n:'notification'},
+  {e:'📅',n:'calendrier'},{e:'📋',n:'presse-papier'},{e:'📌',n:'épingle'},
+  {e:'📎',n:'trombone'},{e:'📝',n:'note'},{e:'✏️',n:'crayon'},
+  {e:'🔍',n:'recherche'},{e:'💡',n:'idée'},{e:'🔑',n:'clé'},
+  {e:'🚨',n:'urgence'},{e:'🆘',n:'sos'},{e:'💊',n:'médicament'},
+  {e:'👁️',n:'oeil'},{e:'👓',n:'lunettes'},{e:'🏥',n:'hôpital'},
+  {e:'❤️',n:'coeur rouge'},{e:'💚',n:'coeur vert'},{e:'💙',n:'coeur bleu'},
+  {e:'🎉',n:'fête bravo'},{e:'🎊',n:'confettis'},{e:'☕',n:'café'},
+];
+
+var _emojiOpenM = false;
+function toggleEmojiPickerMulti() {
+  _emojiOpenM = !_emojiOpenM;
+  var picker = document.getElementById('emoji-picker-multi');
+  if (_emojiOpenM) {
+    var btn = document.getElementById('emoji-btn-multi');
+    var r = btn.getBoundingClientRect();
+    picker.style.bottom = (window.innerHeight - r.top + 6) + 'px';
+    picker.style.right = (window.innerWidth - r.right + 20) + 'px';
+    picker.style.left = 'auto'; picker.style.top = 'auto';
+    document.getElementById('emoji-search-multi').value = '';
+    filtrerEmojisMulti('');
+    picker.style.display = 'block';
+    setTimeout(function(){ document.getElementById('emoji-search-multi').focus(); }, 50);
+  } else { picker.style.display = 'none'; }
+}
+function filtrerEmojisMulti(q) {
+  var liste = q.trim() ? EMOJIS_M.filter(function(em){ return em.n.includes(q.toLowerCase()) || em.e.includes(q); }) : EMOJIS_M;
+  var grid = document.getElementById('emoji-grid-multi');
+  grid.innerHTML = liste.map(function(em){
+    return '<button type="button" title="'+em.n+'" onclick="insererEmojiMulti(\'' + em.e + '\')" style="background:none;border:none;font-size:20px;cursor:pointer;padding:3px;border-radius:4px;line-height:1;" onmouseover="this.style.background=\'var(--hover)\'" onmouseout="this.style.background=\'none\'">'+em.e+'</button>';
+  }).join('');
+}
+function insererEmojiMulti(emoji) {
+  var ta = document.getElementById('msg-textarea-multi');
+  var s = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.slice(0,s) + emoji + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + emoji.length;
+  ta.focus();
+  document.getElementById('emoji-picker-multi').style.display = 'none';
+  _emojiOpenM = false;
+}
+document.addEventListener('click', function(e){
+  if (_emojiOpenM && !e.target.closest('#emoji-picker-multi') && !e.target.closest('#emoji-btn-multi')) {
+    document.getElementById('emoji-picker-multi').style.display = 'none';
+    _emojiOpenM = false;
+  }
+});
 </script>
 {% endblock %}
