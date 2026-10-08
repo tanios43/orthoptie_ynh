@@ -8481,20 +8481,21 @@ def ordo_telecharger(token):
     sess = WopiSession.query.filter_by(token=token).first_or_404()
     nom_doc = sess.nom_fichier or 'ordonnance.docx'
 
-    # Vérifier si le fichier existe toujours
-    # Si le chemin absolu stocké n'existe plus, tenter de reconstruire depuis UPLOAD_FOLDER
-    chemin = sess.chemin_fichier
+    # Reconstruire le chemin depuis UPLOAD_FOLDER courant (le chemin absolu stocké
+    # peut être obsolète après une réinstallation ou un déplacement de l'app)
+    nom_stocke = os.path.basename(sess.chemin_fichier)
+    chemin = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke)
     if not os.path.exists(chemin):
-        # Tenter avec le nom de fichier seul dans le dossier wopi courant
-        nom_stocke = os.path.basename(chemin)
-        chemin_alt = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke)
-        if os.path.exists(chemin_alt):
-            chemin = chemin_alt
-            sess.chemin_fichier = chemin_alt
-            db.session.commit()
-        else:
-            flash('Le fichier est introuvable sur le serveur.', 'danger')
-            return redirect(url_for('index'))
+        # Dernier recours : essayer le chemin original tel quel
+        chemin = sess.chemin_fichier
+    if not os.path.exists(chemin):
+        app.logger.warning(f"ordo_telecharger: fichier introuvable — chemin_fichier={sess.chemin_fichier}, chemin_reconstruit={os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke)}")
+        flash('Le fichier est introuvable sur le serveur.', 'danger')
+        return redirect(url_for('index'))
+    # Mettre à jour le chemin en base si nécessaire
+    if chemin != sess.chemin_fichier:
+        sess.chemin_fichier = chemin
+        db.session.commit()
 
     # Régénérer un token frais si l'original est expiré (ou toujours pour la sécurité)
     if sess.expires_at and sess.expires_at < datetime.utcnow():
