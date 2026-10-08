@@ -8482,16 +8482,26 @@ def ordo_telecharger(token):
     nom_doc = sess.nom_fichier or 'ordonnance.docx'
 
     # Vérifier si le fichier existe toujours
-    if not os.path.exists(sess.chemin_fichier):
-        flash('Le fichier est introuvable sur le serveur.', 'danger')
-        return redirect(url_for('index'))
+    # Si le chemin absolu stocké n'existe plus, tenter de reconstruire depuis UPLOAD_FOLDER
+    chemin = sess.chemin_fichier
+    if not os.path.exists(chemin):
+        # Tenter avec le nom de fichier seul dans le dossier wopi courant
+        nom_stocke = os.path.basename(chemin)
+        chemin_alt = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke)
+        if os.path.exists(chemin_alt):
+            chemin = chemin_alt
+            sess.chemin_fichier = chemin_alt
+            db.session.commit()
+        else:
+            flash('Le fichier est introuvable sur le serveur.', 'danger')
+            return redirect(url_for('index'))
 
     # Régénérer un token frais si l'original est expiré (ou toujours pour la sécurité)
     if sess.expires_at and sess.expires_at < datetime.utcnow():
         new_token = _wopi_token_for(
             sess.consultation_id,
             sess.section_type,
-            sess.chemin_fichier,
+            chemin,
             nom_doc,
             section_ordre=sess.section_ordre or 0
         )
