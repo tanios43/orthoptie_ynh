@@ -8474,10 +8474,46 @@ def ordo_supprimer(token):
 @app.route('/ordo/telecharger/<token>')
 @login_required
 def ordo_telecharger(token):
-    """Ouvre une ordonnance existante dans Collabora."""
-    import urllib.parse
+    """Ouvre une ordonnance existante dans Collabora.
+    Régénère un nouveau token WOPI si l'ancien est expiré,
+    afin que les documents restent accessibles indéfiniment."""
+    import urllib.parse, os
     sess = WopiSession.query.filter_by(token=token).first_or_404()
     nom_doc = sess.nom_fichier or 'ordonnance.docx'
+
+    # Vérifier si le fichier existe toujours
+    if not os.path.exists(sess.chemin_fichier):
+        flash('Le fichier est introuvable sur le serveur.', 'danger')
+        return redirect(url_for('index'))
+
+    # Régénérer un token frais si l'original est expiré (ou toujours pour la sécurité)
+    if sess.expires_at and sess.expires_at < datetime.utcnow():
+        new_token = _wopi_token_for(
+            sess.consultation_id,
+            sess.section_type,
+            sess.chemin_fichier,
+            nom_doc,
+            section_ordre=sess.section_ordre or 0
+        )
+        # Mettre à jour les références dans doc_ordo des séances
+        import json
+        seances = SeanceAmblyopie.query.all()
+        for seance in seances:
+            if seance.doc_ordo:
+                try:
+                    ordos = json.loads(seance.doc_ordo)
+                    changed = False
+                    for o in ordos:
+                        if o.get('token') == token:
+                            o['token'] = new_token
+                            changed = True
+                    if changed:
+                        seance.doc_ordo = json.dumps(ordos)
+                except Exception:
+                    pass
+        db.session.commit()
+        token = new_token
+
     wopi_src = f"{get_wopi_base_url()}/wopi/files/{token}"
     collabora_action_url = _get_collabora_url(nom_doc)
     editor_url = f"{collabora_action_url}WOPISrc={urllib.parse.quote(wopi_src, safe='')}&access_token={token}&darkTheme=false&ignoreSysTheme=1"
@@ -8487,7 +8523,7 @@ def ordo_telecharger(token):
                            editor_url=editor_url,
                            nom_fichier=nom_doc,
                            token=token,
-                           section_type='ordonnance',
+                           section_type=sess.section_type or 'ordonnance',
                            collabora_url=get_collabora_url())
 
 
