@@ -8269,8 +8269,15 @@ def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier, secti
     import os as _os
     token = _secrets.token_urlsafe(32)
     expires = datetime.utcnow() + timedelta(hours=4)
-    # Stocker le chemin réel (résout les liens symboliques YunoHost)
-    chemin_reel = _os.path.realpath(docx_path) if docx_path else docx_path
+    # Stocker le vrai chemin résolu (pas le symlink UPLOAD_FOLDER)
+    # _uploads_real = /home/yunohost.app/orthoptie/uploads (défini ligne ~484)
+    chemin_reel = docx_path
+    if docx_path:
+        uploads_sym = app.config['UPLOAD_FOLDER']
+        if docx_path.startswith(uploads_sym):
+            chemin_reel = _uploads_real + docx_path[len(uploads_sym):]
+        else:
+            chemin_reel = _os.path.realpath(docx_path)
     sess = WopiSession(
         token=token,
         consultation_id=consultation_id,
@@ -8484,14 +8491,15 @@ def ordo_telecharger(token):
     sess = WopiSession.query.filter_by(token=token).first_or_404()
     nom_doc = sess.nom_fichier or 'ordonnance.docx'
 
-    # Reconstruire le chemin — le chemin absolu stocké peut pointer vers un emplacement
-    # différent selon la configuration YunoHost (ex: /home/yunohost.app/orthoptie/uploads/)
+    # Reconstruire le chemin — les anciens enregistrements peuvent avoir le symlink
+    # au lieu du vrai chemin (/var/www/orthoptie/uploads/ au lieu de /home/yunohost.app/…)
     nom_stocke = os.path.basename(sess.chemin_fichier)
-    # Candidats dans l'ordre de priorité
     chemins_candidats = [
         sess.chemin_fichier,
+        # Vrai chemin via _uploads_real (résolu au démarrage de l'app)
+        os.path.join(_uploads_real, 'wopi', nom_stocke),
+        # Chemin symlink classique
         os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke),
-        os.path.join('/home/yunohost.app/orthoptie/uploads/wopi', nom_stocke),
     ]
     chemin = None
     for c in chemins_candidats:
