@@ -8266,15 +8266,18 @@ def _age_str(date_naissance, date_ref=None):
 
 def _wopi_token_for(consultation_id, section_type, docx_path, nom_fichier, section_ordre=0):
     """Crée une session WOPI et retourne le token."""
+    import os as _os
     token = _secrets.token_urlsafe(32)
     expires = datetime.utcnow() + timedelta(hours=4)
+    # Stocker le chemin réel (résout les liens symboliques YunoHost)
+    chemin_reel = _os.path.realpath(docx_path) if docx_path else docx_path
     sess = WopiSession(
         token=token,
         consultation_id=consultation_id,
         section_type=section_type,
         section_ordre=section_ordre,
         nom_fichier=nom_fichier,
-        chemin_fichier=docx_path,
+        chemin_fichier=chemin_reel,
         expires_at=expires,
     )
     db.session.add(sess); db.session.commit()
@@ -8481,15 +8484,22 @@ def ordo_telecharger(token):
     sess = WopiSession.query.filter_by(token=token).first_or_404()
     nom_doc = sess.nom_fichier or 'ordonnance.docx'
 
-    # Reconstruire le chemin depuis UPLOAD_FOLDER courant (le chemin absolu stocké
-    # peut être obsolète après une réinstallation ou un déplacement de l'app)
+    # Reconstruire le chemin — le chemin absolu stocké peut pointer vers un emplacement
+    # différent selon la configuration YunoHost (ex: /home/yunohost.app/orthoptie/uploads/)
     nom_stocke = os.path.basename(sess.chemin_fichier)
-    chemin = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke)
-    if not os.path.exists(chemin):
-        # Dernier recours : essayer le chemin original tel quel
-        chemin = sess.chemin_fichier
-    if not os.path.exists(chemin):
-        app.logger.warning(f"ordo_telecharger: fichier introuvable — chemin_fichier={sess.chemin_fichier}, chemin_reconstruit={os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke)}")
+    # Candidats dans l'ordre de priorité
+    chemins_candidats = [
+        sess.chemin_fichier,
+        os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke),
+        os.path.join('/home/yunohost.app/orthoptie/uploads/wopi', nom_stocke),
+    ]
+    chemin = None
+    for c in chemins_candidats:
+        if c and os.path.exists(c):
+            chemin = c
+            break
+    if not chemin:
+        app.logger.warning(f"ordo_telecharger: fichier introuvable — candidats={chemins_candidats}")
         flash('Le fichier est introuvable sur le serveur.', 'danger')
         return redirect(url_for('index'))
     # Mettre à jour le chemin en base si nécessaire
