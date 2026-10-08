@@ -2143,6 +2143,8 @@ def suivi_amblyopie_detail(suivi_id):
 def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
     """Génère une ordonnance (occlusion ou ryser) depuis le suivi amblyopie."""
     import os, shutil, uuid, urllib.parse, json
+    # Les documents suivi amblyopie sont permanents — stockés dans wopi_permanent/
+    # pour ne pas être supprimés par le nettoyage des fichiers temporaires wopi/
     s = SuiviAmblyopie.query.get_or_404(suivi_id)
     seance_id = request.args.get('seance_id', type=int)
     p = s.patient
@@ -2207,7 +2209,7 @@ def suivi_amblyopie_ordonnance(suivi_id, type_ordo):
     docx_path = _generer_ordonnance_docx(_FakeConsult(), _praticien, _cabinet, pc,
                                           titre_ordo, lignes_ordo)
 
-    wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
+    wopi_dir = os.path.join(_uploads_real, 'wopi_permanent')
     os.makedirs(wopi_dir, exist_ok=True)
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
     shutil.copy2(docx_path, permanent_path)
@@ -8428,7 +8430,7 @@ def suivi_amblyopie_compte_rendu(suivi_id):
     docx_path = _generer_ordonnance_docx(_FakeConsult(), _praticien, _cabinet, pc,
                                           'SUIVI D\'AMBLYOPIE', lignes)
 
-    wopi_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'wopi')
+    wopi_dir = os.path.join(_uploads_real, 'wopi_permanent')
     os.makedirs(wopi_dir, exist_ok=True)
     nom_doc = f'{p.nom}_{p.prenom}_{date_ref.strftime("%Y%m%d") if date_ref else "CR"}_CompteRendu_Amblyopie.docx'
     permanent_path = os.path.join(wopi_dir, f"{uuid.uuid4().hex}.docx")
@@ -8496,10 +8498,13 @@ def ordo_telecharger(token):
     nom_stocke = os.path.basename(sess.chemin_fichier)
     chemins_candidats = [
         sess.chemin_fichier,
-        # Vrai chemin via _uploads_real (résolu au démarrage de l'app)
+        # Dossier permanent (nouveau comportement)
+        os.path.join(_uploads_real, 'wopi_permanent', nom_stocke),
+        # Vrai chemin via _uploads_real
         os.path.join(_uploads_real, 'wopi', nom_stocke),
-        # Chemin symlink classique
+        # Chemin symlink classique (anciens enregistrements)
         os.path.join(app.config['UPLOAD_FOLDER'], 'wopi', nom_stocke),
+        os.path.join(app.config['UPLOAD_FOLDER'], 'wopi_permanent', nom_stocke),
     ]
     chemin = None
     for c in chemins_candidats:
