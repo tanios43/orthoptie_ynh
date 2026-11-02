@@ -1633,8 +1633,15 @@ def _update_da_cache(patient):
                           last[0].praticien_id if last else None,
                           cab.id if cab else None))
     if items:
-        items.sort(key=lambda x: x[0], reverse=True)
-        d, m, prat_id, cab_id = items[0]
+        # Tri stable : date décroissante ; à date égale, les consultations (bilans) priment
+        # sur les suivis car elles ont un motif plus précis. Les consultations sont ajoutées
+        # en premier dans la liste (index bas), les suivis après (index plus élevé).
+        # On utilise l'index d'insertion inverse comme tie-break : index bas = priorité haute.
+        items_idx = [(x[0], x[1], x[2], x[3], i) for i, x in enumerate(items)]
+        items_idx.sort(key=lambda x: (x[0], -x[4]), reverse=True)
+        # reverse=True sur la date, mais -x[4] inverse l'index → les petits index (consultations)
+        # passent devant à date égale, car -petit_index > -grand_index.
+        d, m, prat_id, cab_id, _ = items_idx[0]
         patient.da_date         = d
         patient.da_motif        = m
         patient.da_praticien_id = prat_id
@@ -4893,6 +4900,7 @@ def consultation_nouvelle(patient_id):
         db.session.add(c); db.session.flush()
         _save_sections(c.id, request.form, sections_all, request.files)
         _save_fichiers(c.id, request.files, request.form)
+        _update_da_cache(patient)
         db.session.commit()
         log_action('creation_consultation', patient_id=patient_id, consultation_id=c.id)
         flash('Bilan enregistré.', 'success')
