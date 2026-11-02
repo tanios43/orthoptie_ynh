@@ -2310,6 +2310,7 @@ def suivi_amblyopie_autosave(suivi_id):
     s = SuiviAmblyopie.query.get_or_404(suivi_id)
     try:
         _save_suivi_amblyopie_data(s, request.form)
+        db.session.flush()
         _update_da_cache(s.patient)
         db.session.commit()
         from datetime import datetime
@@ -2326,6 +2327,7 @@ def suivi_bv_autosave(suivi_id):
     s = SuiviBV.query.get_or_404(suivi_id)
     try:
         _save_suivi_bv_data(s, request.form)
+        db.session.flush()
         _update_da_cache(s.patient)
         db.session.commit()
         from datetime import datetime
@@ -2342,6 +2344,7 @@ def suivi_nv_autosave(suivi_id):
     s = SuiviNV.query.get_or_404(suivi_id)
     try:
         _save_suivi_nv_data(s, request.form)
+        db.session.flush()
         _update_da_cache(s.patient)
         db.session.commit()
         from datetime import datetime
@@ -2358,6 +2361,7 @@ def suivi_vb_autosave(suivi_id):
     s = SuiviVB.query.get_or_404(suivi_id)
     try:
         _save_suivi_vb_data(s, request.form)
+        db.session.flush()
         _update_da_cache(s.patient)
         db.session.commit()
         from datetime import datetime
