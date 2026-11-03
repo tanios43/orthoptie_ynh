@@ -617,7 +617,7 @@
                 </div>
                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
                   {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
-                  {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
+                  {%- set cab  = (last_s.cabinet_seance if last_s and last_s.cabinet_seance else none) if last_s else none -%}
                   {%- if prat -%}
                   {%- set coul = prat.couleur or '#2E7D6B' -%}
                   <span style="display:inline-flex;align-items:center;gap:5px;
@@ -680,7 +680,7 @@
                 </div>
                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
                   {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
-                  {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
+                  {%- set cab  = (last_s.cabinet_seance if last_s and last_s.cabinet_seance else none) if last_s else none -%}
                   {%- if prat -%}
                   {%- set coul = prat.couleur or '#2E7D6B' -%}
                   <span style="display:inline-flex;align-items:center;gap:5px;
@@ -744,7 +744,7 @@
                 </div>
                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
                   {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
-                  {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
+                  {%- set cab  = (last_s.cabinet_seance if last_s and last_s.cabinet_seance else none) if last_s else none -%}
                   {%- if prat -%}
                   {%- set coul = prat.couleur or '#2E7D6B' -%}
                   <span style="display:inline-flex;align-items:center;gap:5px;
@@ -808,7 +808,7 @@
                 </div>
                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
                   {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
-                  {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
+                  {%- set cab  = (last_s.cabinet_seance if last_s and last_s.cabinet_seance else none) if last_s else none -%}
                   {%- if prat -%}
                   {%- set coul = prat.couleur or '#2E7D6B' -%}
                   <span style="display:inline-flex;align-items:center;gap:5px;
