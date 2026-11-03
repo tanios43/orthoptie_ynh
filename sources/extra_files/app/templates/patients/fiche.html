@@ -609,7 +609,12 @@
                 </div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:500;">Suivi amblyopie</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="font-size:14px;font-weight:500;">Suivi amblyopie</div>
+                  <span style="background:#E8F5E9;color:#2E7D32;border-radius:10px;font-size:11px;padding:1px 8px;font-weight:500;">
+                    👁 {{ c.seances|length }} séance{{ 's' if c.seances|length > 1 }}
+                  </span>
+                </div>
                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
                   {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
                   {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
@@ -667,7 +672,12 @@
                 </div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:500;">Rééducation VB</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="font-size:14px;font-weight:500;">Rééducation VB</div>
+                  <span style="background:#E3F2FD;color:#1565C0;border-radius:10px;font-size:11px;padding:1px 8px;font-weight:500;">
+                    👁 {{ c.seances|length }} séance{{ 's' if c.seances|length > 1 }}
+                  </span>
+                </div>
                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
                   {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
                   {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
@@ -726,7 +736,12 @@
                 </div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:500;">Rééducation Basse Vision</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="font-size:14px;font-weight:500;">Rééducation Basse Vision</div>
+                  <span style="background:#F3E5F5;color:#6A1B9A;border-radius:10px;font-size:11px;padding:1px 8px;font-weight:500;">
+                    👁 {{ c.seances|length }} séance{{ 's' if c.seances|length > 1 }}
+                  </span>
+                </div>
                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
                   {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
                   {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
@@ -785,7 +800,12 @@
                 </div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:500;">Rééducation Neurovisuelle</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="font-size:14px;font-weight:500;">Rééducation Neurovisuelle</div>
+                  <span style="background:#E8EEF8;color:#1a3a6e;border-radius:10px;font-size:11px;padding:1px 8px;font-weight:500;">
+                    🧠 {{ c.seances|length }} séance{{ 's' if c.seances|length > 1 }}
+                  </span>
+                </div>
                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
                   {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
                   {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
