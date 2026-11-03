@@ -1645,14 +1645,54 @@ def _update_da_cache(patient):
 
 
 def _derniere_activite(patient):
-    """Retourne un dict depuis le cache da_* du patient."""
-    if not patient.da_date:
+    """Calcule la dernière activité du patient en temps réel (sans cache)."""
+    items = []
+    for c in patient.consultations:
+        if c.date_consult:
+            praticien = c.praticien
+            cabinet   = c.cabinet if hasattr(c, 'cabinet') else None
+            items.append((c.date_consult, c.motif or 'Bilan orthoptique', praticien, cabinet))
+    for s in SuiviAmblyopie.query.filter_by(patient_id=patient.id).all():
+        dates = [seance.date_seance for seance in s.seances if seance.date_seance]
+        d = max(dates) if dates else s.date_bilan
+        if d:
+            last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            prat = last[0].praticien if last and last[0].date_seance else s.praticien
+            cab  = _get_cab(last[0]) if last and last[0].date_seance else None
+            items.append((d, 'Suivi amblyopie', prat, cab))
+    for s in SuiviVB.query.filter_by(patient_id=patient.id).all():
+        dates = [seance.date_seance for seance in s.seances if seance.date_seance]
+        d = max(dates) if dates else s.date_debut
+        if d:
+            last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            prat = last[0].praticien if last and last[0].date_seance else s.praticien
+            cab  = _get_cab(last[0]) if last and last[0].date_seance else None
+            items.append((d, 'Suivi vision binoculaire', prat, cab))
+    for s in SuiviNV.query.filter_by(patient_id=patient.id).all():
+        dates = [seance.date_seance for seance in s.seances if seance.date_seance]
+        d = max(dates) if dates else s.date_debut
+        if d:
+            last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            prat = last[0].praticien if last and last[0].date_seance else s.praticien
+            cab  = _get_cab(last[0]) if last and last[0].date_seance else None
+            items.append((d, 'Suivi neurovisuel', prat, cab))
+    for s in SuiviBV.query.filter_by(patient_id=patient.id).all():
+        dates = [seance.date_seance for seance in s.seances if seance.date_seance]
+        d = max(dates) if dates else s.date_debut
+        if d:
+            last = sorted(s.seances, key=lambda x: x.date_seance or date(1900,1,1), reverse=True)
+            prat = last[0].praticien if last and last[0].date_seance else s.praticien
+            cab  = _get_cab(last[0]) if last and last[0].date_seance else None
+            items.append((d, 'Suivi basse vision', prat, cab))
+    if not items:
         return None
+    items.sort(key=lambda x: x[0], reverse=True)
+    d, motif, praticien, cabinet = items[0]
     return {
-        'date':      patient.da_date,
-        'motif':     patient.da_motif or '',
-        'praticien': patient.da_praticien,
-        'cabinet':   patient.da_cabinet,
+        'date':      d,
+        'motif':     motif,
+        'praticien': praticien,
+        'cabinet':   cabinet,
     }
 
 
@@ -1674,12 +1714,7 @@ def ping():
 @app.route('/')
 @login_required
 def index():
-    # Chargement optimisé : jointures eager sur da_praticien et da_cabinet
-    patients = Patient.query.options(
-        db.joinedload(Patient.da_praticien),
-        db.joinedload(Patient.da_cabinet)
-    ).order_by(Patient.nom).all()
-    # _derniere_activite lit directement les colonnes da_* — pas de requêtes supplémentaires
+    patients = Patient.query.order_by(Patient.nom).all()
     activites = {p.id: _derniere_activite(p) for p in patients}
     return render_template('patients/liste.html', patients=patients, activites=activites)
 
