@@ -592,6 +592,7 @@
 
         {% elif entry.type == 'suivi' %}
         {# ── SUIVI AMBLYOPIE ── #}
+        {%- set last_s = c.seances|selectattr('date_seance')|sort(attribute='date_seance',reverse=true)|first -%}
         <div style="border-bottom:1px solid var(--border);">
           <div style="display:flex;align-items:center;">
             <a href="{{ url_for('suivi_amblyopie_detail', suivi_id=c.id) }}"
@@ -608,25 +609,30 @@
                 </div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-size:14px;font-weight:500;">Suivi amblyopie</span>
-                  <span style="background:#E1F5EE;color:#085041;border-radius:10px;
-                               font-size:11px;padding:1px 8px;font-weight:500;">
-                    👁 {{ c.seances|length }} séances
+                <div style="font-size:14px;font-weight:500;">Suivi amblyopie</div>
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
+                  {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
+                  {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
+                  {%- if prat -%}
+                  {%- set coul = prat.couleur or '#2E7D6B' -%}
+                  <span style="display:inline-flex;align-items:center;gap:5px;
+                               padding:2px 9px;border-radius:20px;font-size:12px;font-weight:500;
+                               background:{{ coul }}20;color:{{ coul }};border:1px solid {{ coul }}40;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+                    {{ prat.titre }} {{ prat.prenom }} {{ prat.nom }}
                   </span>
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
-                  {% if c.traitement %}
-                  <span style="font-size:11px;color:var(--muted);">{{ c.traitement }}</span>
-                  {% endif %}
-                  {% set filled = c.seances|selectattr('av_od')|list|length %}
-                  {% if filled %}
-                  <span style="font-size:11px;color:#085041;font-weight:500;">
-                    {{ filled }} séance{{ 's' if filled > 1 }} renseignée{{ 's' if filled > 1 }}
+                  {%- endif -%}
+                  {%- if cab -%}
+                  {%- set cc = cab.couleur or '#1C2B3A' -%}
+                  <span style="display:inline-flex;align-items:center;gap:4px;
+                               padding:1px 8px;border-radius:20px;font-size:11px;font-weight:500;
+                               background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
+                    🏥 {{ cab.nom }}
                   </span>
-                  {% endif %}
+                  {%- endif -%}
                   {% if patient.date_naissance %}
-                  <span style="font-size:11px;color:var(--accent);font-weight:500;">
+                  <span style="font-size:12px;color:var(--accent);font-weight:500;">
                     {{ age_a_la_date(patient.date_naissance, c.date_bilan) }}
                   </span>
                   {% endif %}
@@ -644,6 +650,7 @@
         </div>
         {% elif entry.type == 'suivi_vb' %}
         {# ── SUIVI VB ── #}
+        {%- set last_s = c.seances|selectattr('date_seance')|sort(attribute='date_seance',reverse=true)|first -%}
         <div style="border-bottom:1px solid var(--border);">
           <div style="display:flex;align-items:center;">
             <a href="{{ url_for('suivi_vb_detail', suivi_id=c.id) }}"
@@ -660,22 +667,30 @@
                 </div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-size:14px;font-weight:500;">Rééducation VB</span>
-                  <span style="background:#FAEEDA;color:#633806;border-radius:10px;
-                               font-size:11px;padding:1px 8px;font-weight:500;">
-                    👁 {{ c.seances|length }} séances
+                <div style="font-size:14px;font-weight:500;">Rééducation VB</div>
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
+                  {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
+                  {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
+                  {%- if prat -%}
+                  {%- set coul = prat.couleur or '#2E7D6B' -%}
+                  <span style="display:inline-flex;align-items:center;gap:5px;
+                               padding:2px 9px;border-radius:20px;font-size:12px;font-weight:500;
+                               background:{{ coul }}20;color:{{ coul }};border:1px solid {{ coul }}40;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+                    {{ prat.titre }} {{ prat.prenom }} {{ prat.nom }}
                   </span>
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
-                  {% set filled = c.seances|selectattr('fusion')|list|length %}
-                  {% if filled %}
-                  <span style="font-size:11px;color:#633806;font-weight:500;">
-                    {{ filled }} séance{{ 's' if filled > 1 }} renseignée{{ 's' if filled > 1 }}
+                  {%- endif -%}
+                  {%- if cab -%}
+                  {%- set cc = cab.couleur or '#1C2B3A' -%}
+                  <span style="display:inline-flex;align-items:center;gap:4px;
+                               padding:1px 8px;border-radius:20px;font-size:11px;font-weight:500;
+                               background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
+                    🏥 {{ cab.nom }}
                   </span>
-                  {% endif %}
+                  {%- endif -%}
                   {% if patient.date_naissance %}
-                  <span style="font-size:11px;color:var(--accent);font-weight:500;">
+                  <span style="font-size:12px;color:var(--accent);font-weight:500;">
                     {{ age_a_la_date(patient.date_naissance, c.date_debut) }}
                   </span>
                   {% endif %}
@@ -694,6 +709,7 @@
 
         {% elif entry.type == 'suivi_bv_reeds' %}
         {# ── SUIVI BASSE VISION ── #}
+        {%- set last_s = c.seances|selectattr('date_seance')|sort(attribute='date_seance',reverse=true)|first -%}
         <div style="border-bottom:1px solid var(--border);">
           <div style="display:flex;align-items:center;">
             <a href="{{ url_for('suivi_bv_detail', suivi_id=c.id) }}"
@@ -710,18 +726,34 @@
                 </div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-size:14px;font-weight:500;">Rééducation Basse Vision</span>
-                  <span style="background:#FEF3E2;color:#7A3E00;border-radius:10px;
-                               font-size:11px;padding:1px 8px;font-weight:500;">
-                    👁 {{ c.seances|length }} séances
+                <div style="font-size:14px;font-weight:500;">Rééducation Basse Vision</div>
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
+                  {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
+                  {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
+                  {%- if prat -%}
+                  {%- set coul = prat.couleur or '#2E7D6B' -%}
+                  <span style="display:inline-flex;align-items:center;gap:5px;
+                               padding:2px 9px;border-radius:20px;font-size:12px;font-weight:500;
+                               background:{{ coul }}20;color:{{ coul }};border:1px solid {{ coul }}40;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+                    {{ prat.titre }} {{ prat.prenom }} {{ prat.nom }}
                   </span>
+                  {%- endif -%}
+                  {%- if cab -%}
+                  {%- set cc = cab.couleur or '#1C2B3A' -%}
+                  <span style="display:inline-flex;align-items:center;gap:4px;
+                               padding:1px 8px;border-radius:20px;font-size:11px;font-weight:500;
+                               background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
+                    🏥 {{ cab.nom }}
+                  </span>
+                  {%- endif -%}
+                  {% if patient.date_naissance %}
+                  <span style="font-size:12px;color:var(--accent);font-weight:500;">
+                    {{ age_a_la_date(patient.date_naissance, c.date_debut) }}
+                  </span>
+                  {% endif %}
                 </div>
-                {% if patient.date_naissance %}
-                <span style="font-size:11px;color:var(--accent);font-weight:500;">
-                  {{ age_a_la_date(patient.date_naissance, c.date_debut) }}
-                </span>
-                {% endif %}
               </div>
               <i class="ti ti-chevron-right" style="color:var(--muted);flex-shrink:0;"></i>
             </a>
@@ -736,6 +768,7 @@
 
         {% elif entry.type == 'suivi_nv' %}
         {# ── SUIVI NEUROVISUEL ── #}
+        {%- set last_s = c.seances|selectattr('date_seance')|sort(attribute='date_seance',reverse=true)|first -%}
         <div style="border-bottom:1px solid var(--border);">
           <div style="display:flex;align-items:center;">
             <a href="{{ url_for('suivi_nv_detail', suivi_id=c.id) }}"
@@ -752,22 +785,30 @@
                 </div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-size:14px;font-weight:500;">Rééducation Neurovisuelle</span>
-                  <span style="background:#E8EEF8;color:#1a3a6e;border-radius:10px;
-                               font-size:11px;padding:1px 8px;font-weight:500;">
-                    🧠 {{ c.seances|length }} séances
+                <div style="font-size:14px;font-weight:500;">Rééducation Neurovisuelle</div>
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;">
+                  {%- set prat = last_s.praticien if last_s and last_s.praticien else c.praticien -%}
+                  {%- set cab  = last_s.cabinet  if last_s and last_s.cabinet  else none -%}
+                  {%- if prat -%}
+                  {%- set coul = prat.couleur or '#2E7D6B' -%}
+                  <span style="display:inline-flex;align-items:center;gap:5px;
+                               padding:2px 9px;border-radius:20px;font-size:12px;font-weight:500;
+                               background:{{ coul }}20;color:{{ coul }};border:1px solid {{ coul }}40;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:{{ coul }};display:inline-block;flex-shrink:0;"></span>
+                    {{ prat.titre }} {{ prat.prenom }} {{ prat.nom }}
                   </span>
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
-                  {% set filled = c.seances|selectattr('vb_acco_omot')|list|length %}
-                  {% if filled %}
-                  <span style="font-size:11px;color:#1a3a6e;font-weight:500;">
-                    {{ filled }} séance{{ 's' if filled > 1 }} renseignée{{ 's' if filled > 1 }}
+                  {%- endif -%}
+                  {%- if cab -%}
+                  {%- set cc = cab.couleur or '#1C2B3A' -%}
+                  <span style="display:inline-flex;align-items:center;gap:4px;
+                               padding:1px 8px;border-radius:20px;font-size:11px;font-weight:500;
+                               background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ cc }};display:inline-block;flex-shrink:0;"></span>
+                    🏥 {{ cab.nom }}
                   </span>
-                  {% endif %}
+                  {%- endif -%}
                   {% if patient.date_naissance %}
-                  <span style="font-size:11px;color:var(--accent);font-weight:500;">
+                  <span style="font-size:12px;color:var(--accent);font-weight:500;">
                     {{ age_a_la_date(patient.date_naissance, c.date_debut) }}
                   </span>
                   {% endif %}
