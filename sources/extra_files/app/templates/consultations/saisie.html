@@ -2990,17 +2990,30 @@ document.addEventListener('DOMContentLoaded', () => {
         sec.fichiers_sec.filter(f => f.champ_name !== 'wopi_doc').forEach(f => {
           const zone = el.querySelector(`[id^="pj-sec-preview-${idx}-"]`);
           if (!zone) return;
+          const lbSrc = '/uploads/section/{{ consultation.id if consultation else 0 }}/' + f.nom_stocke;
+          const lbGroup = 'sec-edit-' + idx;
+          const lbType = f.type_fichier === 'image' ? 'image' : (f.type_fichier === 'pdf' ? 'pdf' : 'other');
+          const lbTitle = f.titre || f.nom_original;
           const wrap = document.createElement('a');
           wrap.id = 'ficsec-' + f.id;
           wrap.dataset.persisted = '1';
-          wrap.href = '/uploads/section/{{ consultation.id if consultation else 0 }}/' + f.nom_stocke;
-          wrap.target = '_blank';
-          wrap.style.cssText = 'position:relative;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);width:72px;text-align:center;display:inline-block;text-decoration:none;cursor:pointer;transition:border-color .15s;';
+          wrap.href = lbSrc;
+          if (f.type_fichier !== 'word') {
+            wrap.dataset.lightbox = lbGroup;
+            wrap.dataset.src = lbSrc;
+            wrap.dataset.type = lbType;
+            wrap.dataset.title = lbTitle;
+          } else {
+            wrap.target = '_blank';
+          }
+          wrap.style.cssText = 'position:relative;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface);width:72px;text-align:center;display:inline-block;text-decoration:none;'
+            + (f.type_fichier !== 'word' ? 'cursor:zoom-in;' : 'cursor:pointer;')
+            + 'transition:border-color .15s;';
           wrap.onmouseover = function() { this.style.borderColor = 'var(--accent)'; };
           wrap.onmouseout  = function() { this.style.borderColor = 'var(--border)'; };
           if (f.type_fichier === 'image') {
             const img = document.createElement('img');
-            img.src = '/uploads/section/{{ consultation.id if consultation else 0 }}/' + f.nom_stocke;
+            img.src = lbSrc;
             img.style.cssText = 'width:72px;height:52px;object-fit:cover;display:block;';
             wrap.appendChild(img);
           } else {
@@ -3011,7 +3024,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           const nm = document.createElement('div');
           nm.style.cssText = 'font-size:9px;color:var(--muted);padding:2px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-          nm.textContent = f.titre || f.nom_original;
+          nm.textContent = lbTitle;
           wrap.appendChild(nm);
           const btn = document.createElement('button');
           btn.type = 'button';
@@ -3020,6 +3033,8 @@ document.addEventListener('DOMContentLoaded', () => {
           btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); supprimerFichierSection(f.id, 'ficsec-' + f.id); };
           wrap.appendChild(btn);
           zone.appendChild(wrap);
+          /* Rebinder la lightbox sur ce nouveau lien */
+          if (f.type_fichier !== 'word' && window._lbBind) window._lbBind(wrap);
         });
 
         // Documents WOPI
@@ -3491,6 +3506,21 @@ function fermerModalConclusion() {
       a.removeAttribute('target');
     });
   }
+
+  /* Expose pour rebind dynamique (section PJ injectées par JS) */
+  window._lbBind = function(el) {
+    el.addEventListener('click', function(e) {
+      var g = el.dataset.lightbox;
+      if (!g) return;
+      e.preventDefault();
+      var items = Array.from(document.querySelectorAll('a[data-lightbox="' + g + '"]'));
+      var idx = items.indexOf(el);
+      open(items, idx < 0 ? 0 : idx);
+    });
+    el.addEventListener('mousedown', function(e) {
+      if (e.button === 1) { e.preventDefault(); window.open(el.dataset.src || el.href, '_blank'); }
+    });
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bindLinks);
