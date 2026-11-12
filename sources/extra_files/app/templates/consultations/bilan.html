@@ -177,6 +177,182 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 {% endblock %}
 
+{% block scripts %}
+<script>
+/* ── LIGHTBOX CARROUSEL ─────────────────────────────────────────────────── */
+(function () {
+  'use strict';
+
+  var overlay = document.createElement('div');
+  overlay.id = 'lb-overlay';
+  overlay.innerHTML = '<div id="lb-box">'
+    + '<div id="lb-header">'
+    +   '<span id="lb-title"></span>'
+    +   '<div id="lb-header-actions">'
+    +     '<span id="lb-counter"></span>'
+    +     '<a id="lb-open-tab" href="#" target="_blank" title="Ouvrir dans un nouvel onglet">'
+    +       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'
+    +     '</a>'
+    +     '<button id="lb-close" title="Fermer (Échap)">&#x2715;</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div id="lb-content">'
+    +   '<button id="lb-prev" title="Précédent">&#8249;</button>'
+    +   '<div id="lb-media"></div>'
+    +   '<button id="lb-next" title="Suivant">&#8250;</button>'
+    + '</div>'
+    + '<div id="lb-dots"></div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+
+  var style = document.createElement('style');
+  style.textContent = [
+    '#lb-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);',
+    'align-items:center;justify-content:center;}',
+    '#lb-overlay.active{display:flex;animation:lb-fade .15s ease;}',
+    '@keyframes lb-fade{from{opacity:0}to{opacity:1}}',
+    '#lb-box{background:var(--surface,#fff);border-radius:12px;',
+    'box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;',
+    'width:min(92vw,1100px);max-height:92vh;overflow:hidden;}',
+    '#lb-header{display:flex;align-items:center;justify-content:space-between;',
+    'padding:10px 16px;border-bottom:1px solid var(--border,#e5e7eb);flex-shrink:0;}',
+    '#lb-title{font-size:13px;font-weight:500;color:var(--text,#1a1a1a);',
+    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;}',
+    '#lb-header-actions{display:flex;align-items:center;gap:10px;}',
+    '#lb-counter{font-size:12px;color:var(--muted,#6b7280);}',
+    '#lb-open-tab{color:var(--muted,#6b7280);display:flex;align-items:center;text-decoration:none;}',
+    '#lb-open-tab:hover{color:var(--accent,#2563eb);}',
+    '#lb-close{background:none;border:none;cursor:pointer;font-size:18px;line-height:1;',
+    'padding:0 2px;color:var(--muted,#6b7280);}',
+    '#lb-close:hover{color:var(--text,#1a1a1a);}',
+    '#lb-content{display:flex;align-items:center;flex:1;min-height:0;padding:0 4px;}',
+    '#lb-prev,#lb-next{background:none;border:none;cursor:pointer;font-size:36px;line-height:1;',
+    'padding:8px 10px;color:var(--muted,#9ca3af);flex-shrink:0;transition:color .15s;}',
+    '#lb-prev:hover,#lb-next:hover{color:var(--text,#1a1a1a);}',
+    '#lb-prev:disabled,#lb-next:disabled{opacity:.2;cursor:default;}',
+    '#lb-media{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;',
+    'padding:12px 0;max-height:calc(92vh - 100px);}',
+    '#lb-media img{max-width:100%;max-height:calc(92vh - 110px);object-fit:contain;',
+    'border-radius:6px;display:block;}',
+    '#lb-media iframe{width:100%;height:calc(92vh - 110px);border:none;border-radius:6px;}',
+    '#lb-media .lb-unsupported{text-align:center;padding:40px;',
+    'color:var(--muted,#6b7280);font-size:14px;}',
+    '#lb-dots{display:flex;justify-content:center;gap:6px;padding:10px 16px 12px;flex-shrink:0;}',
+    '.lb-dot{width:7px;height:7px;border-radius:50%;background:var(--border,#d1d5db);',
+    'cursor:pointer;transition:background .15s;border:none;padding:0;}',
+    '.lb-dot.active{background:var(--accent,#2563eb);}'
+  ].join('');
+  document.head.appendChild(style);
+
+  var items = [], current = 0;
+
+  function renderItem(idx) {
+    var it = items[idx];
+    var media = document.getElementById('lb-media');
+    document.getElementById('lb-title').textContent = it.title || '';
+    document.getElementById('lb-counter').textContent = items.length > 1 ? (idx + 1) + ' / ' + items.length : '';
+    document.getElementById('lb-open-tab').href = it.src;
+    document.getElementById('lb-prev').disabled = idx === 0;
+    document.getElementById('lb-next').disabled = idx === items.length - 1;
+
+    var dots = document.getElementById('lb-dots');
+    dots.innerHTML = '';
+    if (items.length > 1) {
+      items.forEach(function(_, i) {
+        var d = document.createElement('button');
+        d.className = 'lb-dot' + (i === idx ? ' active' : '');
+        d.onclick = function() { go(i); };
+        dots.appendChild(d);
+      });
+    }
+
+    media.innerHTML = '';
+    var isImg = it.type === 'image' || /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(it.src);
+    var isPDF = it.type === 'pdf'   || /\.pdf(\?|$)/i.test(it.src);
+    if (isImg) {
+      var img = document.createElement('img');
+      img.src = it.src; img.alt = it.title || '';
+      media.appendChild(img);
+    } else if (isPDF) {
+      var iframe = document.createElement('iframe');
+      iframe.src = it.src; iframe.title = it.title || 'PDF';
+      media.appendChild(iframe);
+    } else {
+      media.innerHTML = '<div class="lb-unsupported">'
+        + '<div style="font-size:40px;margin-bottom:12px;">&#128206;</div>'
+        + '<div>' + (it.title || 'Fichier') + '</div>'
+        + '<a href="' + it.src + '" target="_blank" style="color:var(--accent,#2563eb);'
+        + 'font-size:13px;margin-top:8px;display:inline-block;">Ouvrir dans un nouvel onglet</a>'
+        + '</div>';
+    }
+  }
+
+  function go(idx) { current = idx; renderItem(current); }
+
+  function openLB(groupItems, startIdx) {
+    items = groupItems; current = startIdx;
+    overlay.classList.add('active');
+    renderItem(current);
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLB() {
+    overlay.classList.remove('active');
+    document.getElementById('lb-media').innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('lb-close').onclick = closeLB;
+  document.getElementById('lb-prev').onclick = function() { if (current > 0) go(current - 1); };
+  document.getElementById('lb-next').onclick = function() { if (current < items.length - 1) go(current + 1); };
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeLB(); });
+
+  document.addEventListener('keydown', function(e) {
+    if (!overlay.classList.contains('active')) return;
+    if (e.key === 'Escape') closeLB();
+    if (e.key === 'ArrowLeft'  && current > 0) go(current - 1);
+    if (e.key === 'ArrowRight' && current < items.length - 1) go(current + 1);
+  });
+
+  function bindLinks() {
+    var groups = {};
+    document.querySelectorAll('a[data-lightbox]').forEach(function(a) {
+      var g = a.dataset.lightbox;
+      if (!groups[g]) groups[g] = [];
+      groups[g].push({ el: a, src: a.dataset.src || a.href, type: a.dataset.type || '', title: a.dataset.title || a.textContent.trim() });
+    });
+
+    document.querySelectorAll('a[data-lightbox]').forEach(function(a) {
+      var g = a.dataset.lightbox;
+      var groupItems = groups[g];
+      var idx = groupItems.findIndex(function(it) { return it.el === a; });
+
+      a.addEventListener('click', function(e) {
+        e.preventDefault();
+        openLB(groupItems, idx);
+      });
+
+      /* Clic molette → nouvel onglet */
+      a.addEventListener('mousedown', function(e) {
+        if (e.button === 1) {
+          e.preventDefault();
+          window.open(a.dataset.src || a.href, '_blank');
+        }
+      });
+
+      a.removeAttribute('target');
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindLinks);
+  } else {
+    bindLinks();
+  }
+})();
+</script>
+{% endblock scripts %}
+
 {% block content %}
 <div style="max-width:860px;">
 
@@ -547,13 +723,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div style="font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;">{{ champ.label }}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                   {% for f in fics %}
-                  <a href="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
-                     target="_blank"
+                  {%- set lb_group = 'sec-' ~ sec.ordre ~ '-' ~ champ.name -%}
+                  {%- set lb_src = url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) -%}
+                  {%- set lb_type = 'image' if f.type_fichier == 'image' else ('pdf' if f.type_fichier == 'pdf' else 'other') -%}
+                  {%- set lb_title = f.titre if f.titre else f.nom_original -%}
+                  <a href="{{ lb_src }}"
+                     data-lightbox="{{ lb_group }}"
+                     data-src="{{ lb_src }}"
+                     data-type="{{ lb_type }}"
+                     data-title="{{ lb_title }}"
                      style="display:flex;flex-direction:column;align-items:center;
                             text-decoration:none;border:1px solid var(--border);
-                            border-radius:7px;overflow:hidden;background:var(--bg);width:90px;">
+                            border-radius:7px;overflow:hidden;background:var(--bg);width:90px;
+                            cursor:zoom-in;">
                     {% if f.type_fichier == 'image' %}
-                      <img src="{{ url_for('uploaded_file_section', consultation_id=c.id, filename=f.nom_stocke) }}"
+                      <img src="{{ lb_src }}"
                            style="width:90px;height:66px;object-fit:cover;display:block;">
                     {% else %}
                       <div style="width:90px;height:66px;display:flex;align-items:center;
@@ -563,7 +747,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% endif %}
                     <div style="font-size:9px;color:var(--muted);padding:3px 4px;width:90px;
                                 overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
-                      {{ f.titre if f.titre else f.nom_original }}
+                      {{ lb_title }}
                     </div>
                   </a>
                   {% endfor %}
@@ -642,29 +826,45 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="card-body">
       <div style="display:flex;flex-wrap:wrap;gap:12px;">
         {% for f in c.fichiers %}
+        {%- set lb_src = url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) -%}
+        {%- set lb_type = 'image' if f.type_fichier == 'image' else ('pdf' if f.type_fichier == 'pdf' else 'other') -%}
+        {%- set lb_title = f.titre if f.titre else f.nom_original -%}
         <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;
                     background:var(--bg);text-align:center;">
           {% if f.type_fichier == 'image' %}
-            <a href="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
-               target="_blank">
-              <img src="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+            <a href="{{ lb_src }}"
+               data-lightbox="general"
+               data-src="{{ lb_src }}"
+               data-type="image"
+               data-title="{{ lb_title }}"
+               style="cursor:zoom-in;">
+              <img src="{{ lb_src }}"
                    style="width:150px;height:110px;object-fit:cover;display:block;">
             </a>
+          {% elif f.type_fichier != 'word' %}
+            <a href="{{ lb_src }}"
+               data-lightbox="general"
+               data-src="{{ lb_src }}"
+               data-type="{{ lb_type }}"
+               data-title="{{ lb_title }}"
+               style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                      width:150px;height:110px;text-decoration:none;color:var(--text);cursor:zoom-in;">
+              <span style="font-size:36px;">📄</span>
+              <span style="font-size:11px;color:var(--muted);margin-top:4px;">Ouvrir le PDF</span>
+            </a>
           {% else %}
-            <a href="{{ url_for('uploaded_file', consultation_id=c.id, filename=f.nom_stocke) }}"
+            <a href="{{ lb_src }}"
                target="_blank"
                style="display:flex;flex-direction:column;align-items:center;justify-content:center;
                       width:150px;height:110px;text-decoration:none;color:var(--text);">
-              <span style="font-size:36px;">{{ '📝' if f.type_fichier == 'word' else '📄' }}</span>
-              <span style="font-size:11px;color:var(--muted);margin-top:4px;">
-                {{ 'Ouvrir le document' if f.type_fichier == 'word' else 'Ouvrir le PDF' }}
-              </span>
+              <span style="font-size:36px;">📝</span>
+              <span style="font-size:11px;color:var(--muted);margin-top:4px;">Ouvrir le document</span>
             </a>
           {% endif %}
           <div style="font-size:11px;font-weight:500;padding:4px 6px;
                       max-width:150px;overflow:hidden;text-overflow:ellipsis;
                       white-space:nowrap;color:var(--text);">
-            {{ f.titre if f.titre else f.nom_original }}
+            {{ lb_title }}
           </div>
         </div>
         {% endfor %}
