@@ -3513,9 +3513,12 @@ function fermerModalConclusion() {
       var g = el.dataset.lightbox;
       if (!g) return;
       e.preventDefault();
-      var items = Array.from(document.querySelectorAll('a[data-lightbox="' + g + '"]'));
-      var idx = items.indexOf(el);
-      open(items, idx < 0 ? 0 : idx);
+      e.stopPropagation();
+      var items = Array.from(document.querySelectorAll('a[data-lightbox="' + g + '"]')).map(function(a) {
+        return { el: a, src: a.dataset.src || a.href, type: a.dataset.type || '', title: a.dataset.title || a.textContent.trim() };
+      });
+      var idx = items.findIndex(function(it) { return it.el === el; });
+      openLB(items, idx < 0 ? 0 : idx);
     });
     el.addEventListener('mousedown', function(e) {
       if (e.button === 1) { e.preventDefault(); window.open(el.dataset.src || el.href, '_blank'); }
