@@ -940,6 +940,43 @@ function hwInit(id, ogJson, odJson){
   });
 }
 
+// ── Calcul AC/A ──
+function calcACA(uid) {
+  var dipEl = document.getElementById(uid + '_dip');
+  var hlEl  = document.getElementById(uid + '_hl');
+  var hpEl  = document.getElementById(uid + '_hp');
+  var resEl = document.getElementById(uid + '_result');
+  var hidEl = document.getElementById(uid + '_hidden');
+  if (!dipEl || !hlEl || !hpEl || !resEl || !hidEl) return;
+  var dip = parseFloat(dipEl.value);
+  var hl  = parseFloat(hlEl.value);
+  var hp  = parseFloat(hpEl.value);
+  hidEl.value = JSON.stringify({
+    dip: isNaN(dip) ? '' : dip,
+    hetero_loin: isNaN(hl) ? '' : hl,
+    hetero_pres: isNaN(hp) ? '' : hp
+  });
+  if (isNaN(dip) || isNaN(hl) || isNaN(hp)) {
+    resEl.textContent = 'Renseigner les 3 valeurs';
+    resEl.style.color = 'var(--muted)';
+    resEl.style.background = 'var(--surface)';
+    resEl.style.borderColor = 'var(--border)';
+    return;
+  }
+  var aca = Math.round((dip + (hp - hl) / 2.5) * 100) / 100;
+  hidEl.value = JSON.stringify({dip: dip, hetero_loin: hl, hetero_pres: hp, aca: aca});
+  var bg, col, lbl;
+  if (aca < 2)      { bg = '#FFF3E0'; col = '#E65100'; lbl = 'Faible'; }
+  else if (aca > 6) { bg = '#FCE4EC'; col = '#B71C1C'; lbl = 'Élevé'; }
+  else              { bg = '#E8F5E9'; col = '#1B5E20'; lbl = 'Normal'; }
+  resEl.innerHTML = 'AC/A = <strong>' + aca + ' δ/D</strong>'
+    + ' — <span style="color:' + col + ';">' + lbl + '</span>'
+    + ' <span style="font-size:11px;font-weight:400;">(norme 4 ± 2)</span>';
+  resEl.style.background = bg;
+  resEl.style.borderColor = col + '44';
+  resEl.style.color = 'var(--text)';
+}
+
 // Listeners globaux pour le drag hors canvas
 document.addEventListener('mousemove',function(e){
   var drag=null;
@@ -1150,6 +1187,43 @@ function champHTML(idx, champ, val, sectionType) {
           </span>
         </div>
       </div>
+    </div>`;
+  }
+
+  if (champ.type === 'aca') {
+    const uid = `aca_${name.replace(/[^a-z0-9]/gi,'_')}`;
+    let stored = {};
+    try { stored = JSON.parse(v || '{}'); } catch(e) {}
+    const dip = stored.dip  !== undefined ? stored.dip  : '';
+    const hl  = stored.hetero_loin !== undefined ? stored.hetero_loin : '';
+    const hp  = stored.hetero_pres !== undefined ? stored.hetero_pres : '';
+    setTimeout(() => calcACA(uid), 50);
+    return `<div class="field-group" style="grid-column:1/-1;">
+      <label class="field-label">${champ.label || 'Rapport AC/A'}</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px 12px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">DIP (cm)</label>
+          <input type="number" id="${uid}_dip" value="${dip}" step="0.1" min="0" style="width:100%;"
+                 oninput="calcACA('${uid}')">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Hétérophorie de loin (Δ)</label>
+          <input type="number" id="${uid}_hl" value="${hl}" step="0.5" placeholder="+ éso / − exo" style="width:100%;"
+                 oninput="calcACA('${uid}')">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Hétérophorie de près (Δ)</label>
+          <input type="number" id="${uid}_hp" value="${hp}" step="0.5" placeholder="+ éso / − exo" style="width:100%;"
+                 oninput="calcACA('${uid}')">
+        </div>
+      </div>
+      <div id="${uid}_result"
+           style="font-size:13px;font-weight:500;padding:6px 10px;border-radius:6px;
+                  background:var(--surface);border:1px solid var(--border);
+                  display:inline-block;min-width:200px;color:var(--muted);">
+        Renseigner les 3 valeurs
+      </div>
+      <input type="hidden" name="${name}" id="${uid}_hidden" value="${escHtml(v)}">
     </div>`;
   }
 

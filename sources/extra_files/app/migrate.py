@@ -914,6 +914,24 @@ with app.app_context():
         except Exception as e:
             db.session.rollback()
             print(f"ERREUR  : section hess_weiss — {e}")
+        # Injecter la section rapport_aca si absente
+        try:
+            if not SectionDef.query.filter_by(type_key='rapport_aca').first():
+                max_ordre = db.session.query(db.func.max(SectionDef.ordre)).scalar() or 0
+                sd = SectionDef(type_key='rapport_aca', label='Rapport AC/A',
+                                ordre=max_ordre+1, builtin=True, actif=True,
+                                avec_observations=False)
+                db.session.add(sd); db.session.flush()
+                db.session.add(ChampDef(section_id=sd.id, name='rapport_aca',
+                                        label='Rapport AC/A', type='aca', ordre=0))
+                db.session.commit()
+                print("OK      : section rapport_aca injectée")
+            else:
+                print("Present : section rapport_aca")
+        except Exception as e:
+            db.session.rollback()
+            print(f"ERREUR  : section rapport_aca — {e}")
+
         if Praticien.query.count() == 0:
             from werkzeug.security import generate_password_hash
             admin = Praticien(
