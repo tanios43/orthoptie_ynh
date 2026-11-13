@@ -7597,6 +7597,22 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                 # Ignorer les champs hidden Hess-Weiss (traités séparément)
                 if ch['name'] in ('hw_og', 'hw_od'):
                     continue
+                # Champ AC/A : afficher uniquement le résultat formaté
+                if ch['type'] == 'aca' and val:
+                    try:
+                        import json as _json
+                        aca_obj = _json.loads(val)
+                        aca_v = aca_obj.get('aca', '')
+                        if aca_v != '':
+                            aca_f = float(aca_v)
+                            if aca_f < 2:   lbl = 'Faible (< 2 Δ/D)'
+                            elif aca_f > 6: lbl = 'Élevé (> 6 Δ/D)'
+                            else:           lbl = 'Normal (2–6 Δ/D)'
+                            val = f'{aca_f} Δ/D — {lbl} (norme 4 ± 2)'
+                        else:
+                            val = ''
+                    except Exception:
+                        val = ''
                 pending_cells.append((ch['label'], str(val) if val else ''))
 
             flush_pending()
