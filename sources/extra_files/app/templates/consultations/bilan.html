@@ -754,39 +754,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
               </div>
               {% endif %}
-            {% elif champ.type == 'aca' %}
-              {%- set aca_raw = d.get(champ.name, '') -%}
-              <div style="grid-column:1/-1;">
-                <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">{{ champ.label or 'Rapport AC/A' }}</div>
-                {% if aca_raw %}
-                  {% set aca_obj = aca_raw | fromjson %}
-                  {% set dip = aca_obj.get('dip', '') %}
-                  {% set hl  = aca_obj.get('hetero_loin', '') %}
-                  {% set hp  = aca_obj.get('hetero_pres', '') %}
-                  {% set aca = aca_obj.get('aca', '') %}
-                  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
-                    <span style="font-size:12px;color:var(--muted);">DIP : <strong>{{ dip }} cm</strong></span>
-                    <span style="font-size:12px;color:var(--muted);">Hét. loin : <strong>{{ hl }} Δ</strong></span>
-                    <span style="font-size:12px;color:var(--muted);">Hét. près : <strong>{{ hp }} Δ</strong></span>
-                    {% if aca != '' %}
-                      {% set aca_f = aca | float %}
-                      {% if aca_f < 2 %}
-                        {% set res_bg='#FFF3E0' %}{% set res_col='#E65100' %}{% set res_lbl='Faible' %}
-                      {% elif aca_f > 6 %}
-                        {% set res_bg='#FCE4EC' %}{% set res_col='#B71C1C' %}{% set res_lbl='Élevé' %}
-                      {% else %}
-                        {% set res_bg='#E8F5E9' %}{% set res_col='#1B5E20' %}{% set res_lbl='Normal' %}
-                      {% endif %}
-                      <span style="padding:4px 10px;border-radius:6px;font-size:13px;font-weight:600;
-                                   background:{{ res_bg }};color:{{ res_col }};border:1px solid {{ res_col }}44;">
-                        AC/A = {{ aca }} Δ/D — {{ res_lbl }} <span style="font-weight:400;font-size:11px;">(norme 4 ± 2)</span>
-                      </span>
-                    {% endif %}
-                  </div>
-                {% else %}
-                  <span style="font-size:13px;color:var(--muted);">—</span>
-                {% endif %}
-              </div>
             {% else %}
               <div>
                 <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">{{ champ.label }}</div>
