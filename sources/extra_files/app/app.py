@@ -279,7 +279,7 @@ def md_to_html(text):
     return lines[0] + ''.join(f'<div>{l if l else "<br>"}</div>' for l in lines[1:])
 
 
-def _md_runs(text, font='Verdana', size=20):
+def _md_runs(text, font='Verdana', size=20, extra_rpr=''):
     """Convertit le Markdown en runs Word XML avec tokenisation."""
     import re
     if not text: return ''
@@ -295,7 +295,7 @@ def _md_runs(text, font='Verdana', size=20):
         for j, line in enumerate(lines):
             br = '<w:br/>' if j < len(lines)-1 else ''
             content += f'<w:t xml:space="preserve">{line}</w:t>{br}'
-        return (f'<w:r><w:rPr>{b}{i}{u}'
+        return (f'<w:r><w:rPr>{b}{i}{u}{extra_rpr}'
                 f'<w:rFonts w:ascii="{font}" w:hAnsi="{font}"/>'
                 f'<w:sz w:val="{size}"/></w:rPr>{content}</w:r>')
 
@@ -7562,8 +7562,13 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                 """Regroupe les cellules en rangées pleines, sans trous."""
                 if not pending_cells:
                     return
-                # Filtrer les cellules vides
-                non_vides = [(lbl, val) for lbl, val in pending_cells if val and str(val).strip()]
+                # Normaliser en tuples (lbl, val, color) et filtrer les cellules vides
+                non_vides = []
+                for cell in pending_cells:
+                    lbl = cell[0]; val = cell[1]
+                    color = cell[2] if len(cell) > 2 else None
+                    if val and str(val).strip():
+                        non_vides.append((lbl, val, color))
                 if not non_vides:
                     pending_cells.clear()
                     return
@@ -7572,7 +7577,7 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                     chunk = non_vides[i:i+nb_cols]
                     # Compléter la dernière rangée si nécessaire
                     while len(chunk) < nb_cols:
-                        chunk.append(('', ''))
+                        chunk.append(('', '', None))
                     lignes.append(('__row__', chunk))
                 pending_cells.clear()
 
@@ -7597,7 +7602,8 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                 # Ignorer les champs hidden Hess-Weiss (traités séparément)
                 if ch['name'] in ('hw_og', 'hw_od'):
                     continue
-                # Champ AC/A : afficher uniquement le résultat formaté
+                # Champ AC/A : afficher uniquement le résultat formaté avec couleur
+                aca_color = None
                 if ch['type'] == 'aca' and val:
                     try:
                         import json as _json
@@ -7605,15 +7611,18 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                         aca_v = aca_obj.get('aca', '')
                         if aca_v != '':
                             aca_f = float(aca_v)
-                            if aca_f < 2:   lbl = 'Faible (< 2 Δ/D)'
-                            elif aca_f > 6: lbl = 'Élevé (> 6 Δ/D)'
-                            else:           lbl = 'Normal (2–6 Δ/D)'
-                            val = f'{aca_f} Δ/D — {lbl} (norme 4 ± 2)'
+                            if aca_f < 2:
+                                lbl2 = 'Faible (< 2 δ/D)'; aca_color = 'E65100'
+                            elif aca_f > 6:
+                                lbl2 = 'Élevé (> 6 δ/D)'; aca_color = 'B71C1C'
+                            else:
+                                lbl2 = 'Normal (2–6 δ/D)'; aca_color = '1B5E20'
+                            val = f'{aca_f} δ/D — {lbl2} (norme 4 ± 2)'
                         else:
                             val = ''
                     except Exception:
                         val = ''
-                pending_cells.append((ch['label'], str(val) if val else ''))
+                pending_cells.append((ch['label'], str(val) if val else '', aca_color))
 
             flush_pending()
 
@@ -7772,7 +7781,8 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                             f'</w:rPr><w:t xml:space="preserve">{esc(obs_line)}</w:t></w:r>'
                             f'</w:p>'
                         )
-                for label, valeur in sec['lignes']:
+                for ligne in sec['lignes']:
+                    label, valeur = ligne[0], ligne[1]
                     if label == '__sep__':
                         # Séparateur — ligne grise avec titre optionnel
                         body_paras.append(
@@ -7794,20 +7804,21 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                         )
                     elif label == '__row__':
                         # Rangée de cellules — tableau Word
-                        cells = valeur  # liste de (label, val)
+                        cells = valeur  # liste de (label, val, color?)
                         nb    = len(cells)
                         col_w = max(1, 9000 // nb)  # largeur en twentieths of a point
 
-                        def cell_xml(lbl, val):
+                        def cell_xml(lbl, val, color=None):
                             content = ''
+                            col_tag = f'<w:color w:val="{color}"/>' if color else ''
                             if lbl and val:
                                 content = (
                                     f'<w:r><w:rPr><w:b/><w:rFonts w:ascii="Verdana" w:hAnsi="Verdana"/>'
                                     f'<w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">{esc(lbl)} : </w:t></w:r>'
-                                    + _md_runs(str(val), size=18)
+                                    + _md_runs(str(val), size=18, extra_rpr=col_tag)
                                 )
                             elif val:
-                                content = _md_runs(str(val), size=18)
+                                content = _md_runs(str(val), size=18, extra_rpr=col_tag)
                             return (
                                 f'<w:tc>'
                                 f'<w:tcPr><w:tcW w:w="{col_w}" w:type="dxa"/>'
@@ -7818,9 +7829,9 @@ def _generer_docx(consultation, modele, sections_incluses, images_ids=None, sect
                                 f'</w:tc>'
                             )
 
-                        row_xml = ''.join(cell_xml(lbl, val) for lbl, val in cells)
+                        row_xml = ''.join(cell_xml(*c) for c in cells)
                         # Générer uniquement si au moins une cellule non vide
-                        if any(val for _, val in cells):
+                        if any(c[1] for c in cells):
                             body_paras.append(
                                 f'<w:tbl>'
                                 f'<w:tblPr><w:tblW w:w="9000" w:type="dxa"/>'
