@@ -1153,6 +1153,69 @@ function champHTML(idx, champ, val, sectionType) {
     </div>`;
   }
 
+  if (champ.type === 'aca') {
+    const uid = `aca_${name.replace(/[^a-z0-9]/gi,'_')}`;
+    let stored = {};
+    try { stored = JSON.parse(v || '{}'); } catch(e) {}
+    const dip   = stored.dip   !== undefined ? stored.dip   : '';
+    const hl    = stored.hetero_loin  !== undefined ? stored.hetero_loin  : '';
+    const hp    = stored.hetero_pres  !== undefined ? stored.hetero_pres  : '';
+    return `<div class="field-group" style="grid-column:1/-1;">
+      <label class="field-label">${champ.label || 'Rapport AC/A'}</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px 12px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">DIP (cm)</label>
+          <input type="number" id="${uid}_dip" value="${dip}" step="0.1" min="0"
+                 style="width:100%;" oninput="calcACA_${uid}()">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Hétérophorie de loin (Δ)</label>
+          <input type="number" id="${uid}_hl" value="${hl}" step="0.5"
+                 placeholder="+ éso / − exo"
+                 style="width:100%;" oninput="calcACA_${uid}()">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Hétérophorie de près (Δ)</label>
+          <input type="number" id="${uid}_hp" value="${hp}" step="0.5"
+                 placeholder="+ éso / − exo"
+                 style="width:100%;" oninput="calcACA_${uid}()">
+        </div>
+      </div>
+      <div id="${uid}_result" style="font-size:13px;font-weight:500;padding:6px 10px;
+           border-radius:6px;background:var(--surface);border:1px solid var(--border);
+           display:inline-block;min-width:180px;"></div>
+      <input type="hidden" name="${name}" id="${uid}_hidden" value="${escHtml(v)}">
+    </div>
+    <script>
+    function calcACA_${uid}() {
+      var dip = parseFloat(document.getElementById('${uid}_dip').value);
+      var hl  = parseFloat(document.getElementById('${uid}_hl').value);
+      var hp  = parseFloat(document.getElementById('${uid}_hp').value);
+      var res = document.getElementById('${uid}_result');
+      var hid = document.getElementById('${uid}_hidden');
+      if (isNaN(dip) || isNaN(hl) || isNaN(hp)) {
+        res.textContent = 'Renseigner les 3 valeurs';
+        res.style.color = 'var(--muted)';
+        res.style.background = 'var(--surface)';
+        hid.value = JSON.stringify({dip: isNaN(dip)?'':dip, hetero_loin: isNaN(hl)?'':hl, hetero_pres: isNaN(hp)?'':hp});
+        return;
+      }
+      var aca = dip + (hp - hl) / 2.5;
+      aca = Math.round(aca * 100) / 100;
+      var label, bg, color;
+      if (aca < 2)      { label = 'Faible';  bg = '#FFF3E0'; color = '#E65100'; }
+      else if (aca > 6) { label = 'Élevé';   bg = '#FCE4EC'; color = '#B71C1C'; }
+      else              { label = 'Normal';  bg = '#E8F5E9'; color = '#1B5E20'; }
+      res.innerHTML = 'AC/A = <strong>' + aca + ' Δ/D</strong> — <span style="color:' + color + ';">' + label + ' (norme 4 ± 2)</span>';
+      res.style.background = bg;
+      res.style.borderColor = color + '44';
+      res.style.color = 'var(--text)';
+      hid.value = JSON.stringify({dip: dip, hetero_loin: hl, hetero_pres: hp, aca: aca});
+    }
+    document.addEventListener('DOMContentLoaded', function() { calcACA_${uid}(); });
+    </script>`;
+  }
+
   // number ou text
   return `<div class="field-group">
     <label class="field-label">${champ.label}</label>
