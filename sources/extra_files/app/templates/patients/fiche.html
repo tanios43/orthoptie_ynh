@@ -551,7 +551,21 @@
                   {% if sdef %}
                   {% set ns = namespace(has_data=false) %}
                   {% for champ in sdef.champs %}
-                    {% if champ.type != 'fichier' and d.get(champ.name) %}
+                    {% if champ.type == 'aca' and d.get(champ.name) %}
+                    {%- set aca_obj = d.get(champ.name) | fromjson -%}
+                    {%- set aca_v = aca_obj.get('aca', '') -%}
+                    {%- if aca_v != '' -%}
+                      {%- set aca_f = aca_v | float -%}
+                      {%- if aca_f < 2 -%}{%- set res_col='#E65100' -%}{%- set res_lbl='Faible' -%}
+                      {%- elif aca_f > 6 -%}{%- set res_col='#B71C1C' -%}{%- set res_lbl='Élevé' -%}
+                      {%- else -%}{%- set res_col='#1B5E20' -%}{%- set res_lbl='Normal' -%}{%- endif %}
+                      {% set ns.has_data = true %}
+                      <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:0.5px solid var(--border);">
+                        <span style="color:var(--muted);">{{ champ.label }}</span>
+                        <span style="font-weight:600;color:{{ res_col }};">{{ aca_f }} Δ/D — {{ res_lbl }}</span>
+                      </div>
+                    {%- endif %}
+                    {% elif champ.type != 'fichier' and d.get(champ.name) %}
                     {% set ns.has_data = true %}
                     <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:0.5px solid var(--border);">
                       <span style="color:var(--muted);">{{ champ.label }}</span>

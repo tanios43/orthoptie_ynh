@@ -388,6 +388,20 @@
                   </div>
                 </div>
                 {% endif %}
+              {% elif champ.type == 'aca' and d.get(champ.name) %}
+              {%- set aca_obj = d.get(champ.name) | fromjson -%}
+              {%- set aca_v = aca_obj.get('aca', '') -%}
+              {%- if aca_v != '' -%}
+                {%- set aca_f = aca_v | float -%}
+                {%- if aca_f < 2 -%}{%- set res_col='#E65100' -%}{%- set res_lbl='Faible' -%}
+                {%- elif aca_f > 6 -%}{%- set res_col='#B71C1C' -%}{%- set res_lbl='Élevé' -%}
+                {%- else -%}{%- set res_col='#1B5E20' -%}{%- set res_lbl='Normal' -%}{%- endif %}
+                <div style="display:flex;justify-content:space-between;padding:2px 0;
+                            font-size:11px;border-bottom:1px solid var(--border);">
+                  <span style="color:var(--muted);">{{ champ.label }}</span>
+                  <span style="font-weight:600;color:{{ res_col }};">{{ aca_f }} Δ/D — {{ res_lbl }}</span>
+                </div>
+              {%- endif %}
               {% elif d.get(champ.name) %}
               <div style="display:flex;justify-content:space-between;padding:2px 0;
                           font-size:11px;border-bottom:1px solid var(--border);">
