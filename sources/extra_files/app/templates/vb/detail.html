@@ -269,7 +269,7 @@
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
               <input type="date" name="seance_{{ seance.id }}_date"
                      value="{{ seance.date_seance.strftime('%Y-%m-%d') if seance.date_seance else '' }}"
-                     style="font-size:13px;padding:4px 6px;width:100%;">
+                     style="font-size:16px;padding:4px 6px;width:100%;">
               {% if loop.last %}
               <button type="button"
                       onclick="supprimerSeance('{{ url_for('seance_vb_supprimer', seance_id=seance.id) }}', 'Supprimer cette séance ?')"
@@ -312,7 +312,7 @@
               <div id="wy-vb-{{seance.id}}-fusion"
      contenteditable="true"
      class="table-wysiwyg"
-     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+     style="font-size:16px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.fusion or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_fusion" id="wy-vb-{{seance.id}}-fusion_hidden" form="form-suivi-vb"
@@ -322,7 +322,7 @@
               <div id="wy-vb-{{seance.id}}-accommodation"
      contenteditable="true"
      class="table-wysiwyg"
-     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+     style="font-size:16px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.accommodation or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_accommodation" id="wy-vb-{{seance.id}}-accommodation_hidden" form="form-suivi-vb"
@@ -332,7 +332,7 @@
               <div id="wy-vb-{{seance.id}}-stereogrammes"
      contenteditable="true"
      class="table-wysiwyg"
-     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+     style="font-size:16px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.stereogrammes or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_stereogrammes" id="wy-vb-{{seance.id}}-stereogrammes_hidden" form="form-suivi-vb"
@@ -342,7 +342,7 @@
               <div id="wy-vb-{{seance.id}}-notes"
      contenteditable="true"
      class="table-wysiwyg"
-     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+     style="font-size:16px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.notes or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_notes" id="wy-vb-{{seance.id}}-notes_hidden" form="form-suivi-vb"

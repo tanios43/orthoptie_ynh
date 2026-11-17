@@ -274,7 +274,7 @@
             <td style="padding:3px 5px;border-bottom:0.5px solid var(--border);vertical-align:top;">
               <input type="date" name="seance_{{ seance.id }}_date"
                      value="{{ seance.date_seance.strftime('%Y-%m-%d') if seance.date_seance else '' }}"
-                     style="font-size:13px;padding:4px 6px;width:100%;">
+                     style="font-size:16px;padding:4px 6px;width:100%;">
               {% if loop.last %}
               <button type="button"
                       onclick="supprimerSeance('{{ url_for('seance_bv_supprimer', seance_id=seance.id) }}', 'Supprimer cette séance ?')"
@@ -318,16 +318,16 @@
                 <input type="text" name="seance_{{ seance.id }}_av_od"
                        value="{{ seance.av_od or '' }}"
                        placeholder="OD"
-                       style="font-size:13px;padding:4px 6px;flex:1;text-align:center;color:#185FA5;font-weight:500;border-radius:5px;border:1px solid var(--border);">
+                       style="font-size:16px;padding:4px 6px;flex:1;text-align:center;color:#185FA5;font-weight:500;border-radius:5px;border:1px solid var(--border);">
                 <input type="text" name="seance_{{ seance.id }}_av_og"
                        value="{{ seance.av_og or '' }}"
                        placeholder="OG"
-                       style="font-size:13px;padding:4px 6px;flex:1;text-align:center;color:#A32D2D;font-weight:500;border-radius:5px;border:1px solid var(--border);">
+                       style="font-size:16px;padding:4px 6px;flex:1;text-align:center;color:#A32D2D;font-weight:500;border-radius:5px;border:1px solid var(--border);">
               </div>
               <div id="wy-bv-{{seance.id}}-av_notes"
      contenteditable="true"
      class="table-wysiwyg"
-     style="font-size:12px;padding:3px 5px;width:100%;min-height:24px;color:var(--muted);border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+     style="font-size:15px;padding:3px 5px;width:100%;min-height:24px;color:var(--muted);border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.av_notes or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_av_notes" id="wy-bv-{{seance.id}}-av_notes_hidden" form="form-suivi-bv"
@@ -337,7 +337,7 @@
               <div id="wy-bv-{{seance.id}}-exercices"
      contenteditable="true"
      class="table-wysiwyg"
-     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+     style="font-size:16px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.exercices or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_exercices" id="wy-bv-{{seance.id}}-exercices_hidden" form="form-suivi-bv"
@@ -348,7 +348,7 @@
               <div id="wy-bv-{{seance.id}}-notes"
      contenteditable="true"
      class="table-wysiwyg"
-     style="font-size:13px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
+     style="font-size:16px;padding:4px 6px;width:100%;min-height:28px;border:1px solid var(--border);border-radius:5px;white-space:pre-wrap;word-break:break-word;">
   {{- (seance.notes or "") | mdhtml | safe -}}
 </div>
 <input type="hidden" name="seance_{{seance.id}}_notes" id="wy-bv-{{seance.id}}-notes_hidden" form="form-suivi-bv"
