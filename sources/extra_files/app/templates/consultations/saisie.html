@@ -29,13 +29,90 @@
       </span>
       {% endif %}
       {% set cab = consultation.cabinet %}
-      {% if cab %}
-      {% set cc = cab.couleur or '#1C2B3A' %}
-      <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;white-space:nowrap;">
-        🏥 {{ cab.nom }}
+      {% set cc = (cab.couleur if cab else none) or '#1C2B3A' %}
+      <span id="cab-badge" role="button" tabindex="0" title="Changer le cabinet du bilan"
+            data-cab-id="{{ cab.id if cab else '' }}"
+            style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;
+                   {% if cab %}background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;{% else %}background:none;color:var(--muted);border:1px dashed var(--border);{% endif %}">
+        🏥 <span id="cab-badge-nom">{{ cab.nom if cab else 'Choisir un cabinet' }}</span>
+        <span style="font-size:9px;opacity:.7;">▾</span>
       </span>
-      {% endif %}
     </div>
+
+    <div id="cab-menu" style="display:none;position:fixed;font-family:var(--font);z-index:3000;min-width:180px;background:var(--surface, #fff);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);padding:4px;">
+      {% for cb in cabinets_bilan or [] %}
+      {% set cbc = cb.couleur or '#1C2B3A' %}
+      <div class="cab-menu-item" data-id="{{ cb.id }}" data-nom="{{ cb.nom }}" data-couleur="{{ cbc }}"
+           style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--text);">
+        <span style="width:8px;height:8px;border-radius:50%;background:{{ cbc }};flex-shrink:0;"></span>
+        <span style="flex:1;">{{ cb.nom }}</span>
+        <span class="cab-check" style="color:{{ cbc }};font-weight:700;">{{ '✓' if cab and cab.id == cb.id else '' }}</span>
+      </div>
+      {% else %}
+      <div style="padding:6px 10px;font-size:12px;color:var(--muted);">Aucun cabinet disponible</div>
+      {% endfor %}
+    </div>
+
+    <style>
+      #cab-badge:hover { filter:brightness(.92); }
+      .cab-menu-item:hover { background:var(--bg, #f3f4f6); }
+    </style>
+    <script>
+    (function () {
+      const badge = document.getElementById('cab-badge');
+      const menu  = document.getElementById('cab-menu');
+      const url   = "{{ url_for('consultation_changer_cabinet', consultation_id=consultation.id) }}";
+      if (!badge || !menu) return;
+
+      function closeMenu() { menu.style.display = 'none'; }
+      function openMenu() {
+        const r = badge.getBoundingClientRect();
+        menu.style.top  = (r.bottom + 4) + 'px';
+        menu.style.left = r.left + 'px';
+        menu.style.display = 'block';
+      }
+      badge.addEventListener('click', e => {
+        e.stopPropagation();
+        menu.style.display === 'block' ? closeMenu() : openMenu();
+      });
+      badge.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); badge.click(); }
+      });
+      document.addEventListener('click', e => { if (!menu.contains(e.target)) closeMenu(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+      window.addEventListener('scroll', closeMenu, true);
+      window.addEventListener('resize', closeMenu);
+
+      menu.querySelectorAll('.cab-menu-item').forEach(item => {
+        item.addEventListener('click', async e => {
+          e.stopPropagation();
+          const id = item.dataset.id, nom = item.dataset.nom;
+          closeMenu();
+          if (id === badge.dataset.cabId) return;
+          const actuel = badge.dataset.cabId ? document.getElementById('cab-badge-nom').textContent : 'aucun';
+          if (!confirm('Changer le cabinet de ce bilan ?\n\n' + actuel + '  →  ' + nom)) return;
+          try {
+            const fd = new FormData();
+            fd.append('cabinet_id', id);
+            const resp = await fetch(url, { method: 'POST', body: fd });
+            const j = await resp.json();
+            if (!resp.ok || !j.ok) throw new Error(j.error || resp.status);
+            const c = j.couleur;
+            badge.dataset.cabId = String(j.id);
+            document.getElementById('cab-badge-nom').textContent = j.nom;
+            badge.style.background = c + '20';
+            badge.style.color = c;
+            badge.style.border = '1px solid ' + c + '40';
+            menu.querySelectorAll('.cab-menu-item').forEach(it => {
+              it.querySelector('.cab-check').textContent = (it.dataset.id === String(j.id)) ? '✓' : '';
+            });
+          } catch (err) {
+            alert('Impossible de changer le cabinet : ' + err.message);
+          }
+        });
+      });
+    })();
+    </script>
   {% else %}
     <div style="font-size:14px;font-weight:400;color:var(--text);">Nouveau bilan</div>
   {% endif %}

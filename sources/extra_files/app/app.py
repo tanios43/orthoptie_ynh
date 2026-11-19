@@ -5067,7 +5067,39 @@ def consultation_modifier(consultation_id):
     return render_template('consultations/saisie.html', patient=c.patient, consultation=c,
                            sections_dispo=sections_filtrees, sections_ordre=ordre_filtres,
                            sections_def=sections_all, sections_all=sections_all,
-                           autres_consultations=autres, modeles=[], modeles_json=[])
+                           autres_consultations=autres, modeles=[], modeles_json=[],
+                           cabinets_bilan=_cabinets_pour_bilan(c))
+
+
+def _cabinets_pour_bilan(c):
+    """Cabinets proposés pour un bilan : ceux du praticien du bilan (+ cabinet actuel)."""
+    pcs = PraticienCabinet.query.filter_by(praticien_id=c.praticien_id)\
+                                .join(Cabinet).filter(Cabinet.actif == True).all()
+    cabinets = [pc.cabinet for pc in pcs]
+    if not cabinets:
+        cabinets = Cabinet.query.filter_by(actif=True).all()
+    if c.cabinet and c.cabinet not in cabinets:
+        cabinets.append(c.cabinet)
+    return sorted(cabinets, key=lambda x: (x.nom or '').lower())
+
+
+@app.route('/consultation/<int:consultation_id>/cabinet', methods=['POST'])
+@login_required
+def consultation_changer_cabinet(consultation_id):
+    """Change le cabinet associé à un bilan (AJAX). Ne touche à rien d'autre."""
+    from flask import jsonify
+    c = Consultation.query.get_or_404(consultation_id)
+    cab_id = request.form.get('cabinet_id', type=int)
+    cab = Cabinet.query.get(cab_id) if cab_id else None
+    if not cab:
+        return jsonify({'ok': False, 'error': 'Cabinet introuvable'}), 400
+    ancien = c.cabinet.nom if c.cabinet else '—'
+    c.cabinet_id = cab.id
+    db.session.commit()
+    log_action('modification_consultation', patient_id=c.patient_id, consultation_id=c.id)
+    log_acces('changement_cabinet_bilan', patient_id=c.patient_id, consultation_id=c.id,
+              detail=f'Cabinet : {ancien} → {cab.nom}')
+    return jsonify({'ok': True, 'id': cab.id, 'nom': cab.nom, 'couleur': cab.couleur or '#1C2B3A'})
 
 
 @app.route('/consultation/<int:consultation_id>/supprimer', methods=['POST'])
