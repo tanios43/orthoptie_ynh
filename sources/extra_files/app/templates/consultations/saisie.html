@@ -18,22 +18,23 @@
 
 {% block page_title %}
   {% if consultation %}
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <div style="font-size:14px;font-weight:400;color:var(--text);">Bilan du {{ consultation.date_consult.strftime('%d/%m/%Y') }}</div>
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        {% if consultation.praticien %}
-          {%- set coul = consultation.praticien.couleur or '#888888' -%}
-          <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;background:{{ coul }}20;color:{{ coul }};border:1px solid {{ coul }}40;white-space:nowrap;">
-            👤 {{ consultation.praticien.prenom }} {{ consultation.praticien.nom }}
-          </span>
-        {% endif %}
-        {% if consultation.cabinet_seance %}
-          {%- set coul2 = consultation.cabinet_seance.couleur or '#888888' -%}
-          <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;background:{{ coul2 }}20;color:{{ coul2 }};border:1px solid {{ coul2 }}40;white-space:nowrap;">
-            🏥 {{ consultation.cabinet_seance.nom }}
-          </span>
-        {% endif %}
-      </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:14px;font-weight:400;color:var(--text);white-space:nowrap;">Bilan du {{ consultation.date_consult.strftime('%d/%m/%Y') }}</span>
+      {% set prat = consultation.praticien %}
+      {% if prat %}
+      {% set coul = prat.couleur or '#2E7D6B' %}
+      <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;background:{{ coul }}20;color:{{ coul }};border:1px solid {{ coul }}40;white-space:nowrap;">
+        <span style="width:6px;height:6px;border-radius:50%;background:{{ coul }};flex-shrink:0;"></span>
+        {{ prat.prenom[0] }}. {{ prat.nom }}
+      </span>
+      {% endif %}
+      {% set cab = consultation.cabinet %}
+      {% if cab %}
+      {% set cc = cab.couleur or '#1C2B3A' %}
+      <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;white-space:nowrap;">
+        🏥 {{ cab.nom }}
+      </span>
+      {% endif %}
     </div>
   {% else %}
     <div style="font-size:14px;font-weight:400;color:var(--text);">Nouveau bilan</div>
