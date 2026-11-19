@@ -18,8 +18,22 @@
 
 {% block page_title %}
   {% if consultation %}
-    <div style="display:flex;flex-direction:column;gap:1px;">
+    <div style="display:flex;flex-direction:column;gap:4px;">
       <div style="font-size:14px;font-weight:400;color:var(--text);">Bilan du {{ consultation.date_consult.strftime('%d/%m/%Y') }}</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        {% if consultation.praticien %}
+          {%- set coul = consultation.praticien.couleur or '#888888' -%}
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;background:{{ coul }}20;color:{{ coul }};border:1px solid {{ coul }}40;white-space:nowrap;">
+            👤 {{ consultation.praticien.prenom }} {{ consultation.praticien.nom }}
+          </span>
+        {% endif %}
+        {% if consultation.cabinet_seance %}
+          {%- set coul2 = consultation.cabinet_seance.couleur or '#888888' -%}
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;background:{{ coul2 }}20;color:{{ coul2 }};border:1px solid {{ coul2 }}40;white-space:nowrap;">
+            🏥 {{ consultation.cabinet_seance.nom }}
+          </span>
+        {% endif %}
+      </div>
     </div>
   {% else %}
     <div style="font-size:14px;font-weight:400;color:var(--text);">Nouveau bilan</div>
