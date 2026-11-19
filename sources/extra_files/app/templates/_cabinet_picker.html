@@ -1,0 +1,99 @@
+{#
+  Sélecteur de cabinet partagé (séances de suivi).
+  À inclure une fois par page. Chaque badge cliquable doit avoir :
+    class="cab-picker"
+    data-url="<route POST qui reçoit cabinet_id>"
+    data-cab-id="<id du cabinet actuel ou vide>"
+    data-options='<JSON [{id, nom, couleur}]>'
+    data-trunc="<longueur max du nom affiché, optionnel>"
+  et contenir un <span class="cab-picker-nom"> pour le nom.
+#}
+<div id="cab-picker-menu" style="display:none;position:fixed;z-index:3000;min-width:180px;font-family:var(--font);
+     background:var(--surface);border:1px solid var(--border);border-radius:8px;
+     box-shadow:0 6px 20px rgba(0,0,0,.15);padding:4px;"></div>
+
+<style>
+  .cab-picker { cursor:pointer; }
+  .cab-picker:hover { filter:brightness(.92); }
+  .cab-picker-item { display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;
+                     font-size:13px;cursor:pointer;color:var(--text); }
+  .cab-picker-item:hover { background:var(--bg); }
+</style>
+
+<script>
+(function () {
+  const menu = document.getElementById('cab-picker-menu');
+  let current = null;   // badge actuellement ouvert
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function trunc(s, n) { return (n && s.length > n) ? s.slice(0, n - 1) + '…' : s; }
+  function closeMenu() { menu.style.display = 'none'; current = null; }
+
+  function openMenu(badge) {
+    let opts = [];
+    try { opts = JSON.parse(badge.dataset.options || '[]'); } catch (e) {}
+    const curId = badge.dataset.cabId || '';
+    menu.innerHTML = opts.length ? opts.map(o =>
+      `<div class="cab-picker-item" data-id="${o.id}">
+         <span style="width:8px;height:8px;border-radius:50%;background:${esc(o.couleur)};flex-shrink:0;"></span>
+         <span style="flex:1;">${esc(o.nom)}</span>
+         <span style="color:${esc(o.couleur)};font-weight:700;">${String(o.id) === curId ? '✓' : ''}</span>
+       </div>`).join('')
+      : '<div style="padding:6px 10px;font-size:12px;color:var(--muted);">Aucun cabinet disponible</div>';
+
+    menu.querySelectorAll('.cab-picker-item').forEach(it => {
+      const o = opts.find(x => String(x.id) === it.dataset.id);
+      it.addEventListener('click', e => { e.stopPropagation(); choisir(badge, o); });
+    });
+
+    const r = badge.getBoundingClientRect();
+    menu.style.display = 'block';
+    const left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8);
+    menu.style.left = Math.max(8, left) + 'px';
+    menu.style.top  = (r.bottom + 4) + 'px';
+    current = badge;
+  }
+
+  async function choisir(badge, o) {
+    closeMenu();
+    if (!o || String(o.id) === (badge.dataset.cabId || '')) return;
+    const nomEl  = badge.querySelector('.cab-picker-nom');
+    const actuel = badge.dataset.cabId ? (badge.dataset.nomComplet || nomEl.textContent) : 'aucun';
+    if (!confirm('Changer le cabinet de cette séance ?\n\n' + actuel + '  →  ' + o.nom)) return;
+    try {
+      const fd = new FormData();
+      fd.append('cabinet_id', o.id);
+      const resp = await fetch(badge.dataset.url, { method: 'POST', body: fd });
+      const j = await resp.json();
+      if (!resp.ok || !j.ok) throw new Error(j.error || resp.status);
+      const c = j.couleur;
+      badge.dataset.cabId = String(j.id);
+      badge.dataset.nomComplet = j.nom;
+      badge.title = j.nom + ' — cliquer pour changer de cabinet';
+      nomEl.textContent = trunc(j.nom, parseInt(badge.dataset.trunc || '0', 10));
+      badge.style.background = c + '20';
+      badge.style.color = c;
+      badge.style.border = '1px solid ' + c + '40';
+    } catch (err) {
+      alert('Impossible de changer le cabinet : ' + err.message);
+    }
+  }
+
+  document.addEventListener('click', e => {
+    const badge = e.target.closest('.cab-picker');
+    if (badge) {
+      e.stopPropagation();
+      current === badge ? closeMenu() : openMenu(badge);
+      return;
+    }
+    if (!menu.contains(e.target)) closeMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeMenu();
+    const badge = e.target.closest && e.target.closest('.cab-picker');
+    if (badge && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); badge.click(); }
+  });
+  window.addEventListener('scroll', closeMenu, true);
+  window.addEventListener('resize', closeMenu);
+})();
+</script>

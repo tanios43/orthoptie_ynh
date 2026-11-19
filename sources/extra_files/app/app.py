@@ -5071,16 +5071,58 @@ def consultation_modifier(consultation_id):
                            cabinets_bilan=_cabinets_pour_bilan(c))
 
 
-def _cabinets_pour_bilan(c):
-    """Cabinets proposés pour un bilan : ceux du praticien du bilan (+ cabinet actuel)."""
-    pcs = PraticienCabinet.query.filter_by(praticien_id=c.praticien_id)\
+def _cabinets_pour_praticien(praticien_id, cabinet_actuel=None):
+    """Cabinets actifs du praticien (tous les actifs s'il n'en a aucun) + cabinet actuel."""
+    pcs = PraticienCabinet.query.filter_by(praticien_id=praticien_id)\
                                 .join(Cabinet).filter(Cabinet.actif == True).all()
     cabinets = [pc.cabinet for pc in pcs]
     if not cabinets:
         cabinets = Cabinet.query.filter_by(actif=True).all()
-    if c.cabinet and c.cabinet not in cabinets:
-        cabinets.append(c.cabinet)
+    if cabinet_actuel and cabinet_actuel not in cabinets:
+        cabinets.append(cabinet_actuel)
     return sorted(cabinets, key=lambda x: (x.nom or '').lower())
+
+
+def _cabinets_pour_bilan(c):
+    """Cabinets proposés pour un bilan : ceux du praticien du bilan (+ cabinet actuel)."""
+    return _cabinets_pour_praticien(c.praticien_id, c.cabinet)
+
+
+@app.template_global()
+def cabinets_options_json(praticien_id, cabinet_actuel=None):
+    """Liste JSON des cabinets proposables, pour le sélecteur de cabinet des séances."""
+    import json as _json
+    return _json.dumps([{'id': cb.id, 'nom': cb.nom, 'couleur': cb.couleur or '#1C2B3A'}
+                        for cb in _cabinets_pour_praticien(praticien_id, cabinet_actuel)])
+
+
+_SEANCE_MODELES = {
+    'amblyopie': lambda: SeanceAmblyopie,
+    'bv':        lambda: SeanceBV,
+    'nv':        lambda: SeanceNV,
+    'vb':        lambda: SeanceVB,
+}
+
+
+@app.route('/seance/<kind>/<int:seance_id>/cabinet', methods=['POST'])
+@login_required
+def seance_changer_cabinet(kind, seance_id):
+    """Change le cabinet d'une séance de suivi (AJAX). Ne touche à rien d'autre."""
+    from flask import jsonify
+    if kind not in _SEANCE_MODELES:
+        return jsonify({'ok': False, 'error': 'Type de séance inconnu'}), 404
+    seance = _SEANCE_MODELES[kind]().query.get_or_404(seance_id)
+    cab_id = request.form.get('cabinet_id', type=int)
+    cab = Cabinet.query.get(cab_id) if cab_id else None
+    if not cab:
+        return jsonify({'ok': False, 'error': 'Cabinet introuvable'}), 400
+    ancien = seance.cabinet_seance.nom if seance.cabinet_seance else '—'
+    seance.cabinet_id = cab.id
+    db.session.commit()
+    patient_id = getattr(seance.suivi, 'patient_id', None)
+    log_acces('changement_cabinet_seance', patient_id=patient_id,
+              detail=f'Séance {kind} n°{seance.numero} : {ancien} → {cab.nom}')
+    return jsonify({'ok': True, 'id': cab.id, 'nom': cab.nom, 'couleur': cab.couleur or '#1C2B3A'})
 
 
 @app.route('/consultation/<int:consultation_id>/cabinet', methods=['POST'])

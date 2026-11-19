@@ -34,6 +34,7 @@
 {% endblock %}
 
 {% block content %}
+{% include '_cabinet_picker.html' %}
 <form method="POST" id="form-suivi">
 
   {# En-tête — pleine largeur #}
@@ -178,15 +179,20 @@
               </span>
               {# Badge cabinet #}
               {% set cab_s = seance.cabinet_seance %}
-              {% if cab_s %}
-              {% set cc = cab_s.couleur or '#1C2B3A' %}
-              <span style="display:inline-flex;align-items:center;gap:3px;margin-top:3px;
-                           padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;
-                           background:{{ cc }}20;color:{{ cc }};
-                           border:1px solid {{ cc }}40;white-space:nowrap;">
-                🏥 {{ cab_s.nom | truncate(12, True, '…') }}
+              {% set cc = (cab_s.couleur if cab_s else none) or '#1C2B3A' %}
+              <span class="cab-picker" role="button" tabindex="0"
+                    title="{{ cab_s.nom ~ ' — ' if cab_s else '' }}cliquer pour changer de cabinet"
+                    data-url="{{ url_for('seance_changer_cabinet', kind='amblyopie', seance_id=seance.id) }}"
+                    data-cab-id="{{ cab_s.id if cab_s else '' }}"
+                    data-nom-complet="{{ cab_s.nom if cab_s else '' }}"
+                    data-trunc="12"
+                    data-options='{{ cabinets_options_json(seance.praticien_id or current_user.id, cab_s) }}'
+                    style="display:inline-flex;align-items:center;gap:3px;margin-top:3px;
+                           padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;white-space:nowrap;
+                           {% if cab_s %}background:{{ cc }}20;color:{{ cc }};border:1px solid {{ cc }}40;{% else %}background:none;color:var(--muted);border:1px dashed var(--border);{% endif %}">
+                🏥 <span class="cab-picker-nom">{{ cab_s.nom | truncate(12, True, '…') if cab_s else 'Cabinet ?' }}</span>
+                <span style="font-size:8px;opacity:.7;">▾</span>
               </span>
-              {% endif %}
               {# Champ caché pour conserver le praticien_id #}
               <input type="hidden" name="seance_{{ seance.id }}_praticien_id"
                      value="{{ seance.praticien_id or current_user.id }}">
