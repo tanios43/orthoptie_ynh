@@ -1,0 +1,21 @@
+name: Miroir vers Forgejo
+
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pousser vers Forgejo
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+        run: |
+          git remote add forgejo "https://tanios:${FORGEJO_TOKEN}@gitlab.cyps.ynh.fr/forgejo/tanios/orthoptie_ynh.git"
+          git push forgejo "${GITHUB_REF}"
