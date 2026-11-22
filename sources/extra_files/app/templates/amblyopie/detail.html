@@ -114,8 +114,8 @@
       <h2 style="color:#17457A;flex:1;">
         Évolution de l'acuité visuelle de loin
         <span style="font-size:11px;font-weight:400;opacity:.75;margin-left:8px;">
-          <span style="display:inline-block;width:14px;height:3px;background:#D32F2F;vertical-align:middle;border-radius:2px;"></span> OD
-          <span style="display:inline-block;width:14px;height:3px;background:#1E63C4;vertical-align:middle;border-radius:2px;margin-left:8px;"></span> OG
+          <span style="display:inline-block;width:14px;height:3px;background:#185FA5;vertical-align:middle;border-radius:2px;"></span> OD
+          <span style="display:inline-block;width:14px;height:3px;background:#A32D2D;vertical-align:middle;border-radius:2px;margin-left:8px;"></span> OG
         </span>
       </h2>
       <span id="ico-courbe-av" style="font-size:11px;opacity:.6;">▼</span>
@@ -801,7 +801,7 @@ setInterval(() => { if (_suiviSaveDirty) sauvegarderSuiviAjax(); }, 120000);
   const tip  = document.getElementById('av-chart-tip');
   const info = document.getElementById('av-chart-info');
   if (!box) return;
-  const COL = { od: '#D32F2F', og: '#1E63C4' };
+  const COL = { od: '#185FA5', og: '#A32D2D' };  // mêmes couleurs que les champs AV des séances
   const NS = 'http://www.w3.org/2000/svg';
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
