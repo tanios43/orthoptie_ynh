@@ -896,14 +896,25 @@ setInterval(() => { if (_suiviSaveDirty) sauvegarderSuiviAjax(); }, 120000);
     // Courbes
     ['od', 'og'].forEach(o => {
       if (pts[o].length < 2) return;
-      el('path', { d: pts[o].map((s, i) => (i ? 'L' : 'M') + x(+s.d) + ',' + y(s[o].far)).join(' '),
+      // Décalage de 1,5 px (OD au-dessus, OG au-dessous) : les deux courbes restent visibles quand elles se confondent
+      el('path', { d: pts[o].map((s, i) => (i ? 'L' : 'M') + x(+s.d) + ',' + (y(s[o].far) + (o === 'od' ? -1.5 : 1.5))).join(' '),
                    fill: 'none', stroke: COL[o], 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
     });
 
-    // Points pleins pour OD et OG
+    // Points pleins pour OD et OG (bicolores si valeurs identiques)
     ['od', 'og'].forEach(o => pts[o].forEach(s => {
       const cx = x(+s.d), cy = y(s[o].far);
-      el('circle', { cx, cy, r: 4.5, fill: COL[o] }, svg);
+      const egal = s.od.status === 'ok' && s.og.status === 'ok' && Math.abs(s.od.far - s.og.far) < 1e-9;
+      if (egal) {
+        // Même valeur OD et OG : point bicolore (moitié gauche OD, moitié droite OG), dessiné une seule fois
+        if (o === 'od') {
+          const R = 5.5;
+          el('path', { d: `M${cx},${cy - R} A${R},${R} 0 0 0 ${cx},${cy + R} Z`, fill: COL.od }, svg);
+          el('path', { d: `M${cx},${cy - R} A${R},${R} 0 0 1 ${cx},${cy + R} Z`, fill: COL.og }, svg);
+        }
+      } else {
+        el('circle', { cx, cy, r: 4.5, fill: COL[o] }, svg);
+      }
       const hit = el('circle', { cx, cy, r: 11, fill: 'transparent', style: 'cursor:pointer;' }, svg);
       const montre = () => {
         tip.innerHTML = `<div style="font-weight:600;margin-bottom:2px;">${esc(s.label)} — ${fmtDate(s.d)}</div>`
