@@ -2,6 +2,53 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <script>
+  /* Protection CSRF : ajoute le jeton de session à tout ce qui modifie des données,
+     sans avoir à toucher chaque page.
+     - formulaires POST (envoyés au clic ou par form.submit()) → champ caché csrf_token
+     - fetch POST/PUT/PATCH/DELETE vers l'appli → en-têtes X-CSRFToken et X-Requested-With */
+  (function () {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    var TOKEN = meta ? meta.content : '';
+    if (!TOKEN) return;
+    function memeOrigine(url) {
+      try { return new URL(url || location.href, location.href).origin === location.origin; }
+      catch (e) { return false; }
+    }
+    function ajouterJeton(form, submitter) {
+      if (!(form instanceof HTMLFormElement)) return;
+      var methode = (submitter && submitter.getAttribute('formmethod')) || form.getAttribute('method') || 'get';
+      var action  = (submitter && submitter.getAttribute('formaction')) || form.getAttribute('action');
+      if (methode.toLowerCase() !== 'post' || !memeOrigine(action)) return;
+      var champ = form.querySelector('input[name="csrf_token"]');
+      if (!champ) {
+        champ = document.createElement('input');
+        champ.type = 'hidden';
+        champ.name = 'csrf_token';
+        form.appendChild(champ);
+      }
+      champ.value = TOKEN;
+    }
+    document.addEventListener('submit', function (e) { ajouterJeton(e.target, e.submitter); }, true);
+    var submitOrigine = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function () { ajouterJeton(this); return submitOrigine.call(this); };
+
+    var fetchOrigine = window.fetch;
+    window.fetch = function (input, init) {
+      var estRequete = (typeof Request !== 'undefined') && input instanceof Request;
+      var methode = ((init && init.method) || (estRequete ? input.method : 'GET')).toUpperCase();
+      var url = estRequete ? input.url : String(input);
+      if (!/^(GET|HEAD|OPTIONS|TRACE)$/.test(methode) && memeOrigine(url)) {
+        var entetes = new Headers((init && init.headers) || (estRequete ? input.headers : undefined));
+        entetes.set('X-CSRFToken', TOKEN);
+        entetes.set('X-Requested-With', 'fetch');
+        init = Object.assign({}, init, { headers: entetes });
+      }
+      return fetchOrigine.call(this, input, init);
+    };
+  })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
@@ -930,8 +977,7 @@ const SESSION_PING_INTERVAL = 4 * 60 * 1000;
 let pingTimer = setInterval(sendPing, SESSION_PING_INTERVAL);
 
 function sendPing() {
-  fetch("{{ url_for('session_ping') }}", {method:'POST', credentials:'include',
-    headers:{'X-CSRFToken': ''}}).catch(() => {});
+  fetch("{{ url_for('session_ping') }}", {method:'POST', credentials:'include'}).catch(() => {});
 }
 
 // ── Polling badge messages non lus ──────────────────────────────────

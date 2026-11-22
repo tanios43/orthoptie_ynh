@@ -467,6 +467,52 @@ app.config['SESSION_COOKIE_SAMESITE']   = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = __import__('datetime').timedelta(minutes=30)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
+# ── Protection CSRF ─────────────────────────────────────────────────────────
+# Chaque requête qui modifie quelque chose (POST…) doit porter le jeton de la session :
+# champ caché « csrf_token » pour les formulaires, en-tête « X-CSRFToken » pour les fetch.
+# Les deux sont ajoutés automatiquement par le script de base.html.
+#
+# CSRF_MODE :
+#   'observation' → rien n'est bloqué ; chaque requête sans jeton valide est seulement notée
+#                   dans /var/log/orthoptie/orthoptie.log (lignes « [CSRF observation] »).
+#   'blocage'     → les requêtes sans jeton valide sont refusées.
+CSRF_MODE = 'observation'
+
+from flask_wtf.csrf import CSRFProtect, CSRFError
+app.config['WTF_CSRF_TIME_LIMIT'] = None   # jeton valable tant que la session l'est (pas 1 h fixe)
+app.config['WTF_CSRF_CHECK_DEFAULT'] = (CSRF_MODE == 'blocage')
+csrf = CSRFProtect(app)
+
+
+@app.before_request
+def csrf_observation():
+    """Mode observation : vérifie le jeton comme le ferait le blocage, mais laisse passer la requête."""
+    if CSRF_MODE != 'observation' or request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
+        return
+    vue = app.view_functions.get(request.endpoint) if request.endpoint else None
+    if vue is None or f'{vue.__module__}.{vue.__name__}' in getattr(csrf, '_exempt_views', set()):
+        return   # route inconnue (404) ou exclue (WOPI)
+    try:
+        csrf.protect()
+    except CSRFError as e:
+        qui = getattr(current_user, 'login', None) if current_user.is_authenticated else 'non connecté'
+        app.logger.warning(
+            f'[CSRF observation] {request.method} {request.path} — {e.description} — '
+            f'page : {request.referrer or "inconnue"} — utilisateur : {qui} (requête acceptée)')
+
+
+@app.errorhandler(CSRFError)
+def csrf_refuse(e):
+    """Requête refusée faute de jeton CSRF valide (session expirée, page trop ancienne…)."""
+    app.logger.warning(f'CSRF refusé : {request.method} {request.path} — {e.description}')
+    message = ("La page était trop ancienne ou votre session a expiré : l'action n'a pas été "
+               "enregistrée. Rechargez la page et recommencez.")
+    if request.headers.get('X-Requested-With') == 'fetch' or request.is_json:
+        return jsonify({'ok': False, 'error': 'csrf', 'message': message}), 400
+    flash(message, 'danger')
+    retour = request.referrer if request.referrer and request.referrer.startswith(request.host_url) else None
+    return redirect(retour or url_for('index'))
+
 # ── Configuration WOPI / Collabora ──────────────────────────────────────────
 # URL publique de CE serveur Flask (accessible par Collabora)
 # Exemples :
@@ -8704,6 +8750,7 @@ def ordo_telecharger(token):
 
 
 @app.route('/wopi/files/<token>')
+@csrf.exempt   # appelée par le serveur Collabora, protégée par son propre jeton WOPI
 def wopi_check_file_info(token):
     """WOPI CheckFileInfo — retourne les métadonnées du fichier."""
     # Accepter aussi le token depuis access_token en query string
@@ -8748,6 +8795,7 @@ def wopi_check_file_info(token):
 
 
 @app.route('/wopi/files/<token>/contents', methods=['GET', 'POST'])
+@csrf.exempt   # appelée par le serveur Collabora, protégée par son propre jeton WOPI
 def wopi_file_contents(token):
     """WOPI GetFile / PutFile — lit ou écrit le fichier."""
     sess = WopiSession.query.filter_by(token=token).first_or_404()
@@ -8848,6 +8896,7 @@ def wopi_file_contents(token):
 
 
 @app.route('/wopi/files/<token>', methods=['POST'])
+@csrf.exempt   # appelée par le serveur Collabora, protégée par son propre jeton WOPI
 def wopi_file_lock(token):
     """WOPI Lock/Unlock/RefreshLock — nécessaire pour Collabora."""
     override = request.headers.get('X-WOPI-Override', '')

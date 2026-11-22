@@ -43,7 +43,8 @@
 
   // Déclencher le redémarrage depuis cette page (nouvelle requête HTTP)
   setTimeout(() => {
-    fetch('/admin/sauvegarde/trigger-restart', { method: 'POST', credentials: 'include' })
+    fetch('/admin/sauvegarde/trigger-restart', { method: 'POST', credentials: 'include',
+                                                   headers: { 'X-CSRFToken': '{{ csrf_token() }}', 'X-Requested-With': 'fetch' } })
       .catch(() => {});
   }, 1000);
 
