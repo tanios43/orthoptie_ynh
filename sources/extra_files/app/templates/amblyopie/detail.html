@@ -900,12 +900,10 @@ setInterval(() => { if (_suiviSaveDirty) sauvegarderSuiviAjax(); }, 120000);
                    fill: 'none', stroke: COL[o], 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
     });
 
-    // Points : OD plein, OG cerclé (visibles même superposés)
+    // Points pleins pour OD et OG
     ['od', 'og'].forEach(o => pts[o].forEach(s => {
       const cx = x(+s.d), cy = y(s[o].far);
-      el('circle', o === 'od'
-        ? { cx, cy, r: 4.5, fill: COL.od }
-        : { cx, cy, r: 4.5, fill: 'var(--surface)', stroke: COL.og, 'stroke-width': 2 }, svg);
+      el('circle', { cx, cy, r: 4.5, fill: COL[o] }, svg);
       const hit = el('circle', { cx, cy, r: 11, fill: 'transparent', style: 'cursor:pointer;' }, svg);
       const montre = () => {
         tip.innerHTML = `<div style="font-weight:600;margin-bottom:2px;">${esc(s.label)} — ${fmtDate(s.d)}</div>`
