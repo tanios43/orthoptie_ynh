@@ -108,6 +108,27 @@
     </div>
   </div>
 
+  {# Courbe d'évolution de l'acuité visuelle de loin #}
+  <div class="card" style="margin-bottom:14px;overflow:hidden;">
+    <div class="card-header" style="background:#E8F1FB;color:#17457A;cursor:pointer;" onclick="toggle('courbe-av')">
+      <h2 style="color:#17457A;flex:1;">
+        Évolution de l'acuité visuelle de loin
+        <span style="font-size:11px;font-weight:400;opacity:.75;margin-left:8px;">
+          <span style="display:inline-block;width:14px;height:3px;background:#D32F2F;vertical-align:middle;border-radius:2px;"></span> OD
+          <span style="display:inline-block;width:14px;height:3px;background:#1E63C4;vertical-align:middle;border-radius:2px;margin-left:8px;"></span> OG
+        </span>
+      </h2>
+      <span id="ico-courbe-av" style="font-size:11px;opacity:.6;">▼</span>
+    </div>
+    <div class="card-body" id="sec-courbe-av" style="position:relative;">
+      <div id="av-chart" style="width:100%;"></div>
+      <div id="av-chart-tip" style="display:none;position:absolute;pointer-events:none;z-index:20;
+           background:var(--surface);border:1px solid var(--border);border-radius:6px;
+           box-shadow:0 4px 14px rgba(0,0,0,.15);padding:6px 9px;font-size:12px;color:var(--text);white-space:nowrap;"></div>
+      <div id="av-chart-info" style="font-size:11px;color:var(--muted);margin-top:6px;"></div>
+    </div>
+  </div>
+
   {# Tableau des séances — pleine largeur #}
   <div class="card" style="margin-bottom:14px;overflow:hidden;">
     <div class="card-header" style="background:#EEEDFE;color:#3C3489;">
@@ -475,7 +496,7 @@ function copierSeancePrecedente(idCible, idSource) {
 
     // Input simple (av_od, av_og) — texte brut
     const input = document.querySelector(`input[name="seance_${idCible}_${field}"]:not([type="hidden"])`);
-    if (input) { input.value = val; return; }
+    if (input) { input.value = val; input.dispatchEvent(new Event('input', { bubbles: true })); return; }
 
     // Champ WYSIWYG — copier le HTML du div source + la valeur markdown du hidden source
     const srcDiv    = document.getElementById(`wy-amb-${idSource}-${field}`);
@@ -742,6 +763,176 @@ setInterval(() => { if (_suiviSaveDirty) sauvegarderSuiviAjax(); }, 120000);
   });
   document.addEventListener('DOMContentLoaded', updateFloat);
   setTimeout(updateFloat, 200);
+})();
+
+// ── Courbe d'évolution de l'acuité visuelle de loin ─────────────
+(function () {
+  /* Lecture tolérante d'une AV en texte libre.
+     8/10, 8/10f, 8/10ff, 8/10+, 7/10 lent, 10/10 rapide, 1/20 → fraction ; "9", "10" → dixièmes ;
+     "0,8" → acuité décimale ; CLD, VBLM → 0/10 ; P2 / R3 (près) → ignoré pour la courbe, affiché au survol. */
+  function parseAV(raw) {
+    const r = { raw: (raw || '').trim(), far: null, near: null, status: 'empty' };
+    if (!r.raw) return r;
+    let s = r.raw.toLowerCase().replace(/,/g, '.');
+    const mNear = s.match(/(^|[^a-z])([pr])\s*(\d+(?:\.\d+)?)/);
+    if (mNear) {
+      r.near = mNear[2].toUpperCase() + mNear[3];
+      s = s.slice(0, mNear.index) + mNear[1] + ' ' + s.slice(mNear.index + mNear[0].length);
+    }
+    const mFrac = s.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+    if (mFrac) {
+      const den = parseFloat(mFrac[2]);
+      if (den > 0) r.far = parseFloat(mFrac[1]) / den * 10;
+    } else if (/(^|[^a-z])(cld|vblm)([^a-z]|$)/.test(s)) {
+      r.far = 0;   // CLD (compte les doigts), VBLM (voit bouger la main) → 0/10
+    } else {
+      const mNum = s.trim().match(/^(\d+(?:\.\d+)?)(?![\d.]|\s*\/)/);
+      if (mNum) {
+        const v = parseFloat(mNum[1]);
+        r.far = (mNum[1].includes('.') && v <= 2) ? v * 10 : v;
+      }
+    }
+    if (r.far !== null && !(r.far >= 0 && r.far <= 20)) r.far = null;
+    r.status = r.far !== null ? 'ok' : (r.near ? 'near' : 'unknown');
+    return r;
+  }
+
+  const box  = document.getElementById('av-chart');
+  const tip  = document.getElementById('av-chart-tip');
+  const info = document.getElementById('av-chart-info');
+  if (!box) return;
+  const COL = { od: '#D32F2F', og: '#1E63C4' };
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function val(name) { const el = document.querySelector('[name="' + name + '"]'); return el ? el.value : ''; }
+  function fmtDate(d) { return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+  function fmtAV(v) { return (Math.round(v * 100) / 100).toString().replace('.', ',') + '/10'; }
+
+  function collecte() {
+    const sources = [];
+    sources.push({ label: 'Bilan initial', date: val('date_bilan'),
+                   od: parseAV(val('av_od_init')), og: parseAV(val('av_og_init')) });
+    document.querySelectorAll('input[name$="_av_od"][name^="seance_"]').forEach(inp => {
+      const id = inp.name.match(/^seance_(\d+)_av_od$/);
+      if (!id) return;
+      const tr = inp.closest('tr');
+      const num = tr ? tr.querySelector('td').textContent.trim() : '';
+      sources.push({ label: 'Séance ' + num, date: val('seance_' + id[1] + '_date'),
+                     od: parseAV(inp.value), og: parseAV(val('seance_' + id[1] + '_av_og')) });
+    });
+    sources.forEach(s => { s.d = s.date ? new Date(s.date + 'T12:00:00') : null; });
+    return sources;
+  }
+
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  function ligneTip(oeil, p) {
+    if (p.status === 'empty') return `<div><b style="color:${COL[oeil]}">${oeil.toUpperCase()}</b> : <span style="color:var(--muted)">—</span></div>`;
+    const lu = p.status === 'ok' ? ` <span style="color:var(--muted)">(${fmtAV(p.far)})</span>` : '';
+    return `<div><b style="color:${COL[oeil]}">${oeil.toUpperCase()}</b> : ${esc(p.raw)}${lu}</div>`;
+  }
+
+  function dessine() {
+    const sources = collecte();
+    const datees = sources.filter(s => s.d && !isNaN(s.d)).sort((a, b) => a.d - b.d);
+    const pts = { od: [], og: [] };
+    datees.forEach(s => ['od', 'og'].forEach(o => { if (s[o].status === 'ok') pts[o].push(s); }));
+
+    // Ligne d'information : valeurs non reconnues / séances sans date
+    const msgs = [];
+    const nonReconnus = [];
+    sources.forEach(s => ['od', 'og'].forEach(o => {
+      if (s[o].status === 'unknown') nonReconnus.push(`${s.label} ${o.toUpperCase()} « ${esc(s[o].raw)} »`);
+    }));
+    const sansDate = sources.filter(s => (!s.d || isNaN(s.d)) && (s.od.status === 'ok' || s.og.status === 'ok'));
+    if (nonReconnus.length) msgs.push(`⚠ ${nonReconnus.length} valeur${nonReconnus.length > 1 ? 's' : ''} non reconnue${nonReconnus.length > 1 ? 's' : ''} : ${nonReconnus.join(', ')}`);
+    if (sansDate.length) msgs.push(`${sansDate.map(s => s.label).join(', ')} sans date : non tracé${sansDate.length > 1 ? 'es' : 'e'}`);
+    info.innerHTML = msgs.join('<br>');
+
+    box.innerHTML = '';
+    if (!pts.od.length && !pts.og.length) {
+      box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:13px;">Aucune acuité de loin reconnue pour l\'instant.</div>';
+      return;
+    }
+
+    const W = Math.max(box.clientWidth, 280), H = 230;
+    const m = { l: 44, r: 18, t: 12, b: 30 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const tous = pts.od.concat(pts.og);
+    const maxV = Math.max(10, ...tous.map(s => Math.max(s.od.far || 0, s.og.far || 0)));
+    const yMax = Math.ceil(maxV / 2) * 2;
+    const t0 = Math.min(...tous.map(s => +s.d)), t1 = Math.max(...tous.map(s => +s.d));
+    const pad = 16;  // marge intérieure pour que les points ne touchent pas les bords
+    const x = d => t1 === t0 ? m.l + pw / 2 : m.l + pad + (d - t0) / (t1 - t0) * (pw - 2 * pad);
+    const y = v => m.t + ph - v / yMax * ph;
+
+    const svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, style: 'display:block;font-family:inherit;' }, box);
+
+    // Grille horizontale et graduations
+    for (let v = 0; v <= yMax; v += 2) {
+      el('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: 'var(--border)', 'stroke-width': v === 10 ? 1.2 : 0.7,
+                   'stroke-dasharray': v === 10 ? '' : '3 3' }, svg);
+      const t = el('text', { x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--muted)' }, svg);
+      t.textContent = v + '/10';
+    }
+
+    // Dates en abscisse (allégées si trop nombreuses)
+    const dates = [...new Map(tous.map(s => [+s.d, s.d])).values()].sort((a, b) => a - b);
+    const maxLbl = Math.max(2, Math.floor(pw / 70));
+    const pas = Math.ceil(dates.length / maxLbl);
+    dates.forEach((d, i) => {
+      if (i % pas !== 0 && i !== dates.length - 1) return;
+      const ancre = dates.length > 1 && i === dates.length - 1 && x(+d) > W - m.r - 30 ? 'end' : 'middle';
+      const t = el('text', { x: ancre === 'end' ? Math.min(x(+d) + 8, W - 2) : x(+d), y: H - 10, 'text-anchor': ancre, 'font-size': 10, fill: 'var(--muted)' }, svg);
+      t.textContent = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    });
+
+    // Courbes
+    ['od', 'og'].forEach(o => {
+      if (pts[o].length < 2) return;
+      el('path', { d: pts[o].map((s, i) => (i ? 'L' : 'M') + x(+s.d) + ',' + y(s[o].far)).join(' '),
+                   fill: 'none', stroke: COL[o], 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+    });
+
+    // Points : OD plein, OG cerclé (visibles même superposés)
+    ['od', 'og'].forEach(o => pts[o].forEach(s => {
+      const cx = x(+s.d), cy = y(s[o].far);
+      el('circle', o === 'od'
+        ? { cx, cy, r: 4.5, fill: COL.od }
+        : { cx, cy, r: 4.5, fill: 'var(--surface)', stroke: COL.og, 'stroke-width': 2 }, svg);
+      const hit = el('circle', { cx, cy, r: 11, fill: 'transparent', style: 'cursor:pointer;' }, svg);
+      const montre = () => {
+        tip.innerHTML = `<div style="font-weight:600;margin-bottom:2px;">${esc(s.label)} — ${fmtDate(s.d)}</div>`
+                      + ligneTip('od', s.od) + ligneTip('og', s.og);
+        tip.style.display = 'block';
+        const bw = box.parentElement.clientWidth;
+        let left = box.offsetLeft + cx + 12;
+        if (left + tip.offsetWidth > bw - 4) left = box.offsetLeft + cx - tip.offsetWidth - 12;
+        tip.style.left = Math.max(4, left) + 'px';
+        tip.style.top  = Math.max(4, box.offsetTop + cy - tip.offsetHeight / 2) + 'px';
+      };
+      hit.addEventListener('mouseenter', montre);
+      hit.addEventListener('click', montre);
+      hit.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+    }));
+  }
+
+  // Redessin en direct quand on modifie une date ou une acuité
+  let timer = null;
+  const relance = () => { clearTimeout(timer); timer = setTimeout(dessine, 250); };
+  document.addEventListener('input', e => {
+    const n = e.target.name || '';
+    if (/^seance_\d+_(av_od|av_og|date)$/.test(n) || ['date_bilan', 'av_od_init', 'av_og_init'].includes(n)) relance();
+  });
+  window.addEventListener('resize', relance);
+  document.addEventListener('click', e => { if (!e.target.closest('#av-chart')) tip.style.display = 'none'; });
+  dessine();
 })();
 </script>
 {% endblock %}
