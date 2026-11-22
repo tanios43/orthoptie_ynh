@@ -46,12 +46,21 @@
       it.addEventListener('click', e => { e.stopPropagation(); choisir(badge, o); });
     });
 
-    const r = badge.getBoundingClientRect();
     menu.style.display = 'block';
-    const left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8);
-    menu.style.left = Math.max(8, left) + 'px';
-    menu.style.top  = (r.bottom + 4) + 'px';
     current = badge;
+    placer();
+  }
+
+  // Place le menu sous le badge (au-dessus s'il manque de la place en bas).
+  // Au défilement, le menu suit son badge ; il ne se ferme que si le badge sort de l'écran.
+  function placer() {
+    if (!current) return;
+    const r = current.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > window.innerHeight) { closeMenu(); return; }
+    const h = menu.offsetHeight;
+    const enHaut = r.bottom + 4 + h > window.innerHeight && r.top - 4 - h > 0;
+    menu.style.top  = (enHaut ? r.top - 4 - h : r.bottom + 4) + 'px';
+    menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8)) + 'px';
   }
 
   async function choisir(badge, o) {
@@ -93,7 +102,7 @@
     const badge = e.target.closest && e.target.closest('.cab-picker');
     if (badge && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); badge.click(); }
   });
-  window.addEventListener('scroll', closeMenu, true);
-  window.addEventListener('resize', closeMenu);
+  window.addEventListener('scroll', placer, true);
+  window.addEventListener('resize', placer);
 })();
 </script>

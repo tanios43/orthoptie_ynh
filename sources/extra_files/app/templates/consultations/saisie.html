@@ -66,10 +66,16 @@
 
       function closeMenu() { menu.style.display = 'none'; }
       function openMenu() {
-        const r = badge.getBoundingClientRect();
-        menu.style.top  = (r.bottom + 4) + 'px';
-        menu.style.left = r.left + 'px';
         menu.style.display = 'block';
+        placer();
+      }
+      // Au défilement, le menu suit le badge ; il ne se ferme que si le badge sort de l'écran
+      function placer() {
+        if (menu.style.display !== 'block') return;
+        const r = badge.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) { closeMenu(); return; }
+        menu.style.top  = (r.bottom + 4) + 'px';
+        menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8)) + 'px';
       }
       badge.addEventListener('click', e => {
         e.stopPropagation();
@@ -80,8 +86,8 @@
       });
       document.addEventListener('click', e => { if (!menu.contains(e.target)) closeMenu(); });
       document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-      window.addEventListener('scroll', closeMenu, true);
-      window.addEventListener('resize', closeMenu);
+      window.addEventListener('scroll', placer, true);
+      window.addEventListener('resize', placer);
 
       menu.querySelectorAll('.cab-menu-item').forEach(item => {
         item.addEventListener('click', async e => {
