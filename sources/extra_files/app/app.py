@@ -6389,6 +6389,67 @@ def inject_cabinet():
     return {'cabinet_courant': None, 'cabinets_dispo': []}
 
 
+SECTIONS_DEFAUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sections_defaut')
+
+# Sections natives indispensables, ajoutées aussi aux installations existantes si elles manquent
+SECTIONS_NATIVES_REQUISES = ('courrier', 'prescription')
+
+
+def installer_sections_defaut(types=None):
+    """Crée les sections du modèle sections_defaut/sections_def.json absentes de la base.
+
+    Le modèle est l'export (Admin → Sections → Exporter) des sections de référence :
+    sections, champs, options, réglages et fichiers joints sont recréés à l'identique.
+    types : liste de type_key à créer (None = toutes les sections du modèle).
+    Une section déjà présente (même type_key) n'est jamais modifiée.
+    Retourne la liste des type_key créés.
+    """
+    import json, shutil
+    chemin = os.path.join(SECTIONS_DEFAUT_DIR, 'sections_def.json')
+    if not os.path.exists(chemin):
+        return []
+    with open(chemin, encoding='utf-8') as f:
+        data = json.load(f)
+    existants = {s.type_key for s in SectionDef.query.all()}
+    dossier_fichiers = os.path.join(app.config['UPLOAD_FOLDER'], 'section_def')
+    crees = []
+    for s in data.get('sections', []):
+        key = (s.get('type_key') or '').strip()
+        if not key or key in existants or (types is not None and key not in types):
+            continue
+        sd = SectionDef(type_key=key, label=s.get('label', key), ordre=s.get('ordre', 99),
+                        builtin=bool(s.get('builtin')), actif=s.get('actif', True),
+                        obs_defaut=s.get('obs_defaut', ''),
+                        avec_observations=s.get('avec_observations', True),
+                        categorie=s.get('categorie', ''), nb_colonnes=s.get('nb_colonnes', 2))
+        db.session.add(sd)
+        db.session.flush()
+        for i, c in enumerate(s.get('champs', [])):
+            cd = ChampDef(section_id=sd.id, name=c['name'], label=c['label'],
+                          type=c.get('type', 'text'), ordre=c.get('ordre', i))
+            db.session.add(cd)
+            db.session.flush()
+            for j, valeur in enumerate(c.get('options', [])):
+                db.session.add(OptionDef(champ_id=cd.id, valeur=valeur, ordre=j))
+        for fd in s.get('fichiers', []):
+            nom = os.path.basename(fd.get('nom_stocke', ''))
+            source = os.path.join(SECTIONS_DEFAUT_DIR, 'fichiers', nom)
+            if not nom or not os.path.exists(source):
+                continue
+            os.makedirs(dossier_fichiers, exist_ok=True)
+            cible = os.path.join(dossier_fichiers, nom)
+            if not os.path.exists(cible):
+                shutil.copyfile(source, cible)
+            db.session.add(SectionDefFichier(section_def_id=sd.id,
+                                             nom_original=fd.get('nom_original', nom), nom_stocke=nom,
+                                             type_fichier=fd.get('type_fichier', 'pdf'),
+                                             titre=fd.get('titre', ''), ordre=fd.get('ordre', 0)))
+        existants.add(key)
+        crees.append(key)
+    db.session.commit()
+    return crees
+
+
 def init_db():
     with app.app_context():
         db.create_all()
@@ -6399,7 +6460,8 @@ def init_db():
             db.session.add(p); db.session.commit()
             print('Praticien admin créé : login=marie.dupont  mot de passe=admin')
             print('⚠  Changez ce mot de passe dès la première connexion !')
-        if not SectionDef.query.first():
+        if not SectionDef.query.first() and not installer_sections_defaut():
+            # Secours si le modèle sections_defaut/ est absent
             for ordre, (key, label, champs) in enumerate(BUILTIN_SECTIONS):
                 sd = SectionDef(type_key=key, label=label, ordre=ordre, builtin=True)
                 db.session.add(sd); db.session.flush()

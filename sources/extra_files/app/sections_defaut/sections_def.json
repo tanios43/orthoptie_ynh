@@ -1,0 +1,2485 @@
+{
+ "version": 2,
+ "type": "sections_def",
+ "sections": [
+  {
+   "type_key": "anam",
+   "label": "Anamnèse",
+   "ordre": 0,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "anamnese",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "entretien",
+     "label": "Entretien",
+     "type": "textarea",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "plan_general",
+     "label": "Plan général",
+     "type": "textarea",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "antecedents",
+     "label": "Antécédents",
+     "type": "textarea",
+     "ordre": 2,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "correction_portee",
+   "label": "Correction portée",
+   "ordre": 1,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "refraction",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "od_sph",
+     "label": "OD sphère",
+     "type": "sph",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "od_cyl",
+     "label": "OD cylindre",
+     "type": "sph",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "od_axe",
+     "label": "OD axe",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "og_sph",
+     "label": "OG sphère",
+     "type": "sph",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "og_cyl",
+     "label": "OG cylindre",
+     "type": "sph",
+     "ordre": 4,
+     "options": []
+    },
+    {
+     "name": "og_axe",
+     "label": "OG axe",
+     "type": "text",
+     "ordre": 5,
+     "options": []
+    },
+    {
+     "name": "od_add",
+     "label": "Add OD",
+     "type": "number",
+     "ordre": 6,
+     "options": []
+    },
+    {
+     "name": "og_add",
+     "label": "Add OG",
+     "type": "number",
+     "ordre": 7,
+     "options": []
+    },
+    {
+     "name": "test_sph",
+     "label": "test sph",
+     "type": "sph",
+     "ordre": 8,
+     "options": []
+    },
+    {
+     "name": "prisme_od",
+     "label": "Prisme OD",
+     "type": "text",
+     "ordre": 8,
+     "options": []
+    },
+    {
+     "name": "prisme_og",
+     "label": "Prisme OG",
+     "type": "text",
+     "ordre": 9,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "refraction_obj",
+   "label": "Réfraction objective",
+   "ordre": 2,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "refraction",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "od_sph",
+     "label": "OD sphère",
+     "type": "sph",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "od_cyl",
+     "label": "OD cylindre",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "od_axe",
+     "label": "OD axe",
+     "type": "number",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "og_sph",
+     "label": "OG sphère",
+     "type": "sph",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "og_cyl",
+     "label": "OG cylindre",
+     "type": "text",
+     "ordre": 4,
+     "options": []
+    },
+    {
+     "name": "og_axe",
+     "label": "OG axe",
+     "type": "number",
+     "ordre": 5,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "frontofocometrie",
+   "label": "Frontofocométrie",
+   "ordre": 3,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "refraction",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "od_sph",
+     "label": "OD sphère",
+     "type": "sph",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "od_cyl",
+     "label": "OD cylindre",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "od_axe",
+     "label": "OD axe",
+     "type": "number",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "od_add",
+     "label": "Add OD",
+     "type": "number",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "og_sph",
+     "label": "OG sphère",
+     "type": "sph",
+     "ordre": 4,
+     "options": []
+    },
+    {
+     "name": "og_cyl",
+     "label": "OG cylindre",
+     "type": "text",
+     "ordre": 5,
+     "options": []
+    },
+    {
+     "name": "og_axe",
+     "label": "OG axe",
+     "type": "number",
+     "ordre": 6,
+     "options": []
+    },
+    {
+     "name": "og_add",
+     "label": "Add OG",
+     "type": "number",
+     "ordre": 7,
+     "options": []
+    },
+    {
+     "name": "prisme_od",
+     "label": "Prisme OD",
+     "type": "text",
+     "ordre": 8,
+     "options": []
+    },
+    {
+     "name": "prisme_og",
+     "label": "Prisme OG",
+     "type": "text",
+     "ordre": 9,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "acuite",
+   "label": "Acuité visuelle",
+   "ordre": 4,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "acuite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "av_bino",
+     "label": "Binoculaire",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "10/10",
+      "9/10",
+      "8/10",
+      "7/10",
+      "6/10",
+      "5/10",
+      "4/10",
+      "3/10",
+      "2/10",
+      "1/10"
+     ]
+    },
+    {
+     "name": "av_correction",
+     "label": "Correction",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "sans correction",
+      "avec la correction portée",
+      "avec correction habituelle",
+      "avec correction optimale",
+      "avec addition"
+     ]
+    },
+    {
+     "name": "av_od_loin",
+     "label": "OD de loin",
+     "type": "select",
+     "ordre": 2,
+     "options": [
+      "10/10",
+      "9/10",
+      "8/10",
+      "7/10",
+      "6/10",
+      "5/10",
+      "4/10",
+      "3/10",
+      "2/10",
+      "1/10"
+     ]
+    },
+    {
+     "name": "av_od_pres",
+     "label": "OD de près",
+     "type": "select",
+     "ordre": 3,
+     "options": [
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6",
+      "P8",
+      "P10",
+      "P14"
+     ]
+    },
+    {
+     "name": "av_og_loin",
+     "label": "OG de loin",
+     "type": "select",
+     "ordre": 4,
+     "options": [
+      "10/10",
+      "9/10",
+      "8/10",
+      "7/10",
+      "6/10",
+      "5/10",
+      "4/10",
+      "3/10",
+      "2/10",
+      "1/10"
+     ]
+    },
+    {
+     "name": "av_og_pres",
+     "label": "OG de près",
+     "type": "select",
+     "ordre": 5,
+     "options": [
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6",
+      "P8",
+      "P10",
+      "P14"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "grille_de_amsler",
+   "label": "Grille de Amsler",
+   "ordre": 5,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "acuite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "od",
+     "label": "OD",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "og",
+     "label": "OG",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    }
+   ],
+   "fichiers": [
+    {
+     "nom_original": "Grille-Amsler.pdf",
+     "nom_stocke": "secdef_45_220a90e6.pdf",
+     "type_fichier": "pdf",
+     "titre": "Grille Amsler",
+     "ordre": 0
+    }
+   ]
+  },
+  {
+   "type_key": "refraction_subj",
+   "label": "Réfraction subjective",
+   "ordre": 6,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "refraction",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "od_sph",
+     "label": "OD sphère",
+     "type": "sph",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "od_cyl",
+     "label": "OD cylindre",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "od_axe",
+     "label": "OD axe",
+     "type": "number",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "og_sph",
+     "label": "OG sphère",
+     "type": "sph",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "og_cyl",
+     "label": "OG cylindre",
+     "type": "text",
+     "ordre": 4,
+     "options": []
+    },
+    {
+     "name": "og_axe",
+     "label": "OG axe",
+     "type": "number",
+     "ordre": 5,
+     "options": []
+    },
+    {
+     "name": "od_av_loin",
+     "label": "AV OD de loin",
+     "type": "select",
+     "ordre": 6,
+     "options": [
+      "10/10",
+      "9/10",
+      "8/10",
+      "7/10",
+      "6/10",
+      "5/10",
+      "4/10",
+      "3/10",
+      "2/10",
+      "1/10"
+     ]
+    },
+    {
+     "name": "od_av_pres",
+     "label": "AV OD de près",
+     "type": "select",
+     "ordre": 7,
+     "options": [
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6",
+      "P8",
+      "P10",
+      "P14"
+     ]
+    },
+    {
+     "name": "og_av_loin",
+     "label": "AV OG de loin",
+     "type": "select",
+     "ordre": 8,
+     "options": [
+      "10/10",
+      "9/10",
+      "8/10",
+      "7/10",
+      "6/10",
+      "5/10",
+      "4/10",
+      "3/10",
+      "2/10",
+      "1/10"
+     ]
+    },
+    {
+     "name": "og_av_pres",
+     "label": "AV OG de près",
+     "type": "select",
+     "ordre": 9,
+     "options": [
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6",
+      "P8",
+      "P10",
+      "P14"
+     ]
+    },
+    {
+     "name": "od_add",
+     "label": "Add OD",
+     "type": "number",
+     "ordre": 10,
+     "options": []
+    },
+    {
+     "name": "og_add",
+     "label": "Add OG",
+     "type": "number",
+     "ordre": 11,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "swaine",
+   "label": "Swaine inverse",
+   "ordre": 7,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "refraction",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "swaine_od",
+     "label": "OD",
+     "type": "text",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "swaine_og",
+     "label": "OG",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "stereoscopie",
+   "label": "Vision stéréoscopique",
+   "ordre": 8,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "stereoscopie",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "tno",
+     "label": "TNO (norme ≤60\")",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "480'' d'arc",
+      "240'' d'arc",
+      "120'' d'arc",
+      "60'' d'arc",
+      "30'' d'arc",
+      "15'' d'arc",
+      "non réalisable"
+     ]
+    },
+    {
+     "name": "lang",
+     "label": "Lang",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "positif",
+      "négatif",
+      "non réalisable"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "cover",
+   "label": "Examen sous écran",
+   "ordre": 9,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "correction",
+     "label": "Correction",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "Avec",
+      "Sans"
+     ]
+    },
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "spacer",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "cover_loin",
+     "label": "Cover test de loin",
+     "type": "select",
+     "ordre": 2,
+     "options": [
+      "orthophorie",
+      "ésophorie",
+      "exophorie",
+      "hypophorie OD",
+      "hyperphorie OD",
+      "ésotropie",
+      "exotropie",
+      "hypertropie OD",
+      "hypertropie OG"
+     ]
+    },
+    {
+     "name": "cover_pres",
+     "label": "Cover test de près",
+     "type": "select",
+     "ordre": 3,
+     "options": [
+      "orthophorie",
+      "ésophorie",
+      "exophorie",
+      "hypophorie OD",
+      "hyperphorie OD",
+      "ésotropie",
+      "exotropie",
+      "hypertropie OD",
+      "hypertropie OG",
+      "reflets centrés, je ne vois pas de strabisme de grand angle"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "rapport_aca",
+   "label": "Rapport Accommodation / Convergence",
+   "ordre": 10,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "motilite",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "rapport_aca",
+     "label": "Rapport AC/A",
+     "type": "aca",
+     "ordre": 0,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "rapport_accommodation_convergence",
+   "label": "Rapport accommodation / convergence",
+   "ordre": 11,
+   "builtin": false,
+   "actif": false,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "dist_interpupillaire",
+     "label": "Dist. interpupillaire",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "ac_a",
+     "label": "AC/A",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "maddox",
+   "label": "Maddox",
+   "ordre": 12,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "correction",
+     "label": "Correction",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "Avec",
+      "Sans"
+     ]
+    },
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "spacer",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "maddox_loin",
+     "label": "De loin",
+     "type": "select",
+     "ordre": 2,
+     "options": [
+      "orthophorie",
+      "ésophorie",
+      "exophorie",
+      "hypophorie",
+      "hyperphorie",
+      "cyclophorie"
+     ]
+    },
+    {
+     "name": "maddox_pres",
+     "label": "De près",
+     "type": "select",
+     "ordre": 3,
+     "options": [
+      "orthophorie",
+      "ésophorie",
+      "exophorie",
+      "hypophorie",
+      "hyperphorie",
+      "cyclophorie"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "motilite",
+   "label": "Motilité",
+   "ordre": 13,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "motilite",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "motilite",
+     "label": "",
+     "type": "textarea",
+     "ordre": 0,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "ppc",
+   "label": "PPC",
+   "ordre": 14,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "motilite",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "ppc_cm",
+     "label": "Suit jusqu'à (norme ≤5cm)",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "1 cm du nez",
+      "2 cm du nez",
+      "3 cm du nez",
+      "4 cm du nez",
+      "5 cm du nez",
+      "6 cm du nez",
+      "7 cm du nez",
+      "8 cm du nez",
+      "9 cm du nez",
+      "10 cm du nez",
+      ">10 cm du nez",
+      "non réalisé"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "deviometrie",
+   "label": "Déviometrie",
+   "ordre": 15,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 3,
+   "champs": [
+    {
+     "name": "haut_droit",
+     "label": "Haut Droit",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "haut",
+     "label": "Haut",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "haut_gauche",
+     "label": "Haut Gauche",
+     "type": "text",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "droit",
+     "label": "Droit",
+     "type": "text",
+     "ordre": 4,
+     "options": []
+    },
+    {
+     "name": "centre",
+     "label": "Centre",
+     "type": "text",
+     "ordre": 5,
+     "options": []
+    },
+    {
+     "name": "gauche",
+     "label": "Gauche",
+     "type": "text",
+     "ordre": 6,
+     "options": []
+    },
+    {
+     "name": "bas_droit",
+     "label": "Bas Droit",
+     "type": "text",
+     "ordre": 7,
+     "options": []
+    },
+    {
+     "name": "bas",
+     "label": "Bas",
+     "type": "text",
+     "ordre": 8,
+     "options": []
+    },
+    {
+     "name": "bas_gauche",
+     "label": "Bas Gauche",
+     "type": "text",
+     "ordre": 9,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "angle",
+   "label": "Angle objectif",
+   "ordre": 16,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "angle_loin",
+     "label": "De loin",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "orthotropie",
+      "ésotropie <10Δ",
+      "ésotropie 10-20Δ",
+      "ésotropie >20Δ",
+      "exotropie <10Δ",
+      "exotropie 10-20Δ",
+      "exotropie >20Δ",
+      "hypertropie"
+     ]
+    },
+    {
+     "name": "angle_pres",
+     "label": "De près",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "orthotropie",
+      "ésotropie <10Δ",
+      "ésotropie 10-20Δ",
+      "ésotropie >20Δ",
+      "exotropie <10Δ",
+      "exotropie 10-20Δ",
+      "exotropie >20Δ",
+      "hypertropie"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "verre_rouge",
+   "label": "Verre rouge",
+   "ordre": 17,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "correction",
+     "label": "Correction",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "Avec",
+      "Sans"
+     ]
+    },
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "spacer",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "de_loin",
+     "label": "De loin",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "de_pres",
+     "label": "De près",
+     "type": "text",
+     "ordre": 3,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "prismes",
+   "label": "Prismes — amplitudes de fusion",
+   "ordre": 18,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "conv_loin",
+     "label": "Convergence de loin (norme 30Δ)",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "1Δ",
+      "2Δ",
+      "4Δ",
+      "6Δ",
+      "8Δ",
+      "10Δ",
+      "12Δ",
+      "14Δ",
+      "16Δ",
+      "18Δ",
+      "20Δ",
+      "25Δ",
+      "30Δ",
+      "35Δ",
+      "40Δ"
+     ]
+    },
+    {
+     "name": "conv_pres",
+     "label": "Convergence de près (norme 40Δ)",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "1Δ",
+      "2Δ",
+      "4Δ",
+      "6Δ",
+      "8Δ",
+      "10Δ",
+      "12Δ",
+      "14Δ",
+      "16Δ",
+      "18Δ",
+      "20Δ",
+      "25Δ",
+      "30Δ",
+      "35Δ",
+      "40Δ"
+     ]
+    },
+    {
+     "name": "div_loin",
+     "label": "Divergence de loin (norme 8Δ)",
+     "type": "select",
+     "ordre": 2,
+     "options": [
+      "1Δ",
+      "2Δ",
+      "4Δ",
+      "6Δ",
+      "8Δ",
+      "10Δ",
+      "12Δ",
+      "14Δ",
+      "16Δ",
+      "18Δ",
+      "20Δ",
+      "25Δ",
+      "30Δ",
+      "35Δ",
+      "40Δ"
+     ]
+    },
+    {
+     "name": "div_pres",
+     "label": "Divergence de près (norme 12Δ)",
+     "type": "select",
+     "ordre": 3,
+     "options": [
+      "1Δ",
+      "2Δ",
+      "4Δ",
+      "6Δ",
+      "8Δ",
+      "10Δ",
+      "12Δ",
+      "14Δ",
+      "16Δ",
+      "18Δ",
+      "20Δ",
+      "25Δ",
+      "30Δ",
+      "35Δ",
+      "40Δ"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "motricite_conjuguee",
+   "label": "Motricité conjuguée",
+   "ordre": 19,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "fixation",
+     "label": "Fixation",
+     "type": "textarea",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "poursuite",
+     "label": "Poursuite",
+     "type": "textarea",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "saccades",
+     "label": "Saccades",
+     "type": "textarea",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "vergences",
+     "label": "Vergences",
+     "type": "textarea",
+     "ordre": 3,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "facilites_accom",
+   "label": "Facilités d'accommodation",
+   "ordre": 20,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "accom_cpm",
+     "label": "Résultat (cpm)",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "<3 cpm",
+      "3-5 cpm",
+      "5-8 cpm",
+      "8-10 cpm",
+      ">10 cpm",
+      "non réalisé"
+     ]
+    },
+    {
+     "name": "accom_lenteur",
+     "label": "Lenteur en",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "+",
+      "−",
+      "± égal",
+      "non précisé"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "facilites_verg",
+   "label": "Facilités de vergences",
+   "ordre": 21,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "motilite",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "verg_cpm",
+     "label": "Résultat (cpm) (norme 15±3)",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "<6 cpm",
+      "6-9 cpm",
+      "9-12 cpm",
+      "12-15 cpm",
+      "15-18 cpm",
+      ">18 cpm",
+      "non réalisé"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "amplitude_d_accommodation",
+   "label": "Amplitude d'accommodation",
+   "ordre": 22,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "hess_weiss",
+   "label": "Test de Hess-Weiss",
+   "ordre": 23,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "hw_og",
+     "label": "O.G. (coordonnées JSON)",
+     "type": "hidden",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "hw_od",
+     "label": "O.D. (coordonnées JSON)",
+     "type": "hidden",
+     "ordre": 1,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "essai_de_prismes",
+   "label": "Essai de prismes",
+   "ordre": 24,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "loin",
+     "label": "Loin",
+     "type": "textarea",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "pres",
+     "label": "Près",
+     "type": "textarea",
+     "ordre": 2,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "man_uvre_de_bielschowsky",
+   "label": "Manœuvre de Bielschowsky",
+   "ordre": 25,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "tete_penchee_sur_l_epaule_droite",
+     "label": "Tête penchée sur l'épaule droite",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "tete_penchee_sur_l_epaule_gauche",
+     "label": "Tête penchée sur l'épaule gauche",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "resultats",
+     "label": "Résultats",
+     "type": "textarea",
+     "ordre": 3,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "il_dominant",
+   "label": "Œil dominant",
+   "ordre": 26,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "motilite",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "OD",
+      "OG"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "amplitude_d_accommodation_2",
+   "label": "Amplitude d'accommodation",
+   "ordre": 27,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "motilite",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "nsuco",
+   "label": "NSUCO",
+   "ordre": 28,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "Normes :\r\n- Fixation : >10s \r\n- Saccades : \r\n      Aptitude : /5 Précision : /5 Mvt tête : /5 Mvt corps : /5\r\n- Poursuite : \r\n      Aptitude : /5 Précision : /5 Mvt tête : /5 Mvt corps : /5",
+   "avec_observations": true,
+   "categorie": "neuro",
+   "nb_colonnes": 4,
+   "champs": [
+    {
+     "name": "fixation_2",
+     "label": "Fixation",
+     "type": "subtitle",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "fixation",
+     "label": "",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "saccades_2",
+     "label": "Saccades",
+     "type": "subtitle",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "aptitude",
+     "label": "Aptitude",
+     "type": "select",
+     "ordre": 3,
+     "options": [
+      "1/5  =  Moins de 2 allers‐retours.",
+      "2/5 = 2 allers-retours.",
+      "3/5 = 3 allers-retours.",
+      "4/5 = 4 allers-retours.",
+      "5/5 = 5 allers-retours."
+     ]
+    },
+    {
+     "name": "precision",
+     "label": "Précision",
+     "type": "select",
+     "ordre": 4,
+     "options": [
+      "1/5 = Grande sur ou sous-estimation de la saccade, une ou plusieurs fois.",
+      "2/5 = Sur ou sous‐estimation modérée, une ou plusieurs fois.",
+      "3/5 = Légère mais constante sur ou sous-estimation (plus de 50 % du temps).",
+      "4/5 = Légère et intermittente sur ou sous-estimation (moins de 50 % du temps).",
+      "5/5 = Pas de sur ou sous-estimation."
+     ]
+    },
+    {
+     "name": "mouvements_de_la_tete",
+     "label": "Mvts de la tête",
+     "type": "select",
+     "ordre": 5,
+     "options": [
+      "1/5 Grand mouvement de la tête à tout moment.",
+      "2/5 Mouvement modéré de la tête à tout moment.",
+      "3/5 Léger mouvement constant de la tête plus de 50 % du temps.",
+      "4/5 Léger mouvement intermittent de la tête moins 50 % du temps.",
+      "5/5 Aucun mouvement de la tête."
+     ]
+    },
+    {
+     "name": "mouvements_du_corps",
+     "label": "Mvts du corps",
+     "type": "select",
+     "ordre": 6,
+     "options": [
+      "1/5 Grand mouvement du corps à tout moment.",
+      "2/5 Mouvement modéré du corps à tout moment.",
+      "3/5 Léger mouvement constant du corps plus de 50 % du temps.",
+      "4/5 Léger mouvement intermittent du corps moins 50 % du temps.",
+      "5/5 Aucun mouvement du corps."
+     ]
+    },
+    {
+     "name": "poursuite",
+     "label": "Poursuite",
+     "type": "subtitle",
+     "ordre": 7,
+     "options": []
+    },
+    {
+     "name": "aptitude_2",
+     "label": "Aptitude",
+     "type": "select",
+     "ordre": 8,
+     "options": [
+      "1/5  = Moins d’une demi-rotation (horaire ou antihoraire)",
+      "2/5  = Une demi‐rotation dans chaque sens.",
+      "3/5  = Une rotation dans chaque sens.",
+      "4/5  = 2 rotations dans un sens, mais moins de deux dans l’autre.",
+      "5/5 = 2 rotations dans chaque sens."
+     ]
+    },
+    {
+     "name": "precision_2",
+     "label": "Précision",
+     "type": "select",
+     "ordre": 9,
+     "options": [
+      "1/5 = Plus de 10 refixations ou pas de tentative de suivre la cible.",
+      "2/5 = Refixation 5 à 10 fois",
+      "3/5 = Refixation 3 à 4 fois.",
+      "4/5 = Refixations 1 à 2 fois.",
+      "5/5 = Pas de refixation."
+     ]
+    },
+    {
+     "name": "mvts_de_la_tete",
+     "label": "Mvts de la tête",
+     "type": "select",
+     "ordre": 10,
+     "options": [
+      "1/5 Grand mouvement de la tête à tout moment.",
+      "2/5 Mouvement modéré de la tête à tout moment.",
+      "3/5 Léger mouvement constant de la tête plus de 50 % du temps.",
+      "4/5 Léger mouvement intermittent de la tête moins 50 % du temps.",
+      "5/5 Aucun mouvement de la tête."
+     ]
+    },
+    {
+     "name": "mvts_du_corps",
+     "label": "Mvts du corps",
+     "type": "select",
+     "ordre": 11,
+     "options": [
+      "1/5 Grand mouvement du corps à tout moment.",
+      "2/5 Mouvement modéré du corps à tout moment.",
+      "3/5 Léger mouvement constant du corps plus de 50 % du temps.",
+      "4/5 Léger mouvement intermittent du corps moins 50 % du temps.",
+      "5/5 Aucun mouvement du corps."
+     ]
+    }
+   ],
+   "fichiers": [
+    {
+     "nom_original": "nsuco normes.png",
+     "nom_stocke": "secdef_31_619793f9.png",
+     "type_fichier": "image",
+     "titre": "NORMES",
+     "ordre": 0
+    }
+   ]
+  },
+  {
+   "type_key": "dem_test",
+   "label": "DEM Test",
+   "ordre": 29,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "Ce test permet d’évaluer la coordination des yeux lors de la lecture et la rapidité à nommer des chiffres.",
+   "avec_observations": true,
+   "categorie": "neuro",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "temps_vertical_a_b",
+     "label": "Temps Vertical (A+B)",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "temps_horizontal",
+     "label": "Temps Horizontal",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "erreurs",
+     "label": "Erreurs",
+     "type": "text",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "resultats",
+     "label": "Résultats",
+     "type": "select",
+     "ordre": 4,
+     "options": [
+      "TYPE I – Normal : Les temps de lecture sont normaux pour l’âge.",
+      "TYPE II – Oculomoteur : Le temps pour lire les chiffres verticalement est normal, mais le temps pour les lire horizontalement (comme en lecture) est plus long. Cela indique une difficulté à suivre les lignes et retourner à la ligne lors de la lecture.",
+      "TYPE III – Langagier : Lenteur dans la reconnaissance ou la dénomination des chiffres, sans problème de suivi visuel. Un bilan orthophonique est souvent conseillé pour explorer le langage oral ou écrit",
+      "TYPE IV – Mixte : Il existe à la fois une lenteur de dénomination des chiffres et un trouble oculomoteur : difficulté à suivre les lignes et retourner à la ligne lors de la lecture."
+     ]
+    },
+    {
+     "name": "pieces_jointes",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 5,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "test",
+   "label": "MVPT-4",
+   "ordre": 30,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "neuro",
+   "nb_colonnes": 4,
+   "champs": [
+    {
+     "name": "discrimination_visuelle",
+     "label": "Discrimination visuelle",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "1/9",
+      "2/9",
+      "3/9",
+      "4/9",
+      "5/9",
+      "6/9",
+      "7/9",
+      "8/9",
+      "9/9"
+     ]
+    },
+    {
+     "name": "figure_fond",
+     "label": "Figure / fond",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "1/9",
+      "2/9",
+      "3/9",
+      "4/9",
+      "5/9",
+      "6/9",
+      "7/9",
+      "8/9",
+      "9/9"
+     ]
+    },
+    {
+     "name": "memoire_visuelle",
+     "label": "Mémoire visuelle",
+     "type": "select",
+     "ordre": 2,
+     "options": [
+      "1/9",
+      "2/9",
+      "3/9",
+      "4/9",
+      "5/9",
+      "6/9",
+      "7/9",
+      "8/9",
+      "9/9"
+     ]
+    },
+    {
+     "name": "relations_spatiales",
+     "label": "Relations spatiales",
+     "type": "select",
+     "ordre": 3,
+     "options": [
+      "1/9",
+      "2/9",
+      "3/9",
+      "4/9",
+      "5/9",
+      "6/9",
+      "7/9",
+      "8/9",
+      "9/9"
+     ]
+    },
+    {
+     "name": "closure_visuelle",
+     "label": "Closure visuelle",
+     "type": "select",
+     "ordre": 4,
+     "options": [
+      "1/9",
+      "2/9",
+      "3/9",
+      "4/9",
+      "5/9",
+      "6/9",
+      "7/9",
+      "8/9",
+      "9/9"
+     ]
+    },
+    {
+     "name": "percentile",
+     "label": "Percentile",
+     "type": "text",
+     "ordre": 5,
+     "options": []
+    },
+    {
+     "name": "age_corrige",
+     "label": "Âge corrigé",
+     "type": "text",
+     "ordre": 6,
+     "options": []
+    },
+    {
+     "name": "",
+     "label": ".",
+     "type": "fichier",
+     "ordre": 7,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "barrage",
+   "label": "Barrage",
+   "ordre": 31,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "neuro",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "textarea",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "pieces_jointes_2",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 2,
+     "options": []
+    }
+   ],
+   "fichiers": [
+    {
+     "nom_original": "TEST DES H.pdf",
+     "nom_stocke": "secdef_37_8a0ca646.pdf",
+     "type_fichier": "pdf",
+     "titre": "TEST DES H.pdf",
+     "ordre": 0
+    },
+    {
+     "nom_original": "BarrageMesulam_4feuilles.pdf",
+     "nom_stocke": "secdef_37_34b2efd1.pdf",
+     "type_fichier": "pdf",
+     "titre": "BarrageMesulam_4feuilles.pdf",
+     "ordre": 1
+    },
+    {
+     "nom_original": "BarrageMesulam_Administration.pdf",
+     "nom_stocke": "secdef_37_33cad9b0.pdf",
+     "type_fichier": "pdf",
+     "titre": "BarrageMesulam_Administration.pdf",
+     "ordre": 2
+    }
+   ]
+  },
+  {
+   "type_key": "test_de_piquetage",
+   "label": "Test de piquetage",
+   "ordre": 32,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "neuro",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "croix_de_saint_thomas",
+     "label": "Croix de saint thomas",
+     "type": "subtitle",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "pieces_jointes_2",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 3,
+     "options": []
+    }
+   ],
+   "fichiers": [
+    {
+     "nom_original": "croix de st thomas.pdf",
+     "nom_stocke": "secdef_41_21dcde86.pdf",
+     "type_fichier": "pdf",
+     "titre": "croix de st thomas.pdf",
+     "ordre": 0
+    }
+   ]
+  },
+  {
+   "type_key": "bmti",
+   "label": "BMTI",
+   "ordre": 33,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "neuro",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "figures_simples",
+     "label": "Figures simples",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "Les résultats sont dans la moyenne des enfants de son âge pour la qualité de reproduction et pour le temps d'exécution.",
+      "Les résultats sont en dessous de la moyenne des enfants de son âge pour la qualité de reproduction et pour le temps d'exécution."
+     ]
+    },
+    {
+     "name": "figure_complexe",
+     "label": "Figure complexe",
+     "type": "select",
+     "ordre": 2,
+     "options": [
+      "Les résultats sont dans la moyenne des enfants de son âge pour la qualité de reproduction et pour le temps d'exécution.",
+      "Les résultats sont en dessous de la moyenne des enfants de son âge pour la qualité de reproduction et pour le temps d'exécution."
+     ]
+    },
+    {
+     "name": "constructions_avec_cubes",
+     "label": "Constructions avec cubes",
+     "type": "select",
+     "ordre": 3,
+     "options": [
+      "Les résultats sont dans la moyenne des enfants de son âge pour la qualité de reproduction et pour le temps d'exécution.",
+      "Les résultats sont en dessous de la moyenne des enfants de son âge pour la qualité de reproduction et pour le temps d'exécution."
+     ]
+    },
+    {
+     "name": "labyrinthes",
+     "label": "Labyrinthes",
+     "type": "select",
+     "ordre": 4,
+     "options": [
+      "Dans la moyenne des enfants de son âge pour la réussite de cette épreuve. Bonne planification.",
+      "En dessous de la moyenne des enfans de son âge pour la réussite de cette épreuve. Difficultés de planification."
+     ]
+    },
+    {
+     "name": "pieces_jointes",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 5,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "kopv",
+   "label": "KOPV",
+   "ordre": 34,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "neuro",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "vsiuo_perceptif",
+     "label": "Vsiuo-perceptif",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "Le test visuo-perceptif montre des résultats dans la moyenne des enfants de son âge.",
+      "Le test visuo-perceptif montre des résultats en-dessous la moyenne des enfants de son âge.",
+      "Le test visuo-perceptif montre des résultats dans une zone de fragilité, légèrement en-dessous de la moyenne des enfants de son âge."
+     ]
+    },
+    {
+     "name": "visuo_constructif",
+     "label": "Visuo-constructif",
+     "type": "select",
+     "ordre": 1,
+     "options": [
+      "Le test visuo-constructif montre des résultats dans la moyenne des enfants de son âge.",
+      "Le test visuo-constructif montre des résultats en-dessous de la moyenne des enfants de son âge.",
+      "Le test visuo-constructif montre des résultats dans une zone de fragilité, légèrement en-dessous de la moyenne des enfants de son âge."
+     ]
+    },
+    {
+     "name": "pieces_jointes",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 2,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "carnet_de_depistage_des_troubles_neurovi",
+   "label": "Carnet de dépistage des troubles neurovisuels",
+   "ordre": 35,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "Tests simples pour aider à repérer une atteinte de la vision d'origine cérébrale.",
+   "avec_observations": true,
+   "categorie": "neuro",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "resultat",
+     "label": "Résultat",
+     "type": "select",
+     "ordre": 2,
+     "options": [
+      "Ce test est normal, nous ne suspectons pas d'atteinte de la vision d'origine cérébrale.",
+      "Ce test suggère les possibles diagnostiques suivants :"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "fluence_de_lecture",
+   "label": "Fluence de lecture",
+   "ordre": 36,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "La fluence est la capacité à lire avec aisance, rapidement, sans erreurs et avec une intonation adaptée.\r\nTexte : Monsieur Petit / Le géant égoïste / Le pollueur  \r\nMoyenne / écart type : \r\nScore faible (p15) :\r\nScore très faible :\r\n\r\nScore patient :  mots correctement lus en 1 minute.",
+   "avec_observations": true,
+   "categorie": "neuro",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "La fluence de lecture est bonne ; le score se situe dans la moyenne des enfants de la même classe d'âge.",
+      "La fluence de lecture est un peu faible (retard) ; le score se situe en dessous des valeurs du 15e percentile pour des enfants de la même classe d'âge.",
+      "La fluence de lecture est très faible (déficit) ; le score se situe en dessous des valeurs du 5e percentile pour des enfants de la même classe d'âge."
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "champ_visuel",
+   "label": "Champ Visuel",
+   "ordre": 37,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "pieces_jointes_2",
+     "label": "",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "24-2 Blanc ODG",
+      "G1X ODG",
+      "24-2 OCULERA ODG",
+      "10-2 OCULERA ODG"
+     ]
+    },
+    {
+     "name": "pieces_jointes",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 1,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "vision_des_couleurs",
+   "label": "Vision des couleurs",
+   "ordre": 38,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "textarea",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "pieces_jointes_2",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 2,
+     "options": []
+    }
+   ],
+   "fichiers": [
+    {
+     "nom_original": "28Hue.pdf",
+     "nom_stocke": "secdef_42_d3c1b4ae.pdf",
+     "type_fichier": "pdf",
+     "titre": "28 Hue",
+     "ordre": 0
+    }
+   ]
+  },
+  {
+   "type_key": "refle_photomoteur",
+   "label": "Réflexe photomoteur",
+   "ordre": 39,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "rpm",
+     "label": "",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "+ OD et OG, beaux reflets pupillaires"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "test_de_la_main",
+   "label": "Test de l'occlusion unilatérale",
+   "ordre": 40,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "",
+     "type": "select",
+     "ordre": 0,
+     "options": [
+      "Ne réagit pas plus à l’occlusion OD qu’à l’occlusion OG. Fixation et poursuite présentes en binoculaire et en monoculaire"
+     ]
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "bebe_vision",
+   "label": "Bébé Vision",
+   "ordre": 41,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "od",
+     "label": "OD",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "og",
+     "label": "OG",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "binoculaire",
+     "label": "Binoculaire",
+     "type": "text",
+     "ordre": 3,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "retinographies",
+   "label": "Rétinographies",
+   "ordre": 42,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 1,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "ordonnance_modifiee",
+   "label": "Ordonnance modifiée",
+   "ordre": 43,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "pieces_jointes",
+     "label": "Pièces jointes",
+     "type": "fichier",
+     "ordre": 1,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "bilan_fonctionnel_basse_vision",
+   "label": "Bilan fonctionnel basse vision",
+   "ordre": 44,
+   "builtin": false,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "orientation_du_regard",
+     "label": "Orientation du regard",
+     "type": "textarea",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "communiquer",
+     "label": "Communiquer",
+     "type": "textarea",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "organiser_le_geste",
+     "label": "Organiser le geste",
+     "type": "textarea",
+     "ordre": 3,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "conclusions",
+   "label": "Conclusions",
+   "ordre": 45,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "conclusions",
+   "nb_colonnes": 1,
+   "champs": [
+    {
+     "name": "conclusions",
+     "label": "",
+     "type": "textarea",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "recommandations",
+     "label": "Recommandations",
+     "type": "textarea",
+     "ordre": 1,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "prescription",
+   "label": "Prescription",
+   "ordre": 46,
+   "builtin": true,
+   "actif": false,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "renouvellement",
+     "label": "Renouvellement correction",
+     "type": "textarea",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "bilan_demande",
+     "label": "Bilan demandé",
+     "type": "textarea",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "exercices",
+     "label": "Exercices prescrits",
+     "type": "textarea",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "nombre_seances",
+     "label": "Nombre de séances",
+     "type": "text",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "rythme",
+     "label": "Rythme",
+     "type": "text",
+     "ordre": 4,
+     "options": []
+    },
+    {
+     "name": "commentaires",
+     "label": "Commentaires",
+     "type": "textarea",
+     "ordre": 5,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "courrier",
+   "label": "Courrier / Compte-rendu",
+   "ordre": 47,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": true,
+   "categorie": "courrier",
+   "nb_colonnes": 2,
+   "champs": [],
+   "fichiers": []
+  },
+  {
+   "type_key": "ordonnance",
+   "label": "Ordonnances",
+   "ordre": 48,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "ordonnance",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "orto_oeil",
+     "label": "Œil à occlure",
+     "type": "select",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "orto_heures",
+     "label": "Heures par jour",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "orto_duree",
+     "label": "Durée du traitement",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "orto_notes",
+     "label": "Notes",
+     "type": "text",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "prisme_od_diop",
+     "label": "OD dioptries",
+     "type": "text",
+     "ordre": 4,
+     "options": []
+    },
+    {
+     "name": "prisme_od_base",
+     "label": "OD base",
+     "type": "select",
+     "ordre": 5,
+     "options": []
+    },
+    {
+     "name": "prisme_og_diop",
+     "label": "OG dioptries",
+     "type": "text",
+     "ordre": 6,
+     "options": []
+    },
+    {
+     "name": "prisme_og_base",
+     "label": "OG base",
+     "type": "select",
+     "ordre": 7,
+     "options": []
+    },
+    {
+     "name": "ryser_od_num",
+     "label": "OD Ryser N°",
+     "type": "text",
+     "ordre": 8,
+     "options": []
+    },
+    {
+     "name": "ryser_od_av",
+     "label": "OD AV laissée",
+     "type": "text",
+     "ordre": 9,
+     "options": []
+    },
+    {
+     "name": "ryser_og_num",
+     "label": "OG Ryser N°",
+     "type": "text",
+     "ordre": 10,
+     "options": []
+    },
+    {
+     "name": "ryser_og_av",
+     "label": "OG AV laissée",
+     "type": "text",
+     "ordre": 11,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  },
+  {
+   "type_key": "ordonnance_lunettes",
+   "label": "Ordonnance de lunettes",
+   "ordre": 49,
+   "builtin": true,
+   "actif": true,
+   "obs_defaut": "",
+   "avec_observations": false,
+   "categorie": "ordonnance",
+   "nb_colonnes": 2,
+   "champs": [
+    {
+     "name": "lun_vl_od_sph",
+     "label": "VL OD — Sphère",
+     "type": "text",
+     "ordre": 0,
+     "options": []
+    },
+    {
+     "name": "lun_vl_od_cyl",
+     "label": "VL OD — Cylindre",
+     "type": "text",
+     "ordre": 1,
+     "options": []
+    },
+    {
+     "name": "lun_vl_od_axe",
+     "label": "VL OD — Axe",
+     "type": "text",
+     "ordre": 2,
+     "options": []
+    },
+    {
+     "name": "lun_vl_og_sph",
+     "label": "VL OG — Sphère",
+     "type": "text",
+     "ordre": 3,
+     "options": []
+    },
+    {
+     "name": "lun_vl_og_cyl",
+     "label": "VL OG — Cylindre",
+     "type": "text",
+     "ordre": 4,
+     "options": []
+    },
+    {
+     "name": "lun_vl_og_axe",
+     "label": "VL OG — Axe",
+     "type": "text",
+     "ordre": 5,
+     "options": []
+    },
+    {
+     "name": "lun_vp_od_add",
+     "label": "VP OD — Addition",
+     "type": "text",
+     "ordre": 6,
+     "options": []
+    },
+    {
+     "name": "lun_vp_og_add",
+     "label": "VP OG — Addition",
+     "type": "text",
+     "ordre": 7,
+     "options": []
+    },
+    {
+     "name": "lun_dip",
+     "label": "DIP (mm)",
+     "type": "text",
+     "ordre": 8,
+     "options": []
+    },
+    {
+     "name": "lun_renouvelable",
+     "label": "Renouvelable",
+     "type": "select",
+     "ordre": 9,
+     "options": []
+    },
+    {
+     "name": "lun_remarques",
+     "label": "Remarques",
+     "type": "textarea",
+     "ordre": 10,
+     "options": []
+    }
+   ],
+   "fichiers": []
+  }
+ ]
+}

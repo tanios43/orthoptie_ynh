@@ -458,6 +458,25 @@ with app.app_context():
     except Exception as e:
         print(f"ERREUR  : admin — {e}")
 
+    # ── Sections par défaut (modèle sections_defaut/sections_def.json) ──────────
+    # Installation neuve (aucune section) : toutes les sections de référence,
+    # avec leurs champs, options et fichiers joints.
+    # Installation existante : seulement les sections natives indispensables
+    # (courrier, prescription) si elles manquent. Rien d'existant n'est modifié.
+    try:
+        from app import installer_sections_defaut, SECTIONS_NATIVES_REQUISES
+        if SectionDef.query.count() == 0:
+            crees = installer_sections_defaut()
+        else:
+            crees = installer_sections_defaut(types=SECTIONS_NATIVES_REQUISES)
+        if crees:
+            print(f"OK      : {len(crees)} section(s) par défaut créée(s) : {', '.join(crees)}")
+        else:
+            print("Present : sections par défaut")
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERREUR  : sections par défaut — {e}")
+
     def add_champs(type_key, labels):
         sec = SectionDef.query.filter_by(type_key=type_key).first()
         if not sec:
