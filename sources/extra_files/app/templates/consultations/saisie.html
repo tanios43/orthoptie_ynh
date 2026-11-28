@@ -3294,6 +3294,37 @@ document.addEventListener('DOMContentLoaded', () => {
     lastInteractionWasKeyboard = false;
   });
 
+  // ── Entrée = champ suivant (comme Tab), Maj+Entrée = champ précédent ──
+  // Sans cela, Entrée dans un champ enverrait le formulaire (« Enregistrer et quitter »).
+  // Les champs multilignes (textarea, zones de texte enrichi) gardent Entrée pour aller à la ligne.
+  const CHAMPS_NAV = 'input:not([type="hidden"]):not([type="button"]):not([type="submit"])'
+                   + ':not([type="reset"]):not([type="image"]):not([type="file"]), '
+                   + 'select, textarea, [contenteditable="true"]';
+  function champsDuBilan() {
+    const form = document.getElementById('form-bilan');
+    return Array.from(document.querySelectorAll(CHAMPS_NAV)).filter(el =>
+      (el.form === form || form.contains(el))
+      && !el.disabled && el.tabIndex >= 0
+      && el.getClientRects().length > 0);       // visible (section dépliée)
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.isComposing || e.ctrlKey || e.altKey || e.metaKey) return;
+    const el = e.target;
+    if (el.tagName === 'TEXTAREA' || el.isContentEditable) return;   // multiligne : retour à la ligne
+    if (!el.matches || !el.matches(CHAMPS_NAV)) return;              // boutons, liens… : comportement normal
+    const form = document.getElementById('form-bilan');
+    if (!form || !(el.form === form || form.contains(el))) return;
+    e.preventDefault();
+    const champs = champsDuBilan();
+    const cible = champs[champs.indexOf(el) + (e.shiftKey ? -1 : 1)];
+    if (!cible) return;                                              // premier / dernier champ : on reste
+    lastInteractionWasKeyboard = true;                               // même recentrage qu'avec Tab
+    cible.focus();
+    if (cible.tagName === 'INPUT' && /^(text|number|search|tel|url|email)$/.test(cible.type)) {
+      try { cible.select(); } catch (_) {}                            // comme Tab : contenu sélectionné
+    }
+  });
+
   // ── Avant soumission : renuméroter les champs pour correspondre à l'ordre réel ──
   document.getElementById('form-bilan').addEventListener('submit', (e) => {
     const sections = document.querySelectorAll('#sections-container .bilan-section');
