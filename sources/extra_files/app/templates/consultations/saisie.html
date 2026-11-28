@@ -788,6 +788,25 @@
           style="flex-shrink:0;background:#534AB7;">
     Enregistrer et quitter
   </button>
+  {# Raccourci : même effet que l'ajout de la section Courrier, avec ses couleurs #}
+  {# Section trouvée par son identifiant « courrier », sinon par sa catégorie, sinon par son nom #}
+  {% set nc = namespace(key=none) %}
+  {% if sections_dispo %}
+    {% if 'courrier' in sections_dispo %}{% set nc.key = 'courrier' %}{% endif %}
+    {% for k in (sections_ordre or []) if nc.key is none and sections_dispo[k] and sections_dispo[k].get('categorie') == 'courrier' %}{% set nc.key = k %}{% endfor %}
+    {% for k in (sections_ordre or []) if nc.key is none and sections_dispo[k] and ((sections_dispo[k].label or '') | lower | trim).startswith('courrier') %}{% set nc.key = k %}{% endfor %}
+  {% endif %}
+  {% if nc.key %}
+  {% set sec_courrier = sections_dispo[nc.key] %}
+  {% set col_courrier = section_style(nc.key, sec_courrier.get('categorie', '')) %}
+  <button type="button" class="btn" title="Ajouter la section {{ sec_courrier.label }}"
+          onclick="ajouterSection('{{ nc.key }}', '{{ sec_courrier.label | replace("'", "\\'") }}')"
+          style="flex-shrink:0;background:{{ col_courrier.bg }};color:{{ col_courrier.color }};
+                 border:1px solid {{ col_courrier.color }}40;font-weight:500;"
+          onmouseover="this.style.filter='brightness(.93)'" onmouseout="this.style.filter=''">
+    <i class="ti {{ col_courrier.icon }}" style="margin-right:4px;"></i>Courrier
+  </button>
+  {% endif %}
   <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary" style="flex-shrink:0;">Annuler</a>
   <span id="save-hint" style="font-size:12px;color:var(--muted);margin-left:4px;flex-shrink:0;"></span>
 
